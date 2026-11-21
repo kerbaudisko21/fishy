@@ -57,6 +57,68 @@ export interface PaymentRequest {
   dueText?: string;
 }
 
+/* ---------- Evidence shown on the detail screens ---------- */
+
+export interface CheckItem {
+  ok: boolean;
+  title: string;
+  detail: string;
+}
+
+export interface CaptionLine {
+  speaker: string;
+  at: string;
+  /** The line split into plain text and highlighted tactic phrases. */
+  parts: Array<{ text: string; tactic?: Tactic }>;
+}
+
+export interface BankAccount {
+  bank: string;
+  masked: string;
+  holder: string;
+}
+
+export interface Evidence {
+  tactics: {
+    counts: Array<{ tactic: Tactic; label: string; count: number; example: string }>;
+    captions: CaptionLine[];
+    window: string;
+    pattern: string;
+    rulesVersion: number;
+  };
+  email: {
+    sender: { name: string; address: Array<{ text: string; changed?: boolean }> };
+    onRecord: { name: string; address: string; paidTimes: number };
+    checks: CheckItem[];
+    attachment: string;
+  };
+  invoice: {
+    number: string;
+    supplier: string;
+    from: string;
+    due: string;
+    amount: { value: number; currency: string };
+    newAccount: BankAccount;
+    usual: BankAccount & { months: string[] };
+    traces: CheckItem[];
+    knownScams: number;
+  };
+  voice: {
+    speaker: string;
+    seconds: number;
+    sentAt: string;
+    /** 0–1 */
+    score: number;
+    faceFrames: number;
+  };
+  known: {
+    matches: Array<{ value: string; count: number; note?: string; events?: Array<{ date: string; what: string }> }>;
+    pattern: { name: string; bullets: string[] };
+    rulesVersion: number;
+    updated: string;
+  };
+}
+
 export interface DirectoryPerson {
   id: string;
   name: string;

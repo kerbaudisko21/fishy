@@ -12,6 +12,9 @@ functions/lib/
 functions/.secret.local
 service-account*.json
 
+# Local tooling
+.claude/
+
 # Firebase emulators and caches
 .firebase/
 firebase-debug.log

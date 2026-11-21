@@ -1,6 +1,7 @@
 ﻿import type { CallState, PaymentRequest, Verdict as VerdictT } from '../../lib/types';
 import { FlagRow } from '../components';
 import { screenFor, type Screen } from '../routes';
+import { money } from '../format';
 
 interface Props {
   request: PaymentRequest;
@@ -10,8 +11,6 @@ interface Props {
   onPaste: () => void;
   onOpen: (s: Screen) => void;
 }
-
-const money = (v: number, c: string) => new Intl.NumberFormat('en-US', { style: 'currency', currency: c, maximumFractionDigits: 0 }).format(v);
 
 export function Verdict({ request, verdict, call, onCall, onPaste, onOpen }: Props) {
   const first = request.askedBy.name.split(' ')[0];

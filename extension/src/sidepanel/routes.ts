@@ -1,15 +1,6 @@
 import type { SignalKind } from '../lib/types';
 
 export type Screen = 'verdict' | 'tactics' | 'email' | 'invoice' | 'voice' | 'known' | 'directory';
-export type DetailScreen = Exclude<Screen, 'verdict' | 'directory'>;
-
-export const DETAIL: Record<DetailScreen, { title: string; step: string }> = {
-  tactics: { title: 'Pressure in the request', step: 'STEP 1 · READ' },
-  email: { title: 'Lookalike sender', step: 'STEP 2 · CHECK' },
-  invoice: { title: 'Bank account changed', step: 'STEP 2 · CHECK' },
-  voice: { title: 'Voice check', step: 'STEP 2 · CHECK' },
-  known: { title: 'Known scams', step: 'STEP 3 · MATCH' },
-};
 
 /** Which evidence screen a red flag opens. */
 export function screenFor(kind: SignalKind): Screen {
@@ -30,4 +21,9 @@ export function screenFor(kind: SignalKind): Screen {
     default:
       return 'known';
   }
+}
+
+/** Where the evidence on each screen came from, for the header chip. */
+export function placeFor(screen: Screen): 'meet' | 'gmail' {
+  return screen === 'email' || screen === 'invoice' ? 'gmail' : 'meet';
 }
