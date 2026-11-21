@@ -1,0 +1,53 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); }
+button { font-family: inherit; }
+h1, h2 { font-family: var(--font-head); margin: 0; }
+
+.header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-head); font-weight: 700; font-size: 19px; letter-spacing: .06em; }
+.brand img { width: 32px; height: 32px; }
+.live { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: var(--surface-muted); font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.live-dot { width: 7px; height: 7px; border-radius: 999px; background: #e5533a; }
+
+.tabs { display: flex; gap: 4px; padding: 8px 16px 0; background: var(--surface); border-bottom: 1px solid var(--line); }
+.tab { padding: 10px 12px 12px; font-size: 14px; font-weight: 500; color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer; }
+.tab[aria-current='page'] { font-weight: 600; color: var(--ink); border-bottom-color: var(--ink); }
+
+.main { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+
+.verdict { border-radius: var(--r-lg); padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+.verdict h1 { font-size: 28px; line-height: 1.1; }
+.verdict p { margin: 0; font-size: 14px; line-height: 1.5; }
+.verdict .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+.verdict.fishy { background: var(--amber-bg); border: 1px solid var(--amber-line); }
+.verdict.fishy .eyebrow { color: var(--amber-text); }
+.verdict.ringing { background: var(--ink); color: #fff; }
+.verdict.ringing .eyebrow { color: #ffb4a3; }
+.verdict.not_me { background: var(--danger); color: #fff; }
+.verdict.confirmed { background: var(--ok-bg); border: 1px solid var(--ok-line); color: #0b3f38; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.steps li { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); font-size: 12px; font-weight: 600; }
+.steps .label { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--muted); }
+
+.flag { display: flex; gap: 12px; align-items: flex-start; width: 100%; padding: 14px 16px; border: 0; border-top: 1px solid var(--line-soft); background: none; text-align: left; color: inherit; cursor: pointer; transition: background-color .15s ease; }
+.flag:hover { background: #fbfaf7; }
+.flag-title { font-size: 14.5px; font-weight: 600; }
+.flag-detail { font-size: 13px; line-height: 1.45; color: #4f5b66; }
+.meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.step-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--muted); }
+
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; }
+.badge.on_device { background: var(--ink); color: #fff; }
+.badge.cloud { background: var(--cloud-bg); color: var(--cloud-text); }
+
+.btn { height: 52px; border-radius: var(--r-md); border: 0; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: transform .12s ease; }
+.btn:active { transform: scale(.98); }
+.btn.primary { background: var(--ink); color: #fff; }
+.btn.secondary { height: 44px; background: var(--surface); color: var(--ink); border: 1px solid #d9d5ca; font-size: 14px; font-weight: 500; }
+.hint { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); text-align: center; }
+
+.back { align-self: flex-start; display: flex; align-items: center; gap: 4px; min-height: 32px; border: 0; background: none; font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

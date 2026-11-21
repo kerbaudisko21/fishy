@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="FISHY">
+  <rect width="32" height="32" rx="7" fill="#F26B4E"/>
+  <g fill="none" stroke="#10202E" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.5 5 V17.5 a5.25 5.25 0 0 1 -10.5 0 V16"/>
+    <path d="M9 16 L12.5 19"/>
+  </g>
+</svg>

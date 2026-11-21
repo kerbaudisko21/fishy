@@ -1,0 +1,16 @@
+{
+  "parameters": {
+    "scam_rules": {
+      "defaultValue": {
+        "value": "{\"version\":1,\"alwaysFishy\":[\"bank_account_changed\",\"known_bad_account\",\"known_bad_domain\",\"unsafe_link\"],\"weights\":{\"pressure_tactics\":2,\"lookalike_sender\":3,\"sender_auth_failed\":2,\"young_domain\":1,\"pdf_edited\":2,\"voice_score\":1,\"face_score\":1},\"threshold\":3,\"patterns\":[{\"name\":\"Vendor bank change\",\"requires\":[\"bank_account_changed\"]},{\"name\":\"Executive asks for a secret, urgent transfer\",\"requires\":[\"pressure_tactics\"]},{\"name\":\"Lookalike supplier invoice\",\"requires\":[\"lookalike_sender\",\"bank_account_changed\"]}]}"
+      },
+      "description": "Rules engine config. Must match DEFAULT_RULES in extension/src/lib/rules/engine.ts.",
+      "valueType": "JSON"
+    },
+    "meet_caption_selectors": {
+      "defaultValue": { "value": "[\"[role=\\\"region\\\"][aria-label*=\\\"aption\\\"]\",\"[aria-live=\\\"polite\\\"]\"]" },
+      "description": "CSS selectors for Meet captions, so a Meet change can be fixed without a release.",
+      "valueType": "JSON"
+    }
+  }
+}

@@ -1,0 +1,75 @@
+import type { Signal, SignalKind, Verdict } from '../types';
+
+/**
+ * Scam patterns, fetched from Remote Config (key: `scam_rules`) so new scam
+ * types are blocked without a release. DEFAULT_PATTERNS is the offline fallback
+ * and must match remoteconfig.template.json.
+ */
+export interface ScamPattern {
+  name: string;
+  /** All of these must be present for the pattern to match. */
+  requires: SignalKind[];
+}
+
+export interface RulesConfig {
+  version: number;
+  /** Signals that make a request fishy on their own. */
+  alwaysFishy: SignalKind[];
+  /** Weight per signal; a request is fishy when the sum reaches `threshold`. */
+  weights: Partial<Record<SignalKind, number>>;
+  threshold: number;
+  patterns: ScamPattern[];
+}
+
+export const DEFAULT_RULES: RulesConfig = {
+  version: 1,
+  alwaysFishy: ['bank_account_changed', 'known_bad_account', 'known_bad_domain', 'unsafe_link'],
+  weights: {
+    pressure_tactics: 2,
+    lookalike_sender: 3,
+    sender_auth_failed: 2,
+    young_domain: 1,
+    pdf_edited: 2,
+    voice_score: 1,
+    face_score: 1,
+  },
+  threshold: 3,
+  patterns: [
+    { name: 'Vendor bank change', requires: ['bank_account_changed'] },
+    { name: 'Executive asks for a secret, urgent transfer', requires: ['pressure_tactics'] },
+    { name: 'Lookalike supplier invoice', requires: ['lookalike_sender', 'bank_account_changed'] },
+  ],
+};
+
+/** Display order: hard evidence first, scores last (they are supporting signals, not proof). */
+const ORDER: SignalKind[] = [
+  'pressure_tactics',
+  'bank_account_changed',
+  'lookalike_sender',
+  'known_bad_account',
+  'known_bad_domain',
+  'unsafe_link',
+  'sender_auth_failed',
+  'young_domain',
+  'pdf_edited',
+  'voice_score',
+  'face_score',
+];
+
+/**
+ * Deterministic verdict: the same signals always give the same verdict (R2).
+ * No model output decides the verdict; Gemini only produces signals and explanations.
+ */
+export function decide(signals: Signal[], rules: RulesConfig = DEFAULT_RULES): Verdict {
+  const kinds = new Set(signals.map((s) => s.kind));
+  const score = [...kinds].reduce((sum, k) => sum + (rules.weights[k] ?? 0), 0);
+  const hard = rules.alwaysFishy.some((k) => kinds.has(k));
+  const level = hard || score >= rules.threshold ? 'fishy' : 'clear';
+
+  const flags = [...signals].sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind));
+  const patterns = rules.patterns
+    .filter((p) => p.requires.every((k) => kinds.has(k)))
+    .map((p) => p.name);
+
+  return { level, flags, patterns, callAdvised: true };
+}

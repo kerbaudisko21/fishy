@@ -1,0 +1,93 @@
+<p align="center"><img src="brand/logo-lockup.svg" alt="FISHY" width="300"></p>
+
+# FISHY: don’t take the bait, make the call
+
+A Chrome extension that spots social-engineering scams in Google Meet and Gmail, checks the evidence on your laptop, and phones the real person on a number on record before money moves.
+
+Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) (Web / Chrome) with **Firebase AI Logic hybrid inference**: Gemini Nano reads private content on the laptop, and Gemini in the cloud takes over (on redacted text) when Nano is not available.
+
+> Status: project skeleton. The build runs 22–30 Nov 2026; submission is due 1 Dec 2026, 05:00 WIB.
+
+## How it works
+
+| Step | What happens | Where it runs |
+|---|---|---|
+| 1 · Read | Tags urgency, secrecy, authority and skipped approvals in Meet captions and opened emails | Gemini Nano, on device |
+| 2 · Check | Sender and lookalike domains, links (Web Risk), invoice bank details vs history, PDF edits; voice/face score on click | On device; cloud for Web Risk and scores |
+| 3 · Match | Known bad accounts, domains and numbers; scam patterns from Remote Config | On device |
+| 4 · Call | Twilio calls the person on record: press 1 or 2, then a PIN; escalates after 10 minutes | Cloud Functions + Twilio |
+
+The verdict comes from a fixed rules engine ([engine.ts](extension/src/lib/rules/engine.ts)), so the same signals always give the same verdict. The model only produces signals.
+
+## Repository
+
+```
+fishy/
+├─ extension/              Chrome extension (Manifest V3, Vite, React, TypeScript)
+│  ├─ manifest.config.ts   permissions, side panel, content scripts
+│  └─ src/
+│     ├─ sidepanel/        the side panel UI (Verdict, evidence screens, Directory)
+│     ├─ content/          Meet and Gmail readers + the in-page banner (Shadow DOM)
+│     ├─ background/       service worker (opens the panel)
+│     ├─ lib/
+│     │  ├─ firebase.ts    Firebase app, App Check, anonymous Auth
+│     │  ├─ ai/tactics.ts  Step 1 with Firebase AI Logic hybrid inference
+│     │  ├─ rules/         deterministic verdict + tests
+│     │  └─ redact.ts      redaction before anything goes to the cloud
+│     ├─ demo/fixtures.ts  synthetic demo company (no real data)
+│     └─ styles/           design tokens
+├─ web/                    web approval page (Firebase Hosting) for when a call can’t reach the approver
+├─ functions/              Cloud Functions: call, phone menu webhooks, approval, Web Risk
+├─ brand/                  logo (SVG); `npm run icons` renders the PNG icons
+├─ firestore.rules         directory phones and PINs are never readable by clients
+└─ remoteconfig.template.json  scam rules and Meet caption selectors
+```
+
+Designs: [FISHY · Screen designs](https://claude.ai/artifact/D2neF4bvCTBrrWq8uiohMN).
+
+## Run it
+
+Requirements: Node 22+, desktop Chrome 139+.
+
+```bash
+npm install
+npm run icons            # brand/*.svg → extension and web icons
+cp extension/.env.example extension/.env.local   # fill in Firebase config
+npm run dev              # builds the extension into extension/dist with hot reload
+```
+
+Load it: `chrome://extensions` → Developer mode → **Load unpacked** → `extension/dist`. Click the FISHY icon to open the side panel. `VITE_DEMO_MODE=true` runs on the synthetic demo company.
+
+### Gemini Nano on the laptop
+
+1. `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input` → Enabled, restart Chrome.
+2. In DevTools: `await LanguageModel.availability()` should say `available`, `downloadable` or `downloading`.
+3. The model downloads after a user click; until then FISHY uses the cloud on redacted text and shows the **Cloud** badge.
+
+### Firebase
+
+- Enable **Firebase AI Logic** (Gemini Developer API), **App Check**, **Authentication** (Anonymous), **Firestore**, **Remote Config**, **Cloud Functions** (Blaze plan).
+- App Check: the extension cannot load reCAPTCHA, so it uses a **debug token** (accepted by #BuildHybridAI). Register it under App Check → Apps → Manage debug tokens and put it in `extension/.env.local`. Never commit it.
+- Copy `.firebaserc.example` to `.firebaserc` with your project id.
+
+## Scripts
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Extension with hot reload |
+| `npm run build` | Builds extension, web page and functions |
+| `npm test` | Rules engine and redaction tests |
+| `npm run typecheck` | TypeScript in all three packages |
+| `npm run icons` | Regenerates PNG icons from `brand/` |
+
+## Privacy
+
+- Message text is read by Gemini Nano on the laptop and is never stored.
+- Without Nano, only redacted text goes to the cloud model; the badge says so.
+- Voice clips and video frames leave the laptop only when the user clicks.
+- FISHY never calls a number taken from a message.
+- The team sees a summary, never the message.
+
+## License
+
+[Apache 2.0](LICENSE)

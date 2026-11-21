@@ -1,0 +1,4 @@
+/* Fonts are bundled from npm (@fontsource), because MV3 extension pages cannot load Google Fonts at runtime. */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource/jetbrains-mono/500.css';

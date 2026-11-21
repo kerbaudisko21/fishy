@@ -1,0 +1,19 @@
+node_modules/
+dist/
+functions/lib/
+*.log
+.DS_Store
+
+# Secrets: never commit. Copy the .example files instead.
+.env
+.env.*
+!.env.example
+.firebaserc
+functions/.secret.local
+service-account*.json
+
+# Firebase emulators and caches
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

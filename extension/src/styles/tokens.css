@@ -1,0 +1,38 @@
+/* Design tokens from the FISHY screen designs canvas. */
+:root {
+  --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-head: 'Space Grotesk Variable', 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-muted: #f1efe8;
+  --note: #e9e6dd;
+  --line: #e3e0d7;
+  --line-soft: #eeebe3;
+  --ink: #10202e;
+  --ink-2: #3b4752;
+  --muted: #5b6672;
+
+  --brand: #f26b4e; /* fills and the logo only; too light for text */
+  --brand-text: #b83a22;
+
+  --amber-bg: #fff1d6;
+  --amber-line: #f0c26a;
+  --amber-text: #8a4b00;
+
+  --danger: #b42a14;
+  --danger-bg: #fde1d9;
+  --danger-text: #a3260f;
+
+  --ok: #0e5a50;
+  --ok-bg: #ddf1ec;
+  --ok-line: #9fd3c7;
+
+  --cloud-bg: #e3ecf7;
+  --cloud-text: #1d4a80;
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 16px;
+}

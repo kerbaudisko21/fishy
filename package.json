@@ -1,0 +1,24 @@
+{
+  "name": "fishy",
+  "private": true,
+  "description": "FISHY: a Chrome extension that spots social-engineering scams in Meet and Gmail and calls the real person before money moves.",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "extension",
+    "web",
+    "functions"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w extension",
+    "build": "npm run build -w extension && npm run build -w web && npm run build -w functions",
+    "test": "npm run test -w extension",
+    "typecheck": "npm run typecheck -w extension && npm run typecheck -w web && npm run typecheck -w functions",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
