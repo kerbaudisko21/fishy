@@ -4,7 +4,7 @@ import { DetailHead, Icon } from '../components';
 // Decorative clip shape; replace with the real clip's levels when recording is built.
 const BARS = [30, 52, 40, 68, 84, 60, 44, 72, 90, 64, 38, 56, 80, 96, 70, 48, 34, 58, 76, 88, 62, 42, 66, 82, 94, 74, 50, 36, 54, 70, 86, 60, 40, 64, 78, 52, 32, 46, 30, 22];
 
-export function Voice({ data, onBack, onCheckFace }: { data: Evidence['voice']; onBack: () => void; onCheckFace: () => void }) {
+export function Voice({ data, onBack, onCheckFace }: { data: NonNullable<Evidence['voice']>; onBack: () => void; onCheckFace?: () => void }) {
   const pct = Math.round(data.score * 100);
   return (
     <>
@@ -49,9 +49,10 @@ export function Voice({ data, onBack, onCheckFace }: { data: Evidence['voice']; 
             <span className="row-title">Face check · not run</span>
             <span className="row-detail">Sends {data.faceFrames} video frames of this speaker to the cloud for a score.</span>
           </span>
-          <button className="btn secondary small" onClick={onCheckFace}>
+          <button className="btn secondary small" onClick={onCheckFace} disabled={!onCheckFace} title={onCheckFace ? undefined : 'Coming after judging (P1)'}>
             Check video frames
           </button>
+          {!onCheckFace && <span className="small">Face scoring is planned (P1) and not switched on in this build.</span>}
         </section>
 
         <p className="hint" style={{ textAlign: 'left', display: 'flex', gap: 8 }}>

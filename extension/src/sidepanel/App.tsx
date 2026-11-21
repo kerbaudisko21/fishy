@@ -1,21 +1,20 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { DEMO_DIRECTORY, DEMO_EVIDENCE, DEMO_REQUEST, DEMO_SIGNALS } from '../demo/fixtures';
-import { decide } from '../lib/rules/engine';
+import { IN_EXTENSION } from '../lib/config';
 import { isPageMessage, type BannerState, type PanelMessage } from '../lib/messages';
-import type { CallState, Signal } from '../lib/types';
+import type { CallTarget, Evidence, SignalKind } from '../lib/types';
 import { Header } from './components';
-import { placeFor, type Screen } from './routes';
+import { placeFor, screenFor, type Screen } from './routes';
+import { CheckYourself } from './screens/CheckYourself';
 import { Directory } from './screens/Directory';
 import { EmailLinks } from './screens/EmailLinks';
 import { Invoice } from './screens/Invoice';
 import { KnownScams } from './screens/KnownScams';
+import { Settings } from './screens/Settings';
 import { Tactics } from './screens/Tactics';
 import { Verdict } from './screens/Verdict';
 import { Voice } from './screens/Voice';
-
-const DEMO = import.meta.env.VITE_DEMO_MODE !== 'false';
-/** False when the panel is opened as a plain web page (design preview), where chrome.* APIs do not exist. */
-const IN_EXTENSION = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
+import { useAnalysis } from './useAnalysis';
+import { useCall } from './useCall';
 
 async function sendBanner(state: BannerState, title: string, line: string) {
   if (!IN_EXTENSION) return;
@@ -27,33 +26,58 @@ async function sendBanner(state: BannerState, title: string, line: string) {
   });
 }
 
+/** A screen opens only when its evidence exists. */
+function hasEvidence(screen: Screen, ev: Evidence) {
+  const key = ({ tactics: 'tactics', email: 'email', invoice: 'invoice', voice: 'voice', known: 'known' } as const)[screen as 'tactics'];
+  return !key || !!ev[key];
+}
+
+const first = (name?: string) => name?.split(' ')[0] ?? '';
+
 export function App() {
+  const a = useAnalysis();
+  const { call, start, cancel, error: callError } = useCall();
   const [screen, setScreen] = useState<Screen>('verdict');
-  const [signals] = useState<Signal[]>(DEMO ? DEMO_SIGNALS : []);
-  const [call, setCall] = useState<CallState>('idle');
-  const verdict = useMemo(() => decide(signals), [signals]);
-  const evidence = DEMO_EVIDENCE; // TODO: build from live checks once Steps 1–3 are wired.
+
+  // Who FISHY may call: the supplier contact on record (for a supplier email), then the approvers.
+  const supplierName = a.mode === 'live' ? (a.evidence.email?.onRecord?.name ?? (a.evidence.invoice?.usual ? a.evidence.invoice.supplier : undefined)) : undefined;
+  const supplier = supplierName ? a.directory.suppliers.find((s) => s.name === supplierName) : undefined;
+  const targets: CallTarget[] = useMemo(() => {
+    const people = [...a.directory.people].sort((x, y) => (x.escalationOrder ?? 0) - (y.escalationOrder ?? 0));
+    const list: CallTarget[] = people.map((p) => ({ id: p.id, name: p.name, role: p.role, phoneMasked: p.phoneMasked }));
+    if (supplier) list.unshift({ id: supplier.id, name: supplier.contact.name, role: `${supplier.contact.role}, ${supplier.name}`, phoneMasked: supplier.contact.phoneMasked });
+    return list;
+  }, [a.directory.people, supplier]);
+
+  const askedName = a.request?.askedBy.name;
+  const defaultTarget = targets.find((t) => t.name === askedName)?.id ?? targets[0]?.id ?? '';
+  const [targetId, setTargetId] = useState('');
+  useEffect(() => setTargetId(defaultTarget), [defaultTarget]);
+  const target = targets.find((t) => t.id === targetId);
+  const escalateTo = a.directory.people
+    .filter((p) => p.escalationOrder && p.id !== target?.id)
+    .sort((x, y) => x.escalationOrder! - y.escalationOrder!)
+    .map((p) => ({ id: p.id, name: p.name, role: p.role, phoneMasked: p.phoneMasked }))[0];
 
   // Live pages: captions and opened emails arrive here from the content scripts.
+  const { onPage } = a;
   useEffect(() => {
     if (!IN_EXTENSION) return;
     const onMessage = (msg: unknown) => {
-      if (!isPageMessage(msg)) return;
-      // TODO: Step 1 → readTactics(msg.text) (src/lib/ai/tactics.ts), Step 2 checks, Step 3 local lists,
-      // then add the resulting signals. Kept out of the demo build until Firebase is configured.
-      console.debug('[FISHY] page message', msg.type);
+      if (isPageMessage(msg)) onPage(msg);
     };
     chrome.runtime.onMessage.addListener(onMessage);
     return () => chrome.runtime.onMessage.removeListener(onMessage);
-  }, []);
+  }, [onPage]);
 
   // Keep the in-page banner in step with the panel.
+  const who = first(call.target?.name);
   useEffect(() => {
-    const first = DEMO_REQUEST.askedBy.name.split(' ')[0];
-    if (call === 'not_me') void sendBanner('red', 'Not verified. Do not pay.', `The real ${first} pressed 2.`);
-    else if (call === 'confirmed') void sendBanner('confirmed', `${first} confirmed by phone.`, 'Pay through the normal approval.');
-    else if (verdict.level === 'fishy') void sendBanner('amber', `Something’s fishy: ${verdict.flags.length} red flags`, 'Hold the payment.');
-  }, [call, verdict]);
+    if (call.state === 'not_me') void sendBanner('red', 'Not verified. Do not pay.', `The real ${who} pressed 2.`);
+    else if (call.state === 'confirmed') void sendBanner('confirmed', `${who} confirmed by phone.`, 'Pay through the normal approval.');
+    else if (a.hasInput && a.verdict.level === 'fishy') void sendBanner('amber', `Something’s fishy: ${a.verdict.flags.length} red flags`, 'Hold the payment.');
+    else void sendBanner('hidden', '', '');
+  }, [call.state, who, a.hasInput, a.verdict]);
 
   // A new screen starts at the top.
   useEffect(() => {
@@ -61,25 +85,33 @@ export function App() {
   }, [screen]);
 
   const startCall = () => {
-    setCall('ringing');
-    if (DEMO) {
-      // Demo only: the real flow is the startVerificationCall Cloud Function + Twilio, reported back via Firestore.
-      window.setTimeout(() => setCall('not_me'), 3000);
-    }
+    if (!target) return;
+    void start(target, {
+      flags: a.verdict.flags.map((f) => f.kind),
+      patterns: a.verdict.patterns,
+      place: a.place,
+      amount: a.request?.amount.value ? a.request.amount : undefined,
+      payee: a.request ? `${a.request.payee.name} · ${a.request.payee.bank} ${a.request.payee.accountMasked}` : undefined,
+    });
   };
 
   const back = () => setScreen('verdict');
-  const paste = () => {
-    /* TODO: paste-text sheet (fallback when captions cannot be read) */
+  const open = (s: Screen) => setScreen(hasEvidence(s, a.evidence) ? s : 'verdict');
+  const flagScreen = (kind: SignalKind) => {
+    const s = screenFor(kind);
+    return hasEvidence(s, a.evidence) ? s : null;
   };
-  const isDetail = screen !== 'verdict' && screen !== 'directory';
-  const gmail = placeFor(screen) === 'gmail';
-  const live = `${DEMO ? 'Demo · ' : ''}${gmail ? 'Gmail · opened' : 'Meet · live'}`;
+
+  const ev = a.evidence;
+  const tabbed = screen === 'verdict' || screen === 'directory';
+  const gmail = (screen === 'verdict' ? a.place : placeFor(screen)) === 'gmail';
+  const live = `${a.mode === 'demo' ? 'Demo · ' : ''}${gmail ? 'Gmail · opened' : 'Meet · live'}`;
+  const error = a.error ?? callError;
 
   return (
     <>
-      <Header live={live} dot={!gmail} />
-      {!isDetail && (
+      <Header live={live} dot={!gmail} onSettings={() => setScreen('settings')} />
+      {tabbed && (
         <nav className="tabs" aria-label="Panel">
           <button className="tab" aria-current={screen === 'verdict' ? 'page' : undefined} onClick={() => setScreen('verdict')}>
             Check
@@ -90,23 +122,69 @@ export function App() {
         </nav>
       )}
 
-      {screen === 'verdict' && (
-        <Verdict request={DEMO_REQUEST} verdict={verdict} call={call} onCall={startCall} onPaste={paste} onOpen={setScreen} />
+      {error && (
+        <div style={{ padding: '16px 16px 0' }}>
+          <p className="error-line" role="alert">
+            <span>{error}</span>
+            <button onClick={() => a.setError(null)} aria-label="Dismiss">
+              ✕
+            </button>
+          </p>
+        </div>
       )}
-      {screen === 'directory' && <Directory people={DEMO_DIRECTORY} />}
-      {screen === 'tactics' && <Tactics data={evidence.tactics} onBack={back} onPaste={paste} />}
-      {screen === 'email' && <EmailLinks data={evidence.email} onBack={back} onOpenInvoice={() => setScreen('invoice')} />}
-      {screen === 'invoice' && <Invoice data={evidence.invoice} onBack={back} onOpenKnown={() => setScreen('known')} />}
-      {screen === 'voice' && (
-        <Voice
-          data={evidence.voice}
+
+      {screen === 'verdict' && (
+        <Verdict
+          request={a.request}
+          verdict={a.verdict}
+          hasInput={a.hasInput}
+          busy={a.busy}
+          call={call}
+          targets={targets}
+          targetId={targetId}
+          onTarget={setTargetId}
+          escalateTo={escalateTo}
+          onCall={startCall}
+          onCancel={cancel}
+          onOpenFlag={flagScreen}
+          onOpen={open}
+          onPaste={() => setScreen('paste')}
+        />
+      )}
+      {screen === 'directory' && <Directory people={a.directory.people} suppliers={a.directory.suppliers} />}
+      {screen === 'tactics' && ev.tactics && <Tactics data={ev.tactics} onBack={back} onPaste={() => setScreen('paste')} />}
+      {screen === 'email' && ev.email && <EmailLinks data={ev.email} onBack={back} onOpenInvoice={ev.invoice ? () => open('invoice') : a.emailOpen ? () => setScreen('paste') : undefined} />}
+      {screen === 'invoice' && ev.invoice && <Invoice data={ev.invoice} onBack={back} onOpenKnown={ev.known ? () => open('known') : undefined} />}
+      {screen === 'voice' && ev.voice && <Voice data={ev.voice} onBack={back} />}
+      {screen === 'known' && ev.known && <KnownScams data={ev.known} onBack={back} />}
+      {screen === 'paste' && (
+        <CheckYourself
+          busy={!!a.busy}
+          emailOpen={a.emailOpen}
           onBack={back}
-          onCheckFace={() => {
-            /* TODO (P1): send frames to the face-check Cloud Function, on click only */
+          onText={a.checkText}
+          onFile={a.checkInvoice}
+          onAttached={a.checkAttachedInvoice}
+        />
+      )}
+      {screen === 'settings' && (
+        <Settings
+          mode={a.mode}
+          rulesVersion={a.rules.version}
+          knownCount={a.knownCount}
+          onBack={back}
+          onDemo={() => {
+            cancel();
+            a.loadDemo();
+            back();
+          }}
+          onClear={() => {
+            cancel();
+            a.clear();
+            back();
           }}
         />
       )}
-      {screen === 'known' && <KnownScams data={evidence.known} onBack={back} />}
     </>
   );
 }

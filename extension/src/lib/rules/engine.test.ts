@@ -31,6 +31,14 @@ describe('decide', () => {
     expect(decide(only).level).toBe('clear');
   });
 
+  it('weighs pressure by the number of distinct tactics', () => {
+    const pressure = (strength: number): Signal[] => [
+      { kind: 'pressure_tactics', step: 'read', source: 'on_device', title: '', detail: '', strength },
+    ];
+    expect(decide(pressure(1)).level).toBe('clear');
+    expect(decide(pressure(3)).level).toBe('fishy');
+  });
+
   it('always advises a call-back, even when clear', () => {
     expect(decide([]).callAdvised).toBe(true);
   });

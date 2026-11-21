@@ -1,6 +1,6 @@
 import type { SignalKind } from '../lib/types';
 
-export type Screen = 'verdict' | 'tactics' | 'email' | 'invoice' | 'voice' | 'known' | 'directory';
+export type Screen = 'verdict' | 'tactics' | 'email' | 'invoice' | 'voice' | 'known' | 'directory' | 'paste' | 'settings';
 
 /** Which evidence screen a red flag opens. */
 export function screenFor(kind: SignalKind): Screen {

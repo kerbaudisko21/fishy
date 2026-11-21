@@ -50,6 +50,37 @@ h1, h2 { font-family: var(--font-head); margin: 0; }
 .btn.secondary { height: 44px; background: var(--surface); color: var(--ink); border: 1px solid #d9d5ca; font-size: 14px; font-weight: 500; }
 .hint { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); text-align: center; }
 
+/* ---------- Live states and forms ---------- */
+.icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.verdict.waiting { background: var(--surface); border: 1px dashed #cfcabd; }
+.verdict.waiting .eyebrow { color: var(--muted); }
+.verdict .escalate { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 12px; border-top: 1px solid #2a3b4b; font-size: 13px; color: #c9d2db; }
+.status-line { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.spinner { width: 14px; height: 14px; border-radius: 999px; border: 2px solid var(--line); border-top-color: var(--ink); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-line { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--danger-bg); color: var(--danger-text); font-size: 13px; line-height: 1.5; display: flex; gap: 8px; justify-content: space-between; align-items: flex-start; }
+.error-line button { border: 0; background: none; color: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; font-weight: 600; }
+.field select, .field textarea { font: 14px var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid #d9d5ca; border-radius: 12px; padding: 10px 12px; }
+.field select { height: 44px; }
+.field textarea { min-height: 160px; resize: vertical; line-height: 1.5; }
+.drop { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 20px; border: 1.5px dashed #cfcabd; border-radius: 14px; background: var(--surface); text-align: center; font-size: 13px; color: var(--muted); cursor: pointer; }
+.drop.over { border-color: var(--ink); background: #fbfaf7; }
+.drop strong { color: var(--ink); font-size: 14px; }
+.avatar { flex: none; width: 40px; height: 40px; border-radius: 999px; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.drop:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+.btn:disabled { opacity: .5; cursor: default; transform: none; }
+.flag:disabled { cursor: default; }
+.flag:disabled:hover { background: none; }
+.kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-weight: 600; text-align: right; }
+.progress { height: 8px; border-radius: 999px; background: var(--line-soft); overflow: hidden; }
+.progress span { display: block; height: 100%; background: var(--ink); transition: width .3s ease; }
+
 /* ---------- Detail screens ---------- */
 .detail-head { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .detail-head h1 { font-size: 24px; line-height: 1.15; }

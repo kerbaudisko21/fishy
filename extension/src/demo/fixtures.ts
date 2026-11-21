@@ -1,5 +1,5 @@
 // Synthetic demo data: one fictional company, its staff and suppliers. No real company data.
-import type { DirectoryPerson, Evidence, PaymentRequest, Signal } from '../lib/types';
+import type { DirectoryPerson, Evidence, KnownBadEntry, PaymentRequest, Signal, Supplier } from '../lib/types';
 
 export const DEMO_COMPANY = 'Kalindra Group';
 
@@ -23,7 +23,7 @@ export const DEMO_CAPTIONS = [
 ];
 
 export const DEMO_SIGNALS: Signal[] = [
-  { kind: 'pressure_tactics', step: 'read', source: 'on_device', title: 'Pressure in the request', detail: 'Urgency, secrecy and authority in the captions.' },
+  { kind: 'pressure_tactics', step: 'read', source: 'on_device', title: 'Pressure in the request', detail: 'Urgency, secrecy and authority in the captions.', strength: 4 },
   { kind: 'bank_account_changed', step: 'check', source: 'on_device', title: 'Bank account changed', detail: 'The invoice account differs from the last 6 payments to Sinar Logistik.' },
   { kind: 'lookalike_sender', step: 'check', source: 'on_device', title: 'Lookalike sender', detail: 'sinar-logistik.co, 9 days old. On record: sinarlogistik.co.id.' },
   { kind: 'known_bad_account', step: 'match', source: 'on_device', title: 'Known scam account', detail: 'Mandiri •••• 9032 is in 2 confirmed scams.', seenCount: 2 },
@@ -69,6 +69,7 @@ export const DEMO_EVIDENCE: Evidence = {
     ],
     pattern: 'Executive asks for a secret, urgent transfer',
     rulesVersion: 14,
+    source: 'on_device',
   },
   email: {
     sender: {
@@ -131,3 +132,37 @@ export const DEMO_DIRECTORY: DirectoryPerson[] = [
   { id: 'sari', name: 'Sari Wijaya', role: 'Finance Director', phoneMasked: '+62 811 •••• 0937', escalationOrder: 1, pinSet: true },
   { id: 'andre', name: 'Andre Halim', role: 'CEO', phoneMasked: '+62 813 •••• 5528', escalationOrder: 2, pinSet: true },
 ];
+
+export const DEMO_SUPPLIERS: Supplier[] = [
+  {
+    id: 'sinar',
+    name: 'PT Sinar Logistik',
+    domain: 'sinarlogistik.co.id',
+    contact: { name: 'Dewi Lestari', role: 'Billing', phoneMasked: '+62 21 •••• 7710' },
+    account: { bank: 'BCA', masked: '•••• 4471', holder: 'PT Sinar Logistik' },
+    paidMonths: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
+  },
+  {
+    id: 'mitra',
+    name: 'PT Mitra Kemas',
+    domain: 'mitrakemas.id',
+    contact: { name: 'Yusuf Rahman', role: 'Finance', phoneMasked: '+62 31 •••• 2046' },
+    account: { bank: 'BNI', masked: '•••• 1185', holder: 'PT Mitra Kemas' },
+    paidMonths: ['Aug', 'Sep', 'Oct', 'Nov'],
+  },
+];
+
+export const DEMO_KNOWN_BAD: KnownBadEntry[] = [
+  {
+    kind: 'account',
+    value: '9032',
+    display: 'Mandiri •••• 9032',
+    count: 2,
+    events: [
+      { date: '14 Nov', what: 'Fake CFO on a video call · another company' },
+      { date: '3 Nov', what: 'Supplier invoice by email · another company' },
+    ],
+  },
+  { kind: 'domain', value: 'sinar-logistik.co', display: 'sinar-logistik.co', count: 1 },
+];
+

@@ -6,7 +6,22 @@ A Chrome extension that spots social-engineering scams in Google Meet and Gmail,
 
 Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) (Web / Chrome) with **Firebase AI Logic hybrid inference**: Gemini Nano reads private content on the laptop, and Gemini in the cloud takes over (on redacted text) when Nano is not available.
 
-> Status: project skeleton. The build runs 22–30 Nov 2026; submission is due 1 Dec 2026, 05:00 WIB.
+> The build runs 22–30 Nov 2026; submission is due 1 Dec 2026, 05:00 WIB.
+
+## Status
+
+| Part | State |
+|---|---|
+| Side panel: Verdict, 5 evidence screens, Directory, Check it yourself, Settings | Built; runs on demo data or live input |
+| Step 1 Read: Firebase AI Logic hybrid (Nano on device, cloud on redacted text) | Built; needs a Firebase config to call Gemini (offline it falls back to a labelled keyword reader) |
+| Step 2 Check: look-alike sender, invoice PDF (account vs record, edit traces) | Built, on device, with tests |
+| Step 2 Check: Web Risk links | Frontend built; `checkLinks` function not built |
+| Step 3 Match: known bad accounts, domains, numbers | Built, on device, cached from Firestore |
+| Step 4 Call: create check, start call, follow state, escalation countdown | Frontend built; `startVerificationCall` and the Twilio webhooks not built |
+| Web approval page and incident report (+ team alerts) | Built; their functions are stubs |
+| Voice and face scores (P1) | Screens built; scoring not built |
+
+Function contracts (inputs and outputs) are written above each stub in [functions/src/index.ts](functions/src/index.ts).
 
 ## How it works
 
@@ -56,7 +71,9 @@ cp extension/.env.example extension/.env.local   # fill in Firebase config
 npm run dev              # builds the extension into extension/dist with hot reload
 ```
 
-Load it: `chrome://extensions` → Developer mode → **Load unpacked** → `extension/dist`. Click the FISHY icon to open the side panel. `VITE_DEMO_MODE=true` runs on the synthetic demo company.
+Load it: `chrome://extensions` → Developer mode → **Load unpacked** → `extension/dist`. Click the FISHY icon to open the side panel. `VITE_DEMO_MODE=true` starts on the synthetic demo company; any live input (captions, an opened email, pasted text, an invoice) switches to a live check. Settings → "Load the demo case" brings it back.
+
+Design preview without installing: `npm run build -w extension`, then `npx vite preview extension` and open `/src/sidepanel/index.html` at 400 px wide. The web pages run on demo data without a config: `npm run dev -w web`, then `/?demo` and `/incident?demo`.
 
 ### Gemini Nano on the laptop
 
@@ -69,6 +86,15 @@ Load it: `chrome://extensions` → Developer mode → **Load unpacked** → `ext
 - Enable **Firebase AI Logic** (Gemini Developer API), **App Check**, **Authentication** (Anonymous), **Firestore**, **Remote Config**, **Cloud Functions** (Blaze plan).
 - App Check: the extension cannot load reCAPTCHA, so it uses a **debug token** (accepted by #BuildHybridAI). Register it under App Check → Apps → Manage debug tokens and put it in `extension/.env.local`. Never commit it.
 - Copy `.firebaserc.example` to `.firebaserc` with your project id.
+
+### Firestore data
+
+| Collection | Who reads it | Fields |
+|---|---|---|
+| `directory/{id}` | Cloud Functions only | full phone, PIN hash |
+| `directoryPublic/{id}` | the side panel | person: `{ type: 'person', name, role, phoneMasked, escalationOrder?, pinSet }` · supplier: `{ type: 'supplier', name, domain, contact: { name, role, phoneMasked }, account: { bank, masked, holder }, paidMonths: string[] }` |
+| `knownBad/{id}` | the side panel (cached 1 h) | `{ kind: 'account' \| 'domain' \| 'phone', value, display, count, events?: [{ date, what }] }` (accounts: last 4 digits) |
+| `checks/{id}` | owner; `call` written by Functions | `{ ownerUid, createdAt, summary: { flags, patterns, place, amount?, payee? }, call?: { state, escalateAt?, escalatedTo? } }` |
 
 ## Scripts
 

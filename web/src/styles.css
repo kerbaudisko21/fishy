@@ -21,12 +21,13 @@ h1 { margin: 0; font-family: 'Space Grotesk Variable', system-ui, sans-serif; fo
 label { font-size: 13px; font-weight: 600; }
 input { height: 52px; padding: 0 16px; border-radius: 14px; border: 1px solid #d9d5ca; background: #fff; font-size: 22px; letter-spacing: .4em; color: var(--ink); }
 
-.btn { height: 54px; border-radius: 14px; border: 0; font: 700 15px inherit; font-family: inherit; cursor: pointer; }
+.btn { height: 54px; border-radius: 14px; border: 0; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .12s ease; }
+.btn:active { transform: scale(.98); }
 .btn:disabled { opacity: .5; cursor: default; }
 .btn.danger { background: var(--danger); color: #fff; font-size: 16px; }
 .btn.primary { background: var(--ink); color: #fff; }
 .btn.secondary { background: #fff; color: var(--ink); border: 1px solid #d9d5ca; font-weight: 600; }
-.link { min-height: 44px; border: 0; background: none; color: var(--ink-2); font: 600 14px inherit; font-family: inherit; cursor: pointer; }
+.link { min-height: 44px; border: 0; background: none; color: var(--ink-2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .error { margin: 0; color: var(--danger); font-size: 13px; }
 
 .result { border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5; }
@@ -35,3 +36,19 @@ input { height: 52px; padding: 0 16px; border-radius: 14px; border: 1px solid #d
 .result.ok { background: var(--ok-bg); border: 1px solid var(--ok-line); color: #0b3f38; }
 
 .foot { margin: auto 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); text-align: center; }
+
+/* Incident report (dark, like the phone screens in the design) */
+.page.dark { background: #0f1c28; color: #fff; }
+html:has(.page.dark), body:has(.page.dark) { background: #0f1c28; }
+.page.dark .brand small, .page.dark .muted, .page.dark .foot { color: #a9b6c2; }
+.panel { border-radius: 22px; background: #172838; border: 1px solid #263a4c; padding: 20px 18px; display: flex; flex-direction: column; gap: 16px; font-size: 14px; }
+.panel h1 { font-size: 24px; line-height: 1.15; }
+.facts { margin: 0; display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 10px 12px; font-size: 13px; line-height: 1.45; }
+.facts dt { color: #a9b6c2; }
+.facts dd { margin: 0; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: #ffb4a3; }
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chips li { font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: #22364a; }
+.btn.brand { background: #f26b4e; color: #0f1c28; }
+.btn.ghost { background: transparent; color: #fff; border: 1px solid #34495c; font-weight: 600; }
+.link.light { color: #ffd3c8; }

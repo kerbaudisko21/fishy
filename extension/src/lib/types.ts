@@ -32,6 +32,8 @@ export interface Signal {
   score?: number;
   /** For known-bad matches: how many confirmed scams it was seen in. */
   seenCount?: number;
+  /** How strong the signal is, e.g. the number of distinct pressure tactics. The rules multiply its weight by this (default 1). */
+  strength?: number;
 }
 
 export type VerdictLevel = 'clear' | 'fishy';
@@ -78,32 +80,41 @@ export interface BankAccount {
   holder: string;
 }
 
+export interface KnownMatchView {
+  value: string;
+  count: number;
+  note?: string;
+  events?: Array<{ date: string; what: string }>;
+}
+
+/** Each section is filled by its check; a screen only opens when its section exists. */
 export interface Evidence {
-  tactics: {
+  tactics?: {
     counts: Array<{ tactic: Tactic; label: string; count: number; example: string }>;
     captions: CaptionLine[];
     window: string;
-    pattern: string;
+    pattern?: string;
     rulesVersion: number;
+    source: Source;
   };
-  email: {
+  email?: {
     sender: { name: string; address: Array<{ text: string; changed?: boolean }> };
-    onRecord: { name: string; address: string; paidTimes: number };
+    onRecord?: { name: string; address: string; paidTimes: number };
     checks: CheckItem[];
-    attachment: string;
+    attachment?: string;
   };
-  invoice: {
+  invoice?: {
     number: string;
     supplier: string;
-    from: string;
-    due: string;
-    amount: { value: number; currency: string };
+    from?: string;
+    due?: string;
+    amount?: { value: number; currency: string };
     newAccount: BankAccount;
-    usual: BankAccount & { months: string[] };
+    usual?: BankAccount & { months: string[] };
     traces: CheckItem[];
     knownScams: number;
   };
-  voice: {
+  voice?: {
     speaker: string;
     seconds: number;
     sentAt: string;
@@ -111,9 +122,9 @@ export interface Evidence {
     score: number;
     faceFrames: number;
   };
-  known: {
-    matches: Array<{ value: string; count: number; note?: string; events?: Array<{ date: string; what: string }> }>;
-    pattern: { name: string; bullets: string[] };
+  known?: {
+    matches: KnownMatchView[];
+    pattern?: { name: string; bullets: string[] };
     rulesVersion: number;
     updated: string;
   };
@@ -127,4 +138,45 @@ export interface DirectoryPerson {
   phoneMasked: string;
   escalationOrder?: number;
   pinSet: boolean;
+}
+
+/** A supplier on record, from Firestore `directoryPublic` (masked values only). */
+export interface Supplier {
+  id: string;
+  name: string;
+  /** Registrable domain on record, e.g. sinarlogistik.co.id */
+  domain: string;
+  contact: { name: string; role: string; phoneMasked: string };
+  account: BankAccount;
+  /** Months of past payments to the account on record, oldest first, e.g. ["Jun", …, "Nov"]. */
+  paidMonths: string[];
+}
+
+export type KnownKind = 'account' | 'domain' | 'phone';
+
+/** A confirmed bad detail from Firestore `knownBad`, cached on the laptop. */
+export interface KnownBadEntry {
+  kind: KnownKind;
+  /** Normalised: digits only for accounts and phones, lower-case registrable domain. */
+  value: string;
+  /** How it is shown, e.g. "Mandiri •••• 9032". */
+  display: string;
+  count: number;
+  events?: Array<{ date: string; what: string }>;
+}
+
+/** Someone FISHY may call: an approver or a supplier contact on record. */
+export interface CallTarget {
+  id: string;
+  name: string;
+  role: string;
+  phoneMasked: string;
+}
+
+export interface CallStatus {
+  state: CallState;
+  target?: CallTarget;
+  /** When the call escalates to the next approver (ms since epoch). */
+  escalateAt?: number;
+  escalatedTo?: string;
 }

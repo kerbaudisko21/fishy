@@ -9,6 +9,8 @@ export interface ScamPattern {
   name: string;
   /** All of these must be present for the pattern to match. */
   requires: SignalKind[];
+  /** Plain-language signs, shown on the Known scams screen. */
+  signs?: string[];
 }
 
 export interface RulesConfig {
@@ -25,7 +27,8 @@ export const DEFAULT_RULES: RulesConfig = {
   version: 1,
   alwaysFishy: ['bank_account_changed', 'known_bad_account', 'known_bad_domain', 'unsafe_link'],
   weights: {
-    pressure_tactics: 2,
+    // Per distinct tactic: one ("need it today") stays clear, three or more (urgent + secret + skip approval) is fishy.
+    pressure_tactics: 1,
     lookalike_sender: 3,
     sender_auth_failed: 2,
     young_domain: 1,
@@ -35,7 +38,15 @@ export const DEFAULT_RULES: RulesConfig = {
   },
   threshold: 3,
   patterns: [
-    { name: 'Vendor bank change', requires: ['bank_account_changed'] },
+    {
+      name: 'Vendor bank change',
+      requires: ['bank_account_changed'],
+      signs: [
+        'New account for a supplier you already pay',
+        'Asked for in a rush, outside the usual approval',
+        'Request comes from a boss or the supplier, not both',
+      ],
+    },
     { name: 'Executive asks for a secret, urgent transfer', requires: ['pressure_tactics'] },
     { name: 'Lookalike supplier invoice', requires: ['lookalike_sender', 'bank_account_changed'] },
   ],
@@ -62,7 +73,8 @@ const ORDER: SignalKind[] = [
  */
 export function decide(signals: Signal[], rules: RulesConfig = DEFAULT_RULES): Verdict {
   const kinds = new Set(signals.map((s) => s.kind));
-  const score = [...kinds].reduce((sum, k) => sum + (rules.weights[k] ?? 0), 0);
+  const strength = (k: SignalKind) => Math.max(1, ...signals.filter((s) => s.kind === k).map((s) => s.strength ?? 1));
+  const score = [...kinds].reduce((sum, k) => sum + (rules.weights[k] ?? 0) * strength(k), 0);
   const hard = rules.alwaysFishy.some((k) => kinds.has(k));
   const level = hard || score >= rules.threshold ? 'fishy' : 'clear';
 

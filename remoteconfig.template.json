@@ -2,9 +2,9 @@
   "parameters": {
     "scam_rules": {
       "defaultValue": {
-        "value": "{\"version\":1,\"alwaysFishy\":[\"bank_account_changed\",\"known_bad_account\",\"known_bad_domain\",\"unsafe_link\"],\"weights\":{\"pressure_tactics\":2,\"lookalike_sender\":3,\"sender_auth_failed\":2,\"young_domain\":1,\"pdf_edited\":2,\"voice_score\":1,\"face_score\":1},\"threshold\":3,\"patterns\":[{\"name\":\"Vendor bank change\",\"requires\":[\"bank_account_changed\"]},{\"name\":\"Executive asks for a secret, urgent transfer\",\"requires\":[\"pressure_tactics\"]},{\"name\":\"Lookalike supplier invoice\",\"requires\":[\"lookalike_sender\",\"bank_account_changed\"]}]}"
+        "value": "{\"version\":14,\"alwaysFishy\":[\"bank_account_changed\",\"known_bad_account\",\"known_bad_domain\",\"unsafe_link\"],\"weights\":{\"pressure_tactics\":1,\"lookalike_sender\":3,\"sender_auth_failed\":2,\"young_domain\":1,\"pdf_edited\":2,\"voice_score\":1,\"face_score\":1},\"threshold\":3,\"patterns\":[{\"name\":\"Vendor bank change\",\"requires\":[\"bank_account_changed\"],\"signs\":[\"New account for a supplier you already pay\",\"Asked for in a rush, outside the usual approval\",\"Request comes from a boss or the supplier, not both\"]},{\"name\":\"Executive asks for a secret, urgent transfer\",\"requires\":[\"pressure_tactics\"]},{\"name\":\"Lookalike supplier invoice\",\"requires\":[\"lookalike_sender\",\"bank_account_changed\"]}]}"
       },
-      "description": "Rules engine config. Must match DEFAULT_RULES in extension/src/lib/rules/engine.ts.",
+      "description": "Rules engine config. Shape: RulesConfig in extension/src/lib/rules/engine.ts.",
       "valueType": "JSON"
     },
     "meet_caption_selectors": {

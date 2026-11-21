@@ -23,20 +23,29 @@ export const Icon = {
   check: (s = 13) => svg(s, <path d="M5 12.5l4.5 4.5L19 7" />, 2.6),
   bang: (s = 13) => svg(s, <path d="M12 6v8M12 18v.5" />, 2.6),
   mail: (s = 13) => svg(s, <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></>, 2),
+  clock: (s = 16) => svg(s, <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>),
+  phone: (s = 18) => svg(s, <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" />, 1.9),
+  sliders: (s = 18) => svg(s, <><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></>),
+  upload: (s = 16) => svg(s, <><path d="M12 16V4M7 9l5-5 5 5" /><path d="M5 20h14" /></>),
 };
 
 /* ---------- Shell ---------- */
 
-export function Header({ live, dot = true }: { live: string; dot?: boolean }) {
+export function Header({ live, dot = true, onSettings }: { live: string; dot?: boolean; onSettings: () => void }) {
   return (
     <header className="header">
       <span className="brand">
         <img src="/icons/icon-48.png" alt="" />
         FISHY
       </span>
-      <span className="live">
-        {dot ? <span className="live-dot" /> : Icon.mail()}
-        {live}
+      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span className="live">
+          {dot ? <span className="live-dot" /> : Icon.mail()}
+          {live}
+        </span>
+        <button className="icon-btn" aria-label="Settings" onClick={onSettings}>
+          {Icon.sliders()}
+        </button>
       </span>
     </header>
   );
@@ -56,9 +65,9 @@ export function SourceBadge({ source, label }: { source: Source; label?: string 
   );
 }
 
-export function FlagRow({ flag, onOpen }: { flag: Signal; onOpen: () => void }) {
+export function FlagRow({ flag, onOpen }: { flag: Signal; onOpen?: () => void }) {
   return (
-    <button className="flag" onClick={onOpen}>
+    <button className="flag" onClick={onOpen} disabled={!onOpen}>
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span className="flag-title">{flag.title}</span>
         <span className="flag-detail">{flag.detail}</span>
@@ -67,7 +76,7 @@ export function FlagRow({ flag, onOpen }: { flag: Signal; onOpen: () => void }) 
           <SourceBadge source={flag.source} label={flag.source === 'cloud' && flag.score !== undefined ? 'Cloud · on click' : undefined} />
         </span>
       </span>
-      <span style={{ flex: 'none', marginTop: 8, color: '#8a949e' }}>{Icon.chevron()}</span>
+      {onOpen && <span style={{ flex: 'none', marginTop: 8, color: '#8a949e' }}>{Icon.chevron()}</span>}
     </button>
   );
 }
@@ -79,17 +88,19 @@ export function DetailHead({
   step,
   badges,
   onBack,
+  backLabel = 'Verdict',
 }: {
   title: string;
   step: string;
   badges: Array<{ source: Source; label?: string }>;
   onBack: () => void;
+  backLabel?: string;
 }) {
   return (
     <div className="detail-head">
       <button className="back" onClick={onBack}>
         {Icon.back()}
-        Verdict
+        {backLabel}
       </button>
       <h1>{title}</h1>
       <div className="meta wrap">
