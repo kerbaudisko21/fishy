@@ -1,5 +1,5 @@
 import type { DirectoryPerson, Supplier } from '../../lib/types';
-import { Icon, Note } from '../components';
+import { Privacy, Section } from '../components';
 
 const initials = (name: string) =>
   name
@@ -15,17 +15,9 @@ export function Directory({ people, suppliers }: { people: DirectoryPerson[]; su
   const ordered = [...people].sort((a, b) => (a.escalationOrder ?? 0) - (b.escalationOrder ?? 0));
   return (
     <main className="main">
-      <Note>Numbers are set by your admin. FISHY only calls these, never a number from a message.</Note>
-
-      <section className="card clip" aria-label="Approvers">
-        <div className="card-head" style={{ padding: '14px 16px 10px' }}>
-          <h2 className="card-title" style={{ padding: 0 }}>
-            Approvers
-          </h2>
-          <span className="small">called in this order</span>
-        </div>
-        {ordered.length === 0 && <p className="row-detail" style={{ padding: '0 16px 14px', margin: 0 }}>No approvers on record yet.</p>}
-        <ol className="rows">
+      <Section title="Approvers" aside="Called in this order">
+        <ol className="rows surface">
+          {ordered.length === 0 && <li className="check-row row-detail">No approvers on record yet.</li>}
           {ordered.map((p, i) => (
             <li key={p.id} className="check-row" style={{ alignItems: 'center' }}>
               <span className="avatar" style={{ background: SHADES[Math.min(i, SHADES.length - 1)] }} aria-hidden="true">
@@ -34,7 +26,7 @@ export function Directory({ people, suppliers }: { people: DirectoryPerson[]; su
               <span className="grow">
                 <span className="row-title">{p.name}</span>
                 <span className="row-detail">
-                  {p.role} · <span className="mono">{p.phoneMasked}</span>
+                  {p.role}, <span className="mono">{p.phoneMasked}</span>
                 </span>
               </span>
               {p.escalationOrder ? (
@@ -47,29 +39,28 @@ export function Directory({ people, suppliers }: { people: DirectoryPerson[]; su
             </li>
           ))}
         </ol>
-      </section>
+      </Section>
 
-      <section className="card clip" aria-label="Suppliers">
-        <h2 className="card-title">Suppliers</h2>
-        <ul className="rows">
+      <Section title="Suppliers" aside="The account we usually pay">
+        <ul className="rows surface">
           {suppliers.map((s) => (
             <li key={s.id} className="check-row" style={{ flexDirection: 'column', gap: 4 }}>
-              <span className="row-title">{s.name}</span>
-              <span className="row-detail">
-                {s.contact.name}, {s.contact.role.toLowerCase()} · <span className="mono">{s.contact.phoneMasked}</span>
+              <span className="card-head" style={{ width: '100%' }}>
+                <span className="row-title">{s.name}</span>
+                <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>
+                  {s.account.bank} {s.account.masked}
+                </span>
               </span>
               <span className="row-detail">
-                Pays to <span className="mono" style={{ color: 'var(--ink)' }}>{s.account.bank} {s.account.masked}</span> · {s.domain}
+                {s.contact.name}, <span className="mono">{s.contact.phoneMasked}</span>
               </span>
+              <span className="row-detail">{s.domain}</span>
             </li>
           ))}
         </ul>
-      </section>
+      </Section>
 
-      <p className="hint" style={{ textAlign: 'left', display: 'flex', gap: 8 }}>
-        <span className="note-icon">{Icon.lock(14)}</span>
-        View only. Admins change numbers, PINs and accounts in the Firebase console.
-      </p>
+      <Privacy>FISHY only calls these numbers, never one from a message. Admins change them in the Firebase console.</Privacy>
     </main>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { nanoStatus, prepareNano, type NanoStatus } from '../../lib/ai/tactics';
 import { FIREBASE_READY } from '../../lib/config';
-import { DetailHead, Icon } from '../components';
+import { DetailHead, Icon, Section } from '../components';
 
 interface Props {
   mode: 'demo' | 'live';
@@ -46,10 +46,10 @@ export function Settings({ mode, rulesVersion, knownCount, onBack, onDemo, onCle
 
   return (
     <>
-      <DetailHead title="Settings" step="HOW FISHY RUNS" badges={[]} onBack={onBack} />
+      <DetailHead title="Settings" kicker="How FISHY runs" badges={[]} onBack={onBack} />
       <main className="main">
-        <section className="card card-pad" aria-label="Gemini Nano">
-          <span className="eyebrow">GEMINI NANO · ON DEVICE</span>
+        <Section title="Gemini Nano on this laptop">
+        <div className="surface card-pad">
           {nano ? (
             <>
               <span className="row-title">{NANO_TEXT[nano].title}</span>
@@ -70,10 +70,11 @@ export function Settings({ mode, rulesVersion, knownCount, onBack, onDemo, onCle
             </button>
           )}
           {error && <p className="error-line">{error}</p>}
-        </section>
+        </div>
+        </Section>
 
-        <section className="card card-pad" aria-label="Connection">
-          <span className="eyebrow">CONNECTION</span>
+        <Section title="Connection">
+        <div className="surface card-pad">
           <dl className="kv">
             <dt>Firebase</dt>
             <dd>{FIREBASE_READY ? 'Connected' : 'Not set up (offline)'}</dd>
@@ -84,10 +85,11 @@ export function Settings({ mode, rulesVersion, knownCount, onBack, onDemo, onCle
             <dt>Known bad details</dt>
             <dd>{knownCount}</dd>
           </dl>
-        </section>
+        </div>
+        </Section>
 
-        <section className="card card-pad" aria-label="Demo">
-          <span className="eyebrow">DEMO</span>
+        <Section title="Demo">
+        <div className="surface card-pad">
           <span className="row-detail">
             {mode === 'demo' ? 'Showing the synthetic Kalindra Group case.' : 'Showing live checks from this browser.'}
           </span>
@@ -99,7 +101,8 @@ export function Settings({ mode, rulesVersion, knownCount, onBack, onDemo, onCle
               Clear this check
             </button>
           </div>
-        </section>
+        </div>
+        </Section>
       </main>
     </>
   );

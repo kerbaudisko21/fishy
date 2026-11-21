@@ -1,20 +1,22 @@
-/* Design tokens from the FISHY screen designs canvas. */
+/* Design tokens. Navy and coral come from the logo; the page sits on a cool tide grey. */
 :root {
   --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
   --font-head: 'Space Grotesk Variable', 'Space Grotesk', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  --bg: #f6f5f1;
+  --bg: #eaeff1; /* tide */
   --surface: #ffffff;
-  --surface-muted: #f1efe8;
-  --note: #e9e6dd;
-  --line: #e3e0d7;
-  --line-soft: #eeebe3;
-  --ink: #10202e;
-  --ink-2: #3b4752;
-  --muted: #5b6672;
+  --surface-muted: #f2f5f6;
+  --note: #e1e8eb;
+  --line: #d9e1e4;
+  --line-soft: #e8eef0;
+  --ink: #10202e; /* navy, from the logo */
+  --ink-2: #34434f;
+  --muted: #5a6874;
+  --navy-2: #1b3042;
+  --on-navy: #c8d3dc;
 
-  --brand: #f26b4e; /* fills and the logo only; too light for text */
+  --brand: #f26b4e; /* coral, from the logo: fills only, too light for text on white */
   --brand-text: #b83a22;
 
   --amber-bg: #fff1d6;
@@ -26,7 +28,7 @@
   --danger-text: #a3260f;
 
   --ok: #0e5a50;
-  --ok-bg: #ddf1ec;
+  --ok-bg: #d6eee7;
   --ok-line: #9fd3c7;
 
   --cloud-bg: #e3ecf7;
@@ -34,5 +36,5 @@
 
   --r-sm: 10px;
   --r-md: 14px;
-  --r-lg: 16px;
+  --r-lg: 18px;
 }

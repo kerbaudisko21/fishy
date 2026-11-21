@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { CheckItem, Signal, Source } from '../lib/types';
+import type { CheckItem, Signal, SignalKind, Source, Step } from '../lib/types';
 
 /* ---------- Icons (inline stroke SVG, decorative) ---------- */
 
@@ -28,27 +28,132 @@ export const Icon = {
   sliders: (s = 18) => svg(s, <><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></>),
   wave: (s = 16) => svg(s, <path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2" />),
   upload: (s = 16) => svg(s, <><path d="M12 16V4M7 9l5-5 5 5" /><path d="M5 20h14" /></>),
+  bank: (s = 18) => svg(s, <><path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" /></>),
+  speech: (s = 18) => svg(s, <><path d="M4 5h16v11H9l-5 4V5z" /><path d="M12 8v3M12 13.5v.01" /></>),
+  link: (s = 18) => svg(s, <><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></>),
+  face: (s = 18) => svg(s, <><circle cx="12" cy="12" r="9" /><path d="M9 10v.01M15 10v.01M9 15c1.7 1.3 4.3 1.3 6 0" /></>),
+  video: (s = 18) => svg(s, <><rect x="3" y="6" width="13" height="12" rx="2" /><path d="M16 10l5-3v10l-5-3" /></>),
 };
+
+/** One icon per kind of red flag, so a list of flags can be scanned without reading. */
+export function flagIcon(kind: SignalKind, size = 18) {
+  switch (kind) {
+    case 'pressure_tactics':
+      return Icon.speech(size);
+    case 'bank_account_changed':
+    case 'known_bad_account':
+      return Icon.bank(size);
+    case 'pdf_edited':
+      return Icon.file(size);
+    case 'lookalike_sender':
+    case 'sender_auth_failed':
+    case 'young_domain':
+    case 'known_bad_domain':
+      return Icon.mail(size);
+    case 'unsafe_link':
+      return Icon.link(size);
+    case 'voice_score':
+      return Icon.wave(size);
+    case 'face_score':
+      return Icon.face(size);
+    default:
+      return Icon.database(size);
+  }
+}
 
 /* ---------- Shell ---------- */
 
-export function Header({ live, dot = true, onSettings }: { live: string; dot?: boolean; onSettings: () => void }) {
+export type Tab = 'verdict' | 'directory';
+
+export function Header({
+  where,
+  demo,
+  tab,
+  onTab,
+  onSettings,
+}: {
+  /** Where FISHY is listening right now, or null when it is only watching. */
+  where: 'meet' | 'gmail' | 'paste' | null;
+  demo: boolean;
+  /** The tab bar shows only on the two top-level screens. */
+  tab?: Tab;
+  onTab: (t: Tab) => void;
+  onSettings: () => void;
+}) {
+  const label = where === 'meet' ? 'Meet' : where === 'gmail' ? 'Gmail' : 'Pasted';
   return (
     <header className="header">
-      <span className="brand">
-        <img src="/icons/icon-48.png" alt="" />
-        FISHY
-      </span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span className="live">
-          {dot ? <span className="live-dot" /> : Icon.mail()}
-          {live}
+      <div className="header-row">
+        <span className="brand">
+          <img src="/icons/icon-48.png" alt="" />
+          FISHY
         </span>
-        <button className="icon-btn" aria-label="Settings" onClick={onSettings}>
-          {Icon.sliders()}
-        </button>
-      </span>
+        <span className="header-tools">
+          {demo && <span className="demo-tag">Demo</span>}
+          {where && (
+            <span className="live">
+              {where === 'meet' ? <span className="live-dot" /> : where === 'gmail' ? Icon.mail(12) : Icon.clipboard(12)}
+              {label}
+            </span>
+          )}
+          <button className="icon-btn" aria-label="Settings" onClick={onSettings}>
+            {Icon.sliders()}
+          </button>
+        </span>
+      </div>
+      {tab && (
+        <nav className="tabs" aria-label="Panel">
+          <button className="tab" aria-current={tab === 'verdict' ? 'page' : undefined} onClick={() => onTab('verdict')}>
+            Check
+          </button>
+          <button className="tab" aria-current={tab === 'directory' ? 'page' : undefined} onClick={() => onTab('directory')}>
+            Directory
+          </button>
+        </nav>
+      )}
     </header>
+  );
+}
+
+export const STEPS: Array<{ id: Step; label: string }> = [
+  { id: 'read', label: 'Read' },
+  { id: 'check', label: 'Check' },
+  { id: 'match', label: 'Match' },
+  { id: 'call', label: 'Call' },
+];
+
+export type StepState = 'done' | 'now' | 'todo' | 'flagged';
+
+/** The four steps on one line. Used in the verdict and, small, on every evidence screen. */
+export function StepTrack({ states, small }: { states: Record<Step, StepState>; small?: boolean }) {
+  return (
+    <ol className={`track${small ? ' small' : ''}`} aria-label="Steps">
+      {STEPS.map((s, i) => (
+        <li key={s.id} className={`track-step ${states[s.id]}`}>
+          <span className="track-node" aria-hidden="true">
+            {states[s.id] === 'done' ? Icon.check(small ? 9 : 11) : states[s.id] === 'flagged' ? Icon.bang(small ? 9 : 11) : small ? null : i + 1}
+          </span>
+          <span className="track-label">
+            {s.label}
+            <span className="visually-hidden">
+              {states[s.id] === 'done' ? ', done' : states[s.id] === 'flagged' ? ', red flags' : states[s.id] === 'now' ? ', current step' : ', not yet'}
+            </span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+export function Section({ title, aside, children, label }: { title: ReactNode; aside?: ReactNode; children: ReactNode; label?: string }) {
+  return (
+    <section className="section" aria-label={label ?? (typeof title === 'string' ? title : undefined)}>
+      <div className="section-head">
+        <h2>{title}</h2>
+        {aside && <span className="section-aside">{aside}</span>}
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -66,59 +171,92 @@ export function SourceBadge({ source, label }: { source: Source; label?: string 
   );
 }
 
-export function FlagRow({ flag, onOpen }: { flag: Signal; onOpen?: () => void }) {
+export function FlagRow({ flag, onOpen, showSource }: { flag: Signal; onOpen?: () => void; showSource?: boolean }) {
   return (
     <button className="flag" onClick={onOpen} disabled={!onOpen}>
-      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span className="flag-icon">{flagIcon(flag.kind)}</span>
+      <span className="grow" style={{ gap: 3 }}>
         <span className="flag-title">{flag.title}</span>
         <span className="flag-detail">{flag.detail}</span>
-        <span className="meta">
-          <span className="step-label">{flag.step.toUpperCase()}</span>
-          <SourceBadge source={flag.source} label={flag.source === 'cloud' && flag.score !== undefined ? 'Cloud · on click' : undefined} />
-        </span>
+        {showSource && (
+          <span className="meta">
+            <SourceBadge source={flag.source} label={flag.source === 'cloud' && flag.score !== undefined ? 'Cloud, on click' : undefined} />
+          </span>
+        )}
       </span>
-      {onOpen && <span style={{ flex: 'none', marginTop: 8, color: '#8a949e' }}>{Icon.chevron()}</span>}
+      {onOpen && <span className="flag-chevron">{Icon.chevron(16)}</span>}
+    </button>
+  );
+}
+
+/** A big tap target with an icon, for the "check more" actions. */
+export function Tile({ icon, title, detail, onClick, disabled }: { icon: ReactNode; title: string; detail?: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button className="tile-btn" onClick={onClick} disabled={disabled}>
+      <span className="tile-icon">{icon}</span>
+      <span className="tile-title">{title}</span>
+      {detail && <span className="tile-detail">{detail}</span>}
     </button>
   );
 }
 
 /* ---------- Detail screens ---------- */
 
+const NUMBER: Record<Step, number> = { read: 1, check: 2, match: 3, call: 4 };
+
 export function DetailHead({
   title,
   step,
+  kicker,
   badges,
   onBack,
-  backLabel = 'Verdict',
+  backLabel = 'Back to the check',
 }: {
   title: string;
-  step: string;
+  /** The step this evidence belongs to; draws the small step track. */
+  step?: Step;
+  /** A short line above the title on screens that are not a step. */
+  kicker?: string;
   badges: Array<{ source: Source; label?: string }>;
   onBack: () => void;
   backLabel?: string;
 }) {
+  const states = step
+    ? (Object.fromEntries(Object.entries(NUMBER).map(([k, n]) => [k, n < NUMBER[step] ? 'done' : n === NUMBER[step] ? 'now' : 'todo'])) as Record<Step, StepState>)
+    : undefined;
   return (
     <div className="detail-head">
       <button className="back" onClick={onBack}>
         {Icon.back()}
         {backLabel}
       </button>
+      {states ? (
+        <div className="detail-step">
+          <span>
+            Step {NUMBER[step!]} of 4 · {step![0].toUpperCase() + step!.slice(1)}
+          </span>
+          <StepTrack states={states} small />
+        </div>
+      ) : (
+        kicker && <span className="detail-kicker">{kicker}</span>
+      )}
       <h1>{title}</h1>
-      <div className="meta wrap">
-        <span className="step-label">{step}</span>
-        {badges.map((b, i) => (
-          <SourceBadge key={i} source={b.source} label={b.label} />
-        ))}
-      </div>
+      {badges.length > 0 && (
+        <div className="meta wrap">
+          {badges.map((b, i) => (
+            <SourceBadge key={i} source={b.source} label={b.label} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 export function CheckList({ title, items }: { title: string; items: CheckItem[] }) {
+  const flagged = items.filter((c) => !c.ok).length;
   return (
-    <section className="card clip" aria-label={title}>
-      <h2 className="card-title">{title}</h2>
-      <ul className="rows">
+    <Section title={title} aside={flagged ? `${flagged} red flag${flagged === 1 ? '' : 's'}` : 'All clear'}>
+      <ul className="rows surface">
         {items.map((c) => (
           <li key={c.title} className="check-row">
             <span className={`dot ${c.ok ? 'ok' : 'flagged'}`}>{c.ok ? Icon.check() : Icon.bang()}</span>
@@ -126,11 +264,10 @@ export function CheckList({ title, items }: { title: string; items: CheckItem[] 
               <span className="row-title">{c.title}</span>
               <span className="row-detail">{c.detail}</span>
             </span>
-            <span className={`row-verdict ${c.ok ? 'ok' : 'flagged'}`}>{c.ok ? 'OK' : 'Red flag'}</span>
           </li>
         ))}
       </ul>
-    </section>
+    </Section>
   );
 }
 
@@ -163,6 +300,16 @@ export function Note({ children, icon = Icon.lock(), dark }: { children: ReactNo
   return (
     <p className={`note${dark ? ' dark' : ''}`}>
       <span className="note-icon">{icon}</span>
+      <span>{children}</span>
+    </p>
+  );
+}
+
+/** One quiet line about where the data went. */
+export function Privacy({ children }: { children: ReactNode }) {
+  return (
+    <p className="privacy">
+      <span className="note-icon">{Icon.lock(13)}</span>
       <span>{children}</span>
     </p>
   );

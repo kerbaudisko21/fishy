@@ -1,5 +1,5 @@
 import { useRef, useState, type DragEvent } from 'react';
-import { DetailHead, Icon } from '../components';
+import { DetailHead, Icon, Privacy, Section } from '../components';
 
 interface Props {
   busy: boolean;
@@ -30,63 +30,68 @@ export function CheckYourself({ busy, emailOpen, onBack, onText, onFile, onAttac
 
   return (
     <>
-      <DetailHead title="Check it yourself" step="WHEN THE PAGE CAN’T BE READ" badges={[{ source: 'on_device', label: 'Read on this laptop' }]} onBack={onBack} />
+      <DetailHead title="Paste or drop" kicker="Check it yourself" badges={[{ source: 'on_device', label: 'Read on this laptop' }]} onBack={onBack} />
       <main className="main">
-        <section className="card card-pad" aria-label="Paste text">
-          <div className="field">
-            <label htmlFor="paste">Paste a message or the meeting captions</label>
-            <textarea id="paste" value={text} onChange={(e) => setText(e.target.value)} placeholder="“Keep this between us. I need it paid today…”" />
-          </div>
-          <button
-            className="btn primary"
-            disabled={busy || !text.trim()}
-            onClick={async () => {
-              await onText(text);
-              onBack();
-            }}
-          >
-            Check this text
-          </button>
-          <p className="hint" style={{ textAlign: 'left' }}>
-            The text is read on this laptop and not stored.
-          </p>
-        </section>
-
-        <section className="stack" aria-label="Invoice">
-          {emailOpen && (
+        <Section title="A message">
+          <div className="surface card-pad">
+            <div className="field">
+              <label htmlFor="paste" className="visually-hidden">
+                Message or meeting captions
+              </label>
+              <textarea id="paste" value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste an email, a chat or the meeting captions…" />
+            </div>
             <button
-              className="btn secondary"
-              disabled={busy}
+              className="btn primary"
+              disabled={busy || !text.trim()}
               onClick={async () => {
-                await onAttached();
+                await onText(text);
                 onBack();
               }}
             >
-              {Icon.file(16)}
-              Check the invoice attached to this email
+              Check this text
             </button>
-          )}
-          <label
-            className={`drop${over ? ' over' : ''}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setOver(true);
-            }}
-            onDragLeave={() => setOver(false)}
-            onDrop={onDrop}
-          >
-            {Icon.upload(20)}
-            <strong>Check an invoice PDF</strong>
-            <span>Drop it here or choose a file. It never leaves this laptop.</span>
-            <input
-              ref={input}
-              type="file"
-              accept="application/pdf,.pdf"
-              className="visually-hidden"
-              onChange={(e) => void takeFile(e.target.files?.[0])}
-            />
-          </label>
-        </section>
+          </div>
+        </Section>
+
+        <Section title="An invoice">
+          <div className="stack">
+            {emailOpen && (
+              <button
+                className="btn secondary"
+                disabled={busy}
+                onClick={async () => {
+                  await onAttached();
+                  onBack();
+                }}
+              >
+                {Icon.file(16)}
+                Check the PDF attached to this email
+              </button>
+            )}
+            <label
+              className={`drop${over ? ' over' : ''}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setOver(true);
+              }}
+              onDragLeave={() => setOver(false)}
+              onDrop={onDrop}
+            >
+              <span className="drop-icon">{Icon.upload(20)}</span>
+              <strong>Drop a PDF here</strong>
+              <span>or click to choose a file</span>
+              <input
+                ref={input}
+                type="file"
+                accept="application/pdf,.pdf"
+                className="visually-hidden"
+                onChange={(e) => void takeFile(e.target.files?.[0])}
+              />
+            </label>
+          </div>
+        </Section>
+
+        <Privacy>Both are read on this laptop and not stored.</Privacy>
       </main>
     </>
   );

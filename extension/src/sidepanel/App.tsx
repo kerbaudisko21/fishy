@@ -103,27 +103,22 @@ export function App() {
   };
 
   const ev = a.evidence;
-  const tabbed = screen === 'verdict' || screen === 'directory';
-  const gmail = (screen === 'verdict' ? a.place : placeFor(screen)) === 'gmail';
-  const live = `${a.mode === 'demo' ? 'Demo · ' : ''}${gmail ? 'Gmail · opened' : 'Meet · live'}`;
+  const tab = screen === 'verdict' || screen === 'directory' ? screen : undefined;
+  const detail = tab ? null : placeFor(screen);
+  const where = !a.hasInput ? null : screen === 'verdict' || screen === 'directory' || screen === 'paste' || screen === 'settings' ? a.place : detail;
   const error = a.error ?? callError;
+  const loadDemo = () => {
+    cancel();
+    a.loadDemo();
+    back();
+  };
 
   return (
     <>
-      <Header live={live} dot={!gmail} onSettings={() => setScreen('settings')} />
-      {tabbed && (
-        <nav className="tabs" aria-label="Panel">
-          <button className="tab" aria-current={screen === 'verdict' ? 'page' : undefined} onClick={() => setScreen('verdict')}>
-            Check
-          </button>
-          <button className="tab" aria-current={screen === 'directory' ? 'page' : undefined} onClick={() => setScreen('directory')}>
-            Directory
-          </button>
-        </nav>
-      )}
+      <Header where={where} demo={a.mode === 'demo'} tab={tab} onTab={setScreen} onSettings={() => setScreen('settings')} />
 
       {error && (
-        <div style={{ padding: '16px 16px 0' }}>
+        <div style={{ padding: '12px 16px 0' }}>
           <p className="error-line" role="alert">
             <span>{error}</span>
             <button onClick={() => a.setError(null)} aria-label="Dismiss">
@@ -149,6 +144,7 @@ export function App() {
           onOpenFlag={flagScreen}
           onOpen={open}
           onPaste={() => setScreen('paste')}
+          onDemo={loadDemo}
           onVoice={a.place === 'meet' && !a.hasVoice ? () => void a.checkVoice() : undefined}
         />
       )}
@@ -176,11 +172,7 @@ export function App() {
           rulesVersion={a.rules.version}
           knownCount={a.knownCount}
           onBack={back}
-          onDemo={() => {
-            cancel();
-            a.loadDemo();
-            back();
-          }}
+          onDemo={loadDemo}
           onClear={() => {
             cancel();
             a.clear();

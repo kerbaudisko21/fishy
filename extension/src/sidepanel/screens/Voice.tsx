@@ -1,5 +1,5 @@
 import type { Evidence } from '../../lib/types';
-import { DetailHead, Icon } from '../components';
+import { DetailHead, Icon, Privacy, Section } from '../components';
 
 // Shape for the demo story, which has no real recording.
 const DEMO_BARS = [30, 52, 40, 68, 84, 60, 44, 72, 90, 64, 38, 56, 80, 96, 70, 48, 34, 58, 76, 88, 62, 42, 66, 82, 94, 74, 50, 36, 54, 70, 86, 60, 40, 64, 78, 52, 32, 46, 30, 22].map((h) => h / 100);
@@ -15,46 +15,38 @@ interface Props {
 export function Voice({ data, busy, onBack, onRecordAgain, onCheckFace }: Props) {
   const pct = Math.round(data.score * 100);
   const bars = data.levels?.length ? data.levels : DEMO_BARS;
-  const verdict = pct >= 60 ? 'likely synthetic' : pct >= 35 ? 'unclear' : 'likely real';
+  const verdict = pct >= 60 ? 'Likely synthetic' : pct >= 35 ? 'Unclear' : 'Likely real';
   return (
     <>
-      <DetailHead title="Voice check" step="STEP 2 · CHECK" badges={[{ source: 'cloud', label: 'Cloud · only on your click' }]} onBack={onBack} />
+      <DetailHead title="Voice check" step="check" badges={[{ source: 'cloud', label: 'Cloud, only when you click' }]} onBack={onBack} />
       <main className="main">
-        <section className="card card-pad" aria-label="Clip">
+        <section className="surface card-pad" aria-label="Score" style={{ gap: 14 }}>
           <div className="card-head">
             <span className="row-title">
-              “{data.speaker}” · {data.seconds} s clip
+              {data.speaker}, {data.seconds} s clip
             </span>
-            <span className="small">sent {data.sentAt}</span>
+            {data.demo ? <span className="pill none">Demo score</span> : <span className="small">sent {data.sentAt}</span>}
           </div>
           <div className="wave" aria-hidden="true">
             {bars.map((h, i) => (
               <span key={i} style={{ height: `${Math.max(6, Math.round(h * 100))}%` }} />
             ))}
           </div>
-        </section>
-
-        <section className="card card-pad" aria-label="Score" style={{ padding: '18px 16px', gap: 14 }}>
           <div className="score">
             <span className="score-num" style={pct < 60 ? { color: 'var(--ink)' } : undefined}>
               {pct}%
             </span>
-            <span style={{ fontSize: 15, fontWeight: 600 }}>{verdict}</span>
-            {data.demo && <span className="pill none">demo score</span>}
+            <span style={{ fontSize: 16, fontWeight: 650 }}>{verdict}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div className="meter" role="img" aria-label={`Score ${pct} out of 100`}>
-              <span style={{ width: `${pct}%` }} />
+              <span style={{ left: `${pct}%` }} />
             </div>
             <div className="small" style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Likely real</span>
               <span>Likely synthetic</span>
             </div>
           </div>
-          <p style={{ margin: 0, paddingTop: 12, borderTop: '1px solid var(--line-soft)', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)' }}>
-            {pct >= 60 ? 'Shown as a red flag, not a verdict.' : 'Not shown as a red flag.'} A bad line can make a real voice score high, and a good fake can score low.{' '}
-            <strong style={{ color: 'var(--ink)' }}>The call on the number on record decides.</strong>
-          </p>
           {onRecordAgain && (
             <button className="btn secondary small" onClick={onRecordAgain} disabled={busy}>
               {Icon.wave()}
@@ -63,21 +55,24 @@ export function Voice({ data, busy, onBack, onRecordAgain, onCheckFace }: Props)
           )}
         </section>
 
-        <section className="card card-pad" aria-label="Face check">
-          <span className="grow" style={{ gap: 3 }}>
-            <span className="row-title">Face check · not run</span>
-            <span className="row-detail">Sends {data.faceFrames} video frames of this speaker to the cloud for a score.</span>
+        <p className="note">
+          <span className="note-icon">{Icon.phone(15)}</span>
+          <span>
+            A score supports the case but never decides it. <strong>The call on the number on record decides.</strong>
           </span>
-          <button className="btn secondary small" onClick={onCheckFace} disabled={!onCheckFace} title={onCheckFace ? undefined : 'Coming after judging (P1)'}>
-            Check video frames
-          </button>
-          {!onCheckFace && <span className="small">Face scoring is planned (P1) and not switched on in this build.</span>}
-        </section>
-
-        <p className="hint" style={{ textAlign: 'left', display: 'flex', gap: 8 }}>
-          <span className="note-icon">{Icon.lock(14)}</span>
-          The clip is deleted after scoring. No caption text was sent with it.
         </p>
+
+        <Section title="Face check" aside="Coming next">
+          <div className="surface card-pad">
+            <span className="row-detail">Scores {data.faceFrames} video frames of this speaker in the cloud.</span>
+            <button className="btn secondary small" onClick={onCheckFace} disabled={!onCheckFace}>
+              {Icon.face(16)}
+              Check video frames
+            </button>
+          </div>
+        </Section>
+
+        <Privacy>The clip is deleted after scoring. No caption text goes with it.</Privacy>
       </main>
     </>
   );
