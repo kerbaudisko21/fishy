@@ -19,6 +19,8 @@ interface Props {
   onOpenFlag: (kind: VerdictT['flags'][number]['kind']) => Screen | null;
   onOpen: (s: Screen) => void;
   onPaste: () => void;
+  /** Shown in a meeting until a voice check has run. */
+  onVoice?: () => void;
 }
 
 const first = (name?: string) => name?.split(' ')[0] ?? 'them';
@@ -49,9 +51,13 @@ export function Verdict(p: Props) {
               {request.dueText ? ` · ${request.dueText}` : ''}
             </span>
           )}
-          <span>
-            {request.payee.name} · {request.payee.bank} {request.payee.accountMasked}
-          </span>
+          {request.payee ? (
+            <span>
+              {request.payee.name} · {request.payee.bank} {request.payee.accountMasked}
+            </span>
+          ) : (
+            <span className="small">No account named yet</span>
+          )}
         </section>
       )}
 
@@ -168,6 +174,16 @@ export function Verdict(p: Props) {
           <span className="note-icon" style={{ color: 'var(--ok)' }}>{Icon.check(15)}</span>
           The account, domain and number in this request were reported to the known-scam list.
         </p>
+      )}
+
+      {call.state === 'idle' && p.onVoice && (
+        <div className="stack" style={{ gap: 6 }}>
+          <button className="btn secondary" onClick={p.onVoice} disabled={!!p.busy}>
+            {Icon.wave()}
+            Check this voice
+          </button>
+          <p className="hint">Sends a 10-second clip of the meeting for a score. Only when you click.</p>
+        </div>
       )}
 
       {call.state === 'idle' && (

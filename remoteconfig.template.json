@@ -11,6 +11,11 @@
       "defaultValue": { "value": "[\"[role=\\\"region\\\"][aria-label*=\\\"aption\\\"]\",\"[aria-live=\\\"polite\\\"]\"]" },
       "description": "CSS selectors for Meet captions, so a Meet change can be fixed without a release.",
       "valueType": "JSON"
+    },
+    "gmail_selectors": {
+      "defaultValue": { "value": "{\"subject\":\"h2[data-thread-perm-id], h2.hP\",\"sender\":\"span.gD[email], span[email]\",\"body\":\"div.a3s\",\"attachment\":\"[download_url]\",\"message\":\"[data-legacy-message-id]\"}" },
+      "description": "CSS selectors for the opened Gmail message. Shape: PageSelectors.gmail in extension/src/lib/messages.ts.",
+      "valueType": "JSON"
     }
   }
 }

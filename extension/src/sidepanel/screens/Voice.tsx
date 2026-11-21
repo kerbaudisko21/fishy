@@ -1,11 +1,21 @@
 import type { Evidence } from '../../lib/types';
 import { DetailHead, Icon } from '../components';
 
-// Decorative clip shape; replace with the real clip's levels when recording is built.
-const BARS = [30, 52, 40, 68, 84, 60, 44, 72, 90, 64, 38, 56, 80, 96, 70, 48, 34, 58, 76, 88, 62, 42, 66, 82, 94, 74, 50, 36, 54, 70, 86, 60, 40, 64, 78, 52, 32, 46, 30, 22];
+// Shape for the demo story, which has no real recording.
+const DEMO_BARS = [30, 52, 40, 68, 84, 60, 44, 72, 90, 64, 38, 56, 80, 96, 70, 48, 34, 58, 76, 88, 62, 42, 66, 82, 94, 74, 50, 36, 54, 70, 86, 60, 40, 64, 78, 52, 32, 46, 30, 22].map((h) => h / 100);
 
-export function Voice({ data, onBack, onCheckFace }: { data: NonNullable<Evidence['voice']>; onBack: () => void; onCheckFace?: () => void }) {
+interface Props {
+  data: NonNullable<Evidence['voice']>;
+  busy?: boolean;
+  onBack: () => void;
+  onRecordAgain?: () => void;
+  onCheckFace?: () => void;
+}
+
+export function Voice({ data, busy, onBack, onRecordAgain, onCheckFace }: Props) {
   const pct = Math.round(data.score * 100);
+  const bars = data.levels?.length ? data.levels : DEMO_BARS;
+  const verdict = pct >= 60 ? 'likely synthetic' : pct >= 35 ? 'unclear' : 'likely real';
   return (
     <>
       <DetailHead title="Voice check" step="STEP 2 · CHECK" badges={[{ source: 'cloud', label: 'Cloud · only on your click' }]} onBack={onBack} />
@@ -18,16 +28,19 @@ export function Voice({ data, onBack, onCheckFace }: { data: NonNullable<Evidenc
             <span className="small">sent {data.sentAt}</span>
           </div>
           <div className="wave" aria-hidden="true">
-            {BARS.map((h, i) => (
-              <span key={i} style={{ height: `${h}%` }} />
+            {bars.map((h, i) => (
+              <span key={i} style={{ height: `${Math.max(6, Math.round(h * 100))}%` }} />
             ))}
           </div>
         </section>
 
         <section className="card card-pad" aria-label="Score" style={{ padding: '18px 16px', gap: 14 }}>
           <div className="score">
-            <span className="score-num">{pct}%</span>
-            <span style={{ fontSize: 15, fontWeight: 600 }}>likely synthetic</span>
+            <span className="score-num" style={pct < 60 ? { color: 'var(--ink)' } : undefined}>
+              {pct}%
+            </span>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>{verdict}</span>
+            {data.demo && <span className="pill none">demo score</span>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div className="meter" role="img" aria-label={`Score ${pct} out of 100`}>
@@ -39,9 +52,15 @@ export function Voice({ data, onBack, onCheckFace }: { data: NonNullable<Evidenc
             </div>
           </div>
           <p style={{ margin: 0, paddingTop: 12, borderTop: '1px solid var(--line-soft)', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)' }}>
-            Shown as a red flag, not a verdict. A bad line can make a real voice score high, and a good fake can score low.{' '}
-            <strong style={{ color: 'var(--ink)' }}>The call to {data.speaker.split(' ')[0]} decides.</strong>
+            {pct >= 60 ? 'Shown as a red flag, not a verdict.' : 'Not shown as a red flag.'} A bad line can make a real voice score high, and a good fake can score low.{' '}
+            <strong style={{ color: 'var(--ink)' }}>The call on the number on record decides.</strong>
           </p>
+          {onRecordAgain && (
+            <button className="btn secondary small" onClick={onRecordAgain} disabled={busy}>
+              {Icon.wave()}
+              Record again
+            </button>
+          )}
         </section>
 
         <section className="card card-pad" aria-label="Face check">

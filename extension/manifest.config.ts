@@ -18,7 +18,8 @@ export default defineManifest({
   action: { default_title: 'Open FISHY', default_icon: icons },
   side_panel: { default_path: 'src/sidepanel/index.html' },
   background: { service_worker: 'src/background/service-worker.ts', type: 'module' },
-  permissions: ['sidePanel', 'storage', 'tabs'],
+  // tabCapture: the voice check records a 10-second clip of the meeting, only on the user's click (R8).
+  permissions: ['sidePanel', 'storage', 'tabs', 'tabCapture'],
   host_permissions: ['https://meet.google.com/*', 'https://mail.google.com/*'],
   content_scripts: [
     { matches: ['https://meet.google.com/*'], js: ['src/content/meet.ts'], run_at: 'document_idle' },

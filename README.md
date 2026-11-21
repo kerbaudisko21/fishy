@@ -15,11 +15,15 @@ Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) 
 | Side panel: Verdict, 5 evidence screens, Directory, Check it yourself, Settings | Built; runs on demo data or live input |
 | Step 1 Read: Firebase AI Logic hybrid (Nano on device, cloud on redacted text) | Built; needs a Firebase config to call Gemini (offline it falls back to a labelled keyword reader) |
 | Step 2 Check: look-alike sender, invoice PDF (account vs record, edit traces) | Built, on device, with tests |
-| Step 2 Check: Web Risk links | Frontend built; `checkLinks` function not built |
+| Step 2 Check: sender authentication (DMARC/SPF/DKIM, webmail reply-to) | Built, read from the opened email's own headers on the laptop |
+| Step 2 Check: Web Risk links, domain age | Frontend built; `checkLinks` and `domainAge` functions not built |
+| Who asked and for how much, from captions (speaker + amount) | Built; the speaker is matched to Directory, so FISHY calls the real person by default |
+| Meet and Gmail selectors from Remote Config | Built (`meet_caption_selectors`, `gmail_selectors`) |
 | Step 3 Match: known bad accounts, domains, numbers | Built, on device, cached from Firestore |
 | Step 4 Call: create check, start call, follow state, escalation countdown | Frontend built; `startVerificationCall` and the Twilio webhooks not built |
 | Web approval page and incident report (+ team alerts) | Built; their functions are stubs |
-| Voice and face scores (P1) | Screens built; scoring not built |
+| Voice check (P1) | Records 10 s of the Meet tab on click (`tabCapture`); `scoreVoice` function not built (demo score without Firebase) |
+| Face check (P1) | Screen only |
 
 Function contracts (inputs and outputs) are written above each stub in [functions/src/index.ts](functions/src/index.ts).
 

@@ -55,7 +55,8 @@ export interface PaymentRequest {
   place: 'meet' | 'gmail' | 'paste';
   askedBy: { name: string; role: string; directoryId?: string };
   amount: { value: number; currency: string };
-  payee: { name: string; bank: string; accountMasked: string };
+  /** Missing when the request named no account yet. */
+  payee?: { name: string; bank: string; accountMasked: string };
   dueText?: string;
 }
 
@@ -121,6 +122,10 @@ export interface Evidence {
     /** 0–1 */
     score: number;
     faceFrames: number;
+    /** Loudness of the recorded clip (0–1), for the waveform. */
+    levels?: number[];
+    /** True when the score is the demo story's, not a real one. */
+    demo?: boolean;
   };
   known?: {
     matches: KnownMatchView[];

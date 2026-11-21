@@ -59,6 +59,40 @@ describe('pipeline', () => {
     expect(toRequest(demoFindings())?.payee).toEqual({ name: 'PT Sinar Logistik', bank: 'Mandiri', accountMasked: '•••• 9032' });
   });
 
+  it('adds sender-auth, young-domain and voice flags, and takes the asker from the captions', () => {
+    const f: Findings = {
+      ...demoFindings(),
+      email: {
+        ...demoFindings().email!,
+        auth: { failed: true, detail: 'DMARC: fail · reply-to is a free webmail address' },
+        age: { days: 9, registered: '12 Nov 2026' },
+      },
+      said: { speaker: 'Budi Santoso', role: 'CFO', amount: { value: 186400, currency: 'USD' } },
+      voice: { speaker: 'Budi Santoso', seconds: 10, sentAt: '10:44', score: 0.87, levels: [], demo: false },
+    };
+    const kinds = toSignals(f).map((s) => s.kind);
+    expect(kinds).toEqual(expect.arrayContaining(['sender_auth_failed', 'young_domain', 'voice_score']));
+    expect(toRequest(f)?.askedBy).toEqual({ name: 'Budi Santoso', role: 'CFO' });
+    const ev = toEvidence(f, DEFAULT_RULES, [], Date.now());
+    expect(ev.email?.checks.map((c) => c.title)).toEqual([
+      'Looks like a known supplier',
+      'Domain is 9 days old',
+      'Sender check failed',
+      '2 links, no known threat',
+    ]);
+    expect(ev.voice?.score).toBe(0.87);
+  });
+
+  it('builds a request from what was said when there is no invoice', () => {
+    const f: Findings = { place: 'meet', known: [], said: { speaker: 'Budi Santoso', role: 'CFO', amount: { value: 186400, currency: 'USD' } } };
+    expect(toRequest(f)).toMatchObject({ askedBy: { name: 'Budi Santoso', role: 'CFO' }, amount: { value: 186400 }, payee: undefined });
+  });
+
+  it('does not flag a low voice score', () => {
+    const f: Findings = { place: 'meet', known: [], voice: { speaker: 'X', seconds: 10, sentAt: '', score: 0.2, levels: [], demo: false } };
+    expect(toSignals(f)).toEqual([]);
+  });
+
   it('highlights quoted phrases without overlap', () => {
     const parts = highlight('Pay today, before three.', [
       { tactic: 'urgency', quote: 'today, before three' },

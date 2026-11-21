@@ -96,6 +96,23 @@ export const registerAlertToken = onCall({ enforceAppCheck: true }, async () => 
 });
 
 /**
+ * R8 · Voice-clone score for a clip the user chose to send (10 s of meeting audio, webm/opus).
+ * In: { audio: base64, mime } · Out: { score: 0–1 }
+ * Call the voice-check API (deck: Modulate developer plan), then drop the clip; never store it.
+ */
+export const scoreVoice = onCall({ enforceAppCheck: true }, async () => {
+  throw new HttpsError('unimplemented', 'scoreVoice is not built yet.');
+});
+
+/**
+ * R3 · Domain age via RDAP (only the domain is sent). In: { domain } · Out: { days, registered: "12 Nov 2026" }
+ * Throw 'not-found' when RDAP has no record.
+ */
+export const domainAge = onCall({ enforceAppCheck: true }, async () => {
+  throw new HttpsError('unimplemented', 'domainAge is not built yet.');
+});
+
+/**
  * Step 2 · Check links with Google Web Risk. In: { urls: string[] } (links only, never the email).
  * Out: { unsafe: string[] }  (the subset Web Risk lists as malware, social engineering or unwanted software)
  */

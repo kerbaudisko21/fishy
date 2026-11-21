@@ -1,11 +1,46 @@
 // Messages between the content scripts (Meet, Gmail) and the side panel.
 // Content scripts never call AI or Firebase: they only read the page and draw the banner.
+import type { SenderAuth } from './checks/email';
+import type { SaidLine } from './checks/said';
 
 export type BannerState = 'hidden' | 'amber' | 'red' | 'confirmed';
 
 export type PageMessage =
-  | { type: 'captions'; tabId?: number; speaker: string; text: string; at: number }
-  | { type: 'email_opened'; tabId?: number; from: string; name: string; subject: string; body: string; attachments: string[] };
+  | { type: 'captions'; lines: SaidLine[]; at: number }
+  | { type: 'email_opened'; from: string; name: string; subject: string; body: string; attachments: string[]; auth?: SenderAuth };
+
+/** Page selectors, pushed from Remote Config so a Meet or Gmail change is fixed without a release. */
+export interface PageSelectors {
+  meetCaptions: string[];
+  gmail: { subject: string; sender: string; body: string; attachment: string; message: string };
+}
+
+export const DEFAULT_SELECTORS: PageSelectors = {
+  meetCaptions: ['[role="region"][aria-label*="aption"]', '[aria-live="polite"]'],
+  gmail: {
+    subject: 'h2[data-thread-perm-id], h2.hP',
+    sender: 'span.gD[email], span[email]',
+    body: 'div.a3s',
+    attachment: '[download_url]',
+    message: '[data-legacy-message-id]',
+  },
+};
+
+export const SELECTORS_KEY = 'pageSelectors';
+
+/** Content scripts: current selectors, updated live when the panel stores new ones. */
+export function watchSelectors(onChange: (s: PageSelectors) => void) {
+  const apply = (v?: Partial<PageSelectors>) =>
+    onChange({ meetCaptions: v?.meetCaptions?.length ? v.meetCaptions : DEFAULT_SELECTORS.meetCaptions, gmail: { ...DEFAULT_SELECTORS.gmail, ...v?.gmail } });
+  apply();
+  chrome.storage.local
+    .get(SELECTORS_KEY)
+    .then((r) => apply(r[SELECTORS_KEY] as Partial<PageSelectors> | undefined))
+    .catch(() => {});
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes[SELECTORS_KEY]) apply(changes[SELECTORS_KEY].newValue as Partial<PageSelectors> | undefined);
+  });
+}
 
 export type PanelMessage =
   | { type: 'banner'; state: BannerState; title: string; line: string }

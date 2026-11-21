@@ -2,6 +2,8 @@ import type { TacticHit, TacticResult } from './ai/tactics';
 import { diffParts, domainOf, registrable, type LookalikeResult } from './checks/domain';
 import { mask, type AccountFound, type InvoiceCompare } from './checks/invoice';
 import type { KnownMatch } from './checks/known';
+import type { AuthVerdict } from './checks/email';
+import type { Amount } from './checks/said';
 import type { RulesConfig } from './rules/engine';
 import type { CaptionLine, CheckItem, Evidence, PaymentRequest, Signal, Supplier, Tactic } from './types';
 
@@ -30,7 +32,14 @@ export interface Findings {
     /** null when Web Risk was not reached. */
     unsafe: string[] | null;
     attachments: string[];
+    /** From the email's own headers; undefined when Gmail did not give them. */
+    auth?: AuthVerdict;
+    /** undefined until known; null when the lookup is not available. */
+    age?: { days: number; registered: string } | null;
   };
+  /** Who asked, for how much, to which account: read from captions, pasted text or the email body. */
+  said?: { speaker?: string; role?: string; amount?: Amount; account?: AccountFound };
+  voice?: { speaker: string; seconds: number; sentAt: string; score: number; levels: number[]; demo: boolean };
   invoice?: {
     fileName: string;
     number?: string;
@@ -50,6 +59,11 @@ export const TACTIC_LABEL: Record<Tactic, string> = {
   skips_process: 'Skips the process',
   new_payment_details: 'New payment details',
 };
+
+/** A domain younger than this is flagged (R3). */
+export const YOUNG_DOMAIN_DAYS = 30;
+/** A voice score from this up is shown as a red flag (R8); below it is only shown on the Voice screen. */
+export const VOICE_FLAG_AT = 0.6;
 
 const listWords = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
@@ -96,6 +110,24 @@ export function toSignals(f: Findings): Signal[] {
   }
   if (em?.unsafe?.length) {
     out.push({ kind: 'unsafe_link', step: 'check', source: 'cloud', title: 'Unsafe link', detail: `${plural(em.unsafe.length, 'link')} flagged by Web Risk.` });
+  }
+  if (em?.auth?.failed) {
+    out.push({ kind: 'sender_auth_failed', step: 'check', source: 'on_device', title: 'Sender check failed', detail: `${em.auth.detail}.`.replace(/^./, (c) => c.toUpperCase()) });
+  }
+  if (em?.age && em.age.days < YOUNG_DOMAIN_DAYS) {
+    out.push({ kind: 'young_domain', step: 'check', source: 'cloud', title: 'Brand-new domain', detail: `${registrable(em.from)} is ${plural(em.age.days, 'day')} old.` });
+  }
+
+  const v = f.voice;
+  if (v && v.score >= VOICE_FLAG_AT) {
+    out.push({
+      kind: 'voice_score',
+      step: 'check',
+      source: 'cloud',
+      title: 'Voice likely synthetic',
+      detail: `${Math.round(v.score * 100)}% on a ${v.seconds}-second clip you sent. A supporting signal, not proof.`,
+      score: v.score,
+    });
   }
 
   for (const m of f.known) {
@@ -162,6 +194,11 @@ export function toEvidence(f: Findings, rules: RulesConfig, patterns: string[], 
     if (em.unsafe === null) checks.push({ ok: true, title: plural(em.links, 'link'), detail: em.links ? 'Web Risk not reached; links not checked' : 'Nothing to check' });
     else if (em.unsafe.length) checks.push({ ok: false, title: `${plural(em.unsafe.length, 'link')} flagged`, detail: 'Web Risk lists them as unsafe' });
     else checks.push({ ok: true, title: `${plural(em.links, 'link')}, no known threat`, detail: 'Web Risk got the links only, never the email' });
+    if (em.auth) checks.splice(1, 0, { ok: !em.auth.failed, title: em.auth.failed ? 'Sender check failed' : 'Sender check passed', detail: em.auth.detail });
+    if (em.age) {
+      const young = em.age.days < YOUNG_DOMAIN_DAYS;
+      checks.splice(1, 0, { ok: !young, title: young ? `Domain is ${plural(em.age.days, 'day')} old` : 'Domain is established', detail: `Registered ${em.age.registered}` });
+    }
     ev.email = {
       sender: { name: em.name, address: sup ? diffParts(em.from, `${local}@${sup.domain}`) : [{ text: em.from }] },
       onRecord: sup ? { name: sup.name, address: `${local}@${sup.domain}`, paidTimes: sup.paidMonths.length } : undefined,
@@ -183,6 +220,18 @@ export function toEvidence(f: Findings, rules: RulesConfig, patterns: string[], 
       usual: inv.supplier ? { ...inv.supplier.account, months: inv.supplier.paidMonths } : undefined,
       traces: inv.traces,
       knownScams: knownCount,
+    };
+  }
+
+  if (f.voice) {
+    ev.voice = {
+      speaker: f.voice.speaker,
+      seconds: f.voice.seconds,
+      sentAt: f.voice.sentAt,
+      score: f.voice.score,
+      faceFrames: 5,
+      levels: f.voice.levels,
+      demo: f.voice.demo,
     };
   }
 
@@ -210,16 +259,31 @@ export function agoText(t: number, now = Date.now()) {
   return `${Math.round(min / 60)} h ago`;
 }
 
+/**
+ * The payment being asked for. The invoice is the best source; otherwise what was said
+ * (captions, pasted text, the email body). The person asking comes from captions or the email.
+ */
 export function toRequest(f: Findings): PaymentRequest | undefined {
   const inv = f.invoice;
-  if (!inv?.compare.found) return undefined;
-  const found = inv.compare.found;
+  const said = f.said;
+  const found = inv?.compare.found ?? said?.account;
+  const amount = inv?.total ?? said?.amount;
+  if (!found && !amount) return undefined;
+
+  // Unknown when nobody is named; the panel then leaves the "Asked by" line out.
+  const askedBy = said?.speaker
+    ? { name: said.speaker, role: said.role ?? '' }
+    : f.email
+      ? { name: f.email.name || domainOf(f.email.from), role: 'by email' }
+      : { name: '', role: '' };
+
   return {
-    id: inv.number ?? inv.fileName,
+    id: inv?.number ?? inv?.fileName ?? 'request',
     place: f.place,
-    // Unknown when only an invoice was checked; the panel then leaves the "Asked by" line out.
-    askedBy: f.email ? { name: f.email.name || domainOf(f.email.from), role: 'by email' } : { name: '', role: '' },
-    amount: inv.total ?? { value: 0, currency: 'USD' },
-    payee: { name: inv.supplier?.name ?? found.holder ?? 'Unknown payee', bank: found.bank ?? 'Bank', accountMasked: mask(found.number) },
+    askedBy,
+    amount: amount ?? { value: 0, currency: 'USD' },
+    payee: found
+      ? { name: inv?.supplier?.name ?? found.holder ?? 'New account', bank: found.bank ?? 'Bank', accountMasked: mask(found.number) }
+      : undefined,
   };
 }

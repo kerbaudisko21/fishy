@@ -2,7 +2,8 @@ import { addDoc, collection, doc, getDocs, getFirestore, onSnapshot, serverTimes
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
 import { DEMO_DIRECTORY, DEMO_KNOWN_BAD, DEMO_SUPPLIERS } from '../demo/fixtures';
-import { FIREBASE_READY, IN_EXTENSION, REGION } from './config';
+import { DEMO, FIREBASE_READY, IN_EXTENSION, REGION } from './config';
+import { DEFAULT_SELECTORS, SELECTORS_KEY, type PageSelectors } from './messages';
 import { ensureSignedIn, firebaseApp } from './firebase';
 import { DEFAULT_RULES, type RulesConfig } from './rules/engine';
 import type { CallState, CallStatus, DirectoryPerson, KnownBadEntry, SignalKind, Supplier } from './types';
@@ -96,6 +97,49 @@ export function watchCall(checkId: string, onChange: (s: Partial<CallStatus>) =>
     if (!call?.state || !CALL_STATES.includes(call.state as CallState)) return;
     onChange({ state: call.state as CallState, escalateAt: call.escalateAt?.toMillis(), escalatedTo: call.escalatedTo });
   });
+}
+
+/**
+ * R8 · Voice-clone score for a clip the user chose to send. Returns 0–1, or null when the function
+ * is not reachable. In demo mode without Firebase it returns the demo story's 0.87, labelled as demo.
+ */
+export async function scoreVoice(base64: string, mime: string): Promise<{ score: number; demo: boolean } | null> {
+  if (!FIREBASE_READY) return DEMO ? { score: 0.87, demo: true } : null;
+  try {
+    const { score } = (await fn<{ audio: string; mime: string }, { score: number }>('scoreVoice')({ audio: base64, mime })).data;
+    return { score, demo: false };
+  } catch (e) {
+    console.warn('[FISHY] voice score failed', e);
+    return null;
+  }
+}
+
+/** R3 · Domain age in days (RDAP lookup in Cloud Functions; only the domain is sent). */
+export async function domainAge(domain: string): Promise<{ days: number; registered: string } | null> {
+  if (!FIREBASE_READY) return null;
+  try {
+    return (await fn<{ domain: string }, { days: number; registered: string }>('domainAge')({ domain })).data;
+  } catch (e) {
+    console.warn('[FISHY] domain age failed', e);
+    return null;
+  }
+}
+
+/** Pushes Meet/Gmail selectors from Remote Config to the content scripts (deck risk: "Meet pages change"). */
+export async function syncSelectors() {
+  if (!FIREBASE_READY || !IN_EXTENSION) return;
+  try {
+    const rc = getRemoteConfig(firebaseApp());
+    await fetchAndActivate(rc);
+    const meet = getValue(rc, 'meet_caption_selectors').asString();
+    const gmail = getValue(rc, 'gmail_selectors').asString();
+    const value: Partial<PageSelectors> = {};
+    if (meet) value.meetCaptions = JSON.parse(meet);
+    if (gmail) value.gmail = { ...DEFAULT_SELECTORS.gmail, ...JSON.parse(gmail) };
+    await chrome.storage.local.set({ [SELECTORS_KEY]: value });
+  } catch (e) {
+    console.warn('[FISHY] selectors not updated', e);
+  }
 }
 
 /** Web Risk via Cloud Functions: only the links are sent, never the email. */

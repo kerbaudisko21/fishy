@@ -91,7 +91,7 @@ export function App() {
       patterns: a.verdict.patterns,
       place: a.place,
       amount: a.request?.amount.value ? a.request.amount : undefined,
-      payee: a.request ? `${a.request.payee.name} · ${a.request.payee.bank} ${a.request.payee.accountMasked}` : undefined,
+      payee: a.request?.payee ? `${a.request.payee.name} · ${a.request.payee.bank} ${a.request.payee.accountMasked}` : undefined,
     });
   };
 
@@ -149,13 +149,16 @@ export function App() {
           onOpenFlag={flagScreen}
           onOpen={open}
           onPaste={() => setScreen('paste')}
+          onVoice={a.place === 'meet' && !a.hasVoice ? () => void a.checkVoice() : undefined}
         />
       )}
       {screen === 'directory' && <Directory people={a.directory.people} suppliers={a.directory.suppliers} />}
       {screen === 'tactics' && ev.tactics && <Tactics data={ev.tactics} onBack={back} onPaste={() => setScreen('paste')} />}
       {screen === 'email' && ev.email && <EmailLinks data={ev.email} onBack={back} onOpenInvoice={ev.invoice ? () => open('invoice') : a.emailOpen ? () => setScreen('paste') : undefined} />}
       {screen === 'invoice' && ev.invoice && <Invoice data={ev.invoice} onBack={back} onOpenKnown={ev.known ? () => open('known') : undefined} />}
-      {screen === 'voice' && ev.voice && <Voice data={ev.voice} onBack={back} />}
+      {screen === 'voice' && ev.voice && (
+        <Voice data={ev.voice} busy={!!a.busy} onBack={back} onRecordAgain={a.mode === 'live' && IN_EXTENSION ? () => void a.checkVoice() : undefined} />
+      )}
       {screen === 'known' && ev.known && <KnownScams data={ev.known} onBack={back} />}
       {screen === 'paste' && (
         <CheckYourself
