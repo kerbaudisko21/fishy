@@ -79,6 +79,15 @@ Load it: `chrome://extensions` → Developer mode → **Load unpacked** → `ext
 
 Design preview without installing: `npm run build -w extension`, then `npx vite preview extension` and open `/src/sidepanel/index.html` at 400 px wide. The web pages run on demo data without a config: `npm run dev -w web`, then `/?demo` and `/incident?demo`.
 
+### Test invoices
+
+`npm run test-invoices` writes two synthetic invoices from the demo supplier into `test-fixtures/`. Attach one to an email or drop it into **Check it yourself**.
+
+| File | What FISHY should show |
+|---|---|
+| `invoice-sinar-fishy.pdf` | Bank account changed (Mandiri •••• 9032, record says BCA •••• 4471), edited 3 days after it was made in an online editor, bank line in another font, known scam account |
+| `invoice-sinar-clean.pdf` | Account matches the record, no later edits |
+
 ### Gemini Nano on the laptop
 
 1. `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input` → Enabled, restart Chrome.
@@ -109,6 +118,7 @@ Design preview without installing: `npm run build -w extension`, then `npx vite 
 | `npm test` | Rules engine and redaction tests |
 | `npm run typecheck` | TypeScript in all three packages |
 | `npm run icons` | Regenerates PNG icons from `brand/` |
+| `npm run test-invoices` | Writes the two test invoice PDFs into `test-fixtures/` |
 
 ## Privacy
 

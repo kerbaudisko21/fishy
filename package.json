@@ -13,7 +13,8 @@
     "build": "npm run build -w extension && npm run build -w web && npm run build -w functions",
     "test": "npm run test -w extension",
     "typecheck": "npm run typecheck -w extension && npm run typecheck -w web && npm run typecheck -w functions",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "test-invoices": "node scripts/make-test-invoices.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2"
