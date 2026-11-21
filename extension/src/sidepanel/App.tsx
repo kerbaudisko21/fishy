@@ -34,10 +34,17 @@ function hasEvidence(screen: Screen, ev: Evidence) {
 
 const first = (name?: string) => name?.split(' ')[0] ?? '';
 
+/** Check is home, Directory sits beside it, everything else opens on top. */
+const DEPTH = (s: Screen) => (s === 'verdict' ? 0 : s === 'directory' ? 1 : 2);
+
 export function App() {
   const a = useAnalysis();
   const { call, start, cancel, error: callError } = useCall();
-  const [screen, setScreen] = useState<Screen>('verdict');
+  // The screen and which way the user moved, so the new screen slides in from the right side.
+  const [nav, setNav] = useState<{ screen: Screen; dir: 'none' | 'fwd' | 'back' }>({ screen: 'verdict', dir: 'none' });
+  const screen = nav.screen;
+  const setScreen = (s: Screen) =>
+    setNav((n) => (s === n.screen ? n : { screen: s, dir: DEPTH(s) >= DEPTH(n.screen) ? 'fwd' : 'back' }));
 
   // Who FISHY may call: the supplier contact on record (for a supplier email), then the approvers.
   const supplierName = a.mode === 'live' ? (a.evidence.email?.onRecord?.name ?? (a.evidence.invoice?.usual ? a.evidence.invoice.supplier : undefined)) : undefined;
@@ -128,6 +135,7 @@ export function App() {
         </div>
       )}
 
+      <div key={screen} className={`screen nav-${nav.dir}`}>
       {screen === 'verdict' && (
         <Verdict
           request={a.request}
@@ -180,6 +188,7 @@ export function App() {
           }}
         />
       )}
+      </div>
     </>
   );
 }

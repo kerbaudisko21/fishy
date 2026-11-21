@@ -1,4 +1,6 @@
-﻿import type { CallStatus, CallTarget, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
+﻿import { createPortal } from 'react-dom';
+import { useFirstSeen } from '../motion';
+import type { CallStatus, CallTarget, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
 import { FlagRow, Icon, Privacy, Section, SourceBadge, StepTrack, Tile, type StepState } from '../components';
 import { money } from '../format';
 import type { Screen } from '../routes';
@@ -68,6 +70,13 @@ export function Verdict(p: Props) {
               ? { tone: 'coral', pill: 'Hold the payment', title: 'Something’s fishy.', line: `${n} red flag${n === 1 ? '' : 's'}. Don’t pay until ${who} confirms on the number on record.` }
               : { tone: 'green', pill: 'No red flags', title: 'Looks normal.', line: 'For a payment, a call on the number on record is still the safe step.' };
 
+  // Motion: the result plays in once per new result; the hero text replays on every state change.
+  const sig = waiting ? 'waiting' : `${verdict.level}:${verdict.flags.map((f) => f.kind).join(',')}:${request?.amount.value ?? 0}`;
+  const heroKey = waiting ? 'waiting' : call.state === 'idle' ? verdict.level : call.state;
+  const intro = useFirstSeen(`result:${sig}`);
+  const heroIntro = useFirstSeen(`hero:${sig}:${heroKey}`);
+  let flagIndex = 0;
+
   const flagged = (s: Exclude<Step, 'call'>) => verdict.flags.some((f) => f.step === s);
   const track: Record<Step, StepState> = {
     read: flagged('read') ? 'flagged' : 'done',
@@ -80,22 +89,24 @@ export function Verdict(p: Props) {
     <>
       {hero && (
         <section className={`hero ${hero.tone}`} aria-live={call.state === 'not_me' ? 'assertive' : 'polite'}>
-          <span className="hero-pill">
-            {hero.tone === 'coral' || hero.tone === 'red' ? Icon.bang(12) : hero.tone === 'green' ? Icon.check(12) : call.state === 'idle' ? <span className="pulse" /> : Icon.phone(12)}
-            {hero.pill}
-          </span>
-          <h1>{hero.title}</h1>
-          <p>{hero.line}</p>
+          <div key={heroKey} className={`hero-body${heroIntro ? ' intro' : ''}`}>
+            <span className="hero-pill">
+              {hero.tone === 'coral' || hero.tone === 'red' ? Icon.bang(12) : hero.tone === 'green' ? Icon.check(12) : call.state === 'idle' ? <span className="pulse" /> : <span className="ringing">{Icon.phone(12)}</span>}
+              {hero.pill}
+            </span>
+            <h1>{hero.title}</h1>
+            <p>{hero.line}</p>
+          </div>
           {call.state === 'ringing' && call.escalateAt && p.escalateTo && (
             <p className="escalate">
               {Icon.clock()} No answer in {mmss(call.escalateAt - now)}: FISHY calls {p.escalateTo.name}, {p.escalateTo.role}
             </p>
           )}
-          {!waiting && <StepTrack states={track} />}
+          {!waiting && <StepTrack states={track} intro={intro} live={call.state === 'ringing' ? 'call' : undefined} />}
         </section>
       )}
 
-      <main className={`main${p.hasInput && (idle || call.state === 'ringing') ? ' with-bar' : ''}`}>
+      <main className={`main${p.hasInput && (idle || call.state === 'ringing') ? ' with-bar' : ''}${intro ? ' intro' : ''}`}>
         {p.busy && (
           <p className="status-line" role="status">
             <span className="spinner" aria-hidden="true" />
@@ -226,7 +237,7 @@ export function Verdict(p: Props) {
                     </div>
                     {flags.map((f) => {
                       const screen = p.onOpenFlag(f.kind);
-                      return <FlagRow key={f.kind} flag={f} showSource={f.source !== source} onOpen={screen ? () => p.onOpen(screen) : undefined} />;
+                      return <FlagRow key={f.kind} index={flagIndex++} flag={f} showSource={f.source !== source} onOpen={screen ? () => p.onOpen(screen) : undefined} />;
                     })}
                   </div>
                 );
@@ -255,8 +266,9 @@ export function Verdict(p: Props) {
         <Privacy>Message text stays on this laptop. Without Gemini Nano, only redacted text goes to the cloud.</Privacy>
       </main>
 
-      {p.hasInput && idle && (
-        <div className="action-bar">
+      {/* In <body>, so the screen's slide-in transform doesn't move a fixed bar. */}
+      {p.hasInput && idle && createPortal(
+        <div className={`action-bar${intro ? ' intro' : ''}`}>
           {p.targets.length > 1 && (
             <label className="target">
               <span>Confirm with</span>
@@ -274,15 +286,18 @@ export function Verdict(p: Props) {
             Call {first(target?.name)} on record
           </button>
           <span className="bar-hint">Number from Directory, never from the message.</span>
-        </div>
+        </div>,
+        document.body,
       )}
-      {call.state === 'ringing' && (
-        <div className="action-bar">
-          <button className="btn secondary" onClick={p.onCancel}>
-            Cancel call
-          </button>
-        </div>
-      )}
+      {call.state === 'ringing' &&
+        createPortal(
+          <div className="action-bar">
+            <button className="btn secondary" onClick={p.onCancel}>
+              Cancel call
+            </button>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

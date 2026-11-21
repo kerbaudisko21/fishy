@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { Evidence } from '../../lib/types';
 import { CheckList, DetailHead, Icon, LinkCard, Section } from '../components';
 import { money } from '../format';
@@ -46,7 +47,7 @@ export function Invoice({ data, onBack, onOpenKnown }: { data: Data; onBack: () 
                 <span className="row-detail">{usual.holder}</span>
                 <ol className="history" aria-label="Payment history" style={{ gridTemplateColumns: `repeat(${Math.max(usual.months.length, 1)}, minmax(0, 1fr))` }}>
                   {usual.months.map((m, i) => (
-                    <li key={`${m}-${i}`}>
+                    <li key={`${m}-${i}`} style={{ '--i': i } as CSSProperties}>
                       <span />
                       {m}
                     </li>

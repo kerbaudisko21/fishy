@@ -37,4 +37,16 @@
   --r-sm: 10px;
   --r-md: 14px;
   --r-lg: 18px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* entrances, press feedback */
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1); /* things moving on screen */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); /* the call bar sliding up */
+  --rise-y: 10px;
+  --slide-x: 18px;
+  --pop-scale: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --rise-y: 0px; --slide-x: 0px; --pop-scale: 1; }
 }

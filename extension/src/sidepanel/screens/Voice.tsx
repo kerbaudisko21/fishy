@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { Evidence } from '../../lib/types';
 import { DetailHead, Icon, Privacy, Section } from '../components';
 
@@ -29,7 +30,7 @@ export function Voice({ data, busy, onBack, onRecordAgain, onCheckFace }: Props)
           </div>
           <div className="wave" aria-hidden="true">
             {bars.map((h, i) => (
-              <span key={i} style={{ height: `${Math.max(6, Math.round(h * 100))}%` }} />
+              <span key={i} style={{ height: `${Math.max(6, Math.round(h * 100))}%`, '--i': i } as CSSProperties} />
             ))}
           </div>
           <div className="score">
@@ -40,7 +41,9 @@ export function Voice({ data, busy, onBack, onRecordAgain, onCheckFace }: Props)
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div className="meter" role="img" aria-label={`Score ${pct} out of 100`}>
-              <span style={{ left: `${pct}%` }} />
+              <span className="meter-pos" style={{ transform: `translateX(${pct}%)` }}>
+                <i />
+              </span>
             </div>
             <div className="small" style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Likely real</span>

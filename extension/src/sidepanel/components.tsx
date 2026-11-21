@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { CheckItem, Signal, SignalKind, Source, Step } from '../lib/types';
 
 /* ---------- Icons (inline stroke SVG, decorative) ---------- */
@@ -101,17 +101,45 @@ export function Header({
           </button>
         </span>
       </div>
-      {tab && (
-        <nav className="tabs" aria-label="Panel">
-          <button className="tab" aria-current={tab === 'verdict' ? 'page' : undefined} onClick={() => onTab('verdict')}>
-            Check
-          </button>
-          <button className="tab" aria-current={tab === 'directory' ? 'page' : undefined} onClick={() => onTab('directory')}>
-            Directory
-          </button>
-        </nav>
-      )}
+      {tab && <Tabs tab={tab} onTab={onTab} />}
     </header>
+  );
+}
+
+/** Check / Directory, with one underline that slides between them. */
+function Tabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
+  const refs = useRef<Record<Tab, HTMLButtonElement | null>>({ verdict: null, directory: null });
+  const [bar, setBar] = useState<{ x: number; w: number } | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = refs.current[tab];
+    if (el) setBar({ x: el.offsetLeft, w: el.offsetWidth });
+  }, [tab]);
+  // Slide only after the first position is drawn, so the bar doesn't fly in on mount.
+  useLayoutEffect(() => {
+    if (!bar || ready) return;
+    const id = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(id);
+  }, [bar, ready]);
+
+  return (
+    <nav className="tabs" aria-label="Panel">
+      {(['verdict', 'directory'] as const).map((t) => (
+        <button
+          key={t}
+          ref={(el) => {
+            refs.current[t] = el;
+          }}
+          className="tab"
+          aria-current={tab === t ? 'page' : undefined}
+          onClick={() => onTab(t)}
+        >
+          {t === 'verdict' ? 'Check' : 'Directory'}
+        </button>
+      ))}
+      {bar && <span className={`tab-bar${ready ? ' ready' : ''}`} aria-hidden="true" style={{ transform: `translateX(${bar.x}px) scaleX(${bar.w / 100})` }} />}
+    </nav>
   );
 }
 
@@ -125,11 +153,11 @@ export const STEPS: Array<{ id: Step; label: string }> = [
 export type StepState = 'done' | 'now' | 'todo' | 'flagged';
 
 /** The four steps on one line. Used in the verdict and, small, on every evidence screen. */
-export function StepTrack({ states, small }: { states: Record<Step, StepState>; small?: boolean }) {
+export function StepTrack({ states, small, intro, live }: { states: Record<Step, StepState>; small?: boolean; intro?: boolean; live?: Step }) {
   return (
-    <ol className={`track${small ? ' small' : ''}`} aria-label="Steps">
+    <ol className={`track${small ? ' small' : ''}${intro ? ' intro' : ''}`} aria-label="Steps">
       {STEPS.map((s, i) => (
-        <li key={s.id} className={`track-step ${states[s.id]}`}>
+        <li key={s.id} className={`track-step ${states[s.id]}${live === s.id ? ' live' : ''}`} style={{ '--i': i } as CSSProperties}>
           <span className="track-node" aria-hidden="true">
             {states[s.id] === 'done' ? Icon.check(small ? 9 : 11) : states[s.id] === 'flagged' ? Icon.bang(small ? 9 : 11) : small ? null : i + 1}
           </span>
@@ -171,9 +199,9 @@ export function SourceBadge({ source, label }: { source: Source; label?: string 
   );
 }
 
-export function FlagRow({ flag, onOpen, showSource }: { flag: Signal; onOpen?: () => void; showSource?: boolean }) {
+export function FlagRow({ flag, onOpen, showSource, index = 0 }: { flag: Signal; onOpen?: () => void; showSource?: boolean; index?: number }) {
   return (
-    <button className="flag" onClick={onOpen} disabled={!onOpen}>
+    <button className="flag" onClick={onOpen} disabled={!onOpen} style={{ '--i': index } as CSSProperties}>
       <span className="flag-icon">{flagIcon(flag.kind)}</span>
       <span className="grow" style={{ gap: 3 }}>
         <span className="flag-title">{flag.title}</span>
