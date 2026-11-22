@@ -243,6 +243,15 @@ PROJECT_ID=your-project-id GITHUB_REPO=owner/name bash scripts/setup-ci.sh
 
 The script creates a sign-in pool that accepts only this repository's `main` branch, and a deploy account, `fishy-deployer`. No key is created: GitHub proves to Google Cloud which repository and branch a run belongs to. It ends by printing the three secrets to store.
 
+One step needs a word. The deploy account can deploy functions only when it may act as two accounts that are not FISHY's:
+
+| Account | Why it is needed | When the script stops instead |
+|---|---|---|
+| App Engine default, `<project>@appspot.gserviceaccount.com` | The Firebase CLI checks it before any functions deploy, even though no FISHY function runs as it | It has any role in the project |
+| Default compute, `<number>-compute@developer.gserviceaccount.com` | It builds the functions, and the Firebase CLI has no setting for another build account | It has the Editor or Owner role. `ALLOW_WIDE_BUILD_ACCOUNT=yes` accepts that, for a project that holds nothing but FISHY |
+
+"May act as" means the deploy account can do whatever that account can do, and can replace any service that runs as it. So the script prints both accounts' roles, and the services that run as the default compute account, before it changes anything. Read that list. A service of another app that runs as the default compute account is better moved to an account of its own first.
+
 Then, in the repository: Settings → Secrets and variables → Actions.
 
 | Name | Kind | What it is |
@@ -260,7 +269,7 @@ Then, in the repository: Settings → Secrets and variables → Actions.
 
 Three things to know before switching it on:
 
-- **Whoever can push to `main` can deploy.** Protect the branch. The deploy account's roles cover the whole project (Google Cloud has no role limited to one Hosting site or one set of functions), so in a shared project a bad merge here could reach the other app's services.
+- **Whoever can push to `main` can deploy.** Protect the branch. The deploy account's roles cover the whole project (Google Cloud has no role limited to one Hosting site or one set of functions), so in a shared project a bad merge here could reach the other app's services. It may also act as the App Engine default account and the default compute account: a role someone later gives either of them is a role the deploy account can use.
 - **The workflow log is public** when the repository is. The pre-deploy check never prints a phone number there, only how many are on the allowlist.
 - **An App Check debug token never goes into the hosted pages.** The workflow has no setting for one.
 
