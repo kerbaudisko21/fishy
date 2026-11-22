@@ -15,6 +15,10 @@
 #   - a sign-in pool "fishy-github" that accepts this repository's main branch
 #   - a deploy account "fishy-deployer" that the workflow signs in as
 # What the deploy account may do is listed below, one line per role.
+#
+# It also lets the deploy account act as two accounts that are not FISHY's:
+# the App Engine default account and the default compute account. It prints
+# what both can do first, and stops when that is too much. See "Look first".
 
 set -euo pipefail
 
@@ -31,6 +35,65 @@ RUNTIME="fishy-functions@${PROJECT_ID}.iam.gserviceaccount.com"
 REPO_ID="${GITHUB_REPO_ID:-$(gh api "repos/${GITHUB_REPO}" --jq .id)}"
 OWNER_ID="${GITHUB_OWNER_ID:-$(gh api "repos/${GITHUB_REPO}" --jq .owner.id)}"
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+
+# Two more accounts, neither of them FISHY's. The deploy account can deploy
+# functions only when it may act as both:
+#   - the App Engine default account. The Firebase CLI checks this before any
+#     functions deploy, even when no function runs as it.
+#   - the default compute account. It builds the functions, and the Firebase
+#     CLI has no setting for another build account.
+# "May act as" means: it can do whatever that account can do, and it can
+# replace any service that runs as that account. So this script looks first,
+# and stops before it has changed anything when either account can do too much.
+APPENGINE="${PROJECT_ID}@appspot.gserviceaccount.com"
+BUILDER="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+# The roles an account holds in this project, on one line.
+roles_of() {
+  gcloud projects get-iam-policy "$PROJECT_ID" --flatten='bindings[].members' \
+    --filter="bindings.members:serviceAccount:$1" --format='value(bindings.role)' | sort | tr '\n' ' '
+}
+
+echo "== Look first: the two accounts the deploy account will be able to act as =="
+if gcloud iam service-accounts describe "$APPENGINE" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  HAS_APPENGINE=yes
+  appengine_roles="$(roles_of "$APPENGINE")"
+  echo "App Engine default account. Roles in this project: ${appengine_roles:-none}"
+  if [ -n "$appengine_roles" ]; then
+    echo "STOP. Nothing was changed."
+    echo "Acting as ${APPENGINE} would hand those roles to whoever can push to main."
+    echo "Remove them if nothing needs them, then run this script again."
+    echo "Or keep deploying the functions by hand."
+    exit 1
+  fi
+else
+  HAS_APPENGINE=no
+  echo "App Engine default account: this project has none, so the Firebase CLI skips its check."
+fi
+
+if ! gcloud iam service-accounts describe "$BUILDER" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  echo "STOP. Nothing was changed."
+  echo "${BUILDER} does not exist yet. Deploy once by hand first (see the README), then run this again."
+  exit 1
+fi
+builder_roles="$(roles_of "$BUILDER")"
+builder_runs="$({ gcloud run services list --project="$PROJECT_ID" \
+  --format='value(metadata.name,spec.template.spec.serviceAccountName)' 2>/dev/null || true; } |
+  awk -v sa="$BUILDER" '$2 == sa { print $1 }' | tr '\n' ' ')"
+echo "Default compute account. Roles in this project: ${builder_roles:-none}"
+echo "Default compute account. Services that run as it: ${builder_runs:-none}"
+case " ${builder_roles}" in
+  *" roles/owner "* | *" roles/editor "*)
+    if [ "${ALLOW_WIDE_BUILD_ACCOUNT:-}" != "yes" ]; then
+      echo "STOP. Nothing was changed."
+      echo "${BUILDER} can change almost everything in this project."
+      echo "Acting as it would hand that to whoever can push to main."
+      echo "Give it only what a build needs (the README's first-deploy steps list it), then run this again."
+      echo "In a project that holds nothing but FISHY you may accept it: add ALLOW_WIDE_BUILD_ACCOUNT=yes."
+      exit 1
+    fi
+    ;;
+esac
 
 echo "== Sign-in without a key needs this API =="
 gcloud services enable iamcredentials.googleapis.com --project="$PROJECT_ID"
@@ -68,8 +131,16 @@ for role in cloudfunctions.admin firebasehosting.admin serviceusage.apiKeysViewe
   echo "granted roles/${role}"
 done
 
-echo "== It may deploy functions that run as the FISHY runtime account, and no other =="
+echo "== It may deploy functions that run as the FISHY runtime account =="
 gcloud iam service-accounts add-iam-policy-binding "$RUNTIME" --project="$PROJECT_ID" \
+  --member="serviceAccount:${DEPLOYER}" --role="roles/iam.serviceAccountUser" --format=none
+
+echo "== It may act as the two accounts looked at above =="
+if [ "$HAS_APPENGINE" = yes ]; then
+  gcloud iam service-accounts add-iam-policy-binding "$APPENGINE" --project="$PROJECT_ID" \
+    --member="serviceAccount:${DEPLOYER}" --role="roles/iam.serviceAccountUser" --format=none
+fi
+gcloud iam service-accounts add-iam-policy-binding "$BUILDER" --project="$PROJECT_ID" \
   --member="serviceAccount:${DEPLOYER}" --role="roles/iam.serviceAccountUser" --format=none
 
 echo "== It may see that the two FISHY secrets exist. It cannot read them. =="
