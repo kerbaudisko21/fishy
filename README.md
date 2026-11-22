@@ -13,7 +13,7 @@ Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) 
 | Part | State |
 |---|---|
 | Side panel: Verdict, 5 evidence screens, Directory, Check it yourself, Settings | Built; runs on demo data or live input |
-| Step 1 Read: Firebase AI Logic hybrid (Nano on device, cloud on redacted text) | Built; needs a Firebase config to call Gemini (offline it falls back to a labelled keyword reader) |
+| Step 1 Read: Firebase AI Logic hybrid (Nano on device, cloud on redacted text) | Built; needs a Firebase config to call Gemini (offline it falls back to a labelled keyword reader). The cloud request was answered live through Firebase AI Logic with App Check; not yet tried from the side panel or with Nano |
 | Step 2 Check: look-alike sender, invoice PDF (account vs record, edit traces) | Built, on device, with tests |
 | Step 2 Check: sender authentication (DMARC/SPF/DKIM, webmail reply-to) | Built, read from the opened email's own headers on the laptop |
 | Step 2 Check: Web Risk links, domain age | Frontend built; `checkLinks` function built with tests and deployed, not yet tried live; `domainAge` not built |
@@ -22,7 +22,7 @@ Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) 
 | Step 3 Match: known bad accounts, domains, numbers | Built, on device, cached from Firestore |
 | Step 4 Call: create check, start call, follow state, escalation countdown | Frontend built; `startVerificationCall` and the Twilio webhooks (`voice`) built with tests and deployed, not yet tried on a real phone; with no call placed the panel says so and links the approval page; escalation to the next approver not built |
 | Shared learning: a "not me" confirmed with the PIN adds to the known-scam list | `reportSuspects` function built with tests; the panel does not call it yet |
-| Web approval page and incident report (+ team alerts) | Pages built; `getApproval` and `answerApproval` built with tests and deployed, not yet tried live (that needs App Check on the pages); the panel shows the link; incident, audit and alert functions are stubs |
+| Web approval page and incident report (+ team alerts) | Pages built; `getApproval` and `answerApproval` built with tests and deployed; tried live only as far as a made-up link (the page passes App Check and says the link has expired), a real approval not yet; the panel shows the link; incident, audit and alert functions are stubs |
 | Voice check (P1) | Records 10 s of the Meet tab on click (`tabCapture`); `scoreVoice` function not built (demo score without Firebase) |
 | Face check (P1) | Screen only |
 
@@ -97,8 +97,19 @@ Design preview without installing: `npm run build -w extension`, then `npx vite 
 
 ### Firebase
 
-- Enable **Firebase AI Logic** (Gemini Developer API), **App Check**, **Authentication** (Anonymous), **Firestore**, **Remote Config**, **Cloud Functions** (Blaze plan).
+- Enable **Firebase AI Logic**, **App Check**, **Authentication** (Anonymous), **Firestore**, **Remote Config**, **Cloud Functions** (Blaze plan).
 - App Check: the extension cannot load reCAPTCHA, so it uses a **debug token** (accepted by #BuildHybridAI). Register it under App Check → Apps → Manage debug tokens and put it in `extension/.env.local`. Never commit it.
+
+#### Which Gemini API the cloud model uses
+
+Firebase AI Logic can reach Gemini through two APIs. FISHY works with either: both go through Firebase AI Logic and App Check, and both get redacted text only. They differ in who pays. Choose with `VITE_AI_PROVIDER` in `extension/.env.local`, then build the extension again.
+
+| `VITE_AI_PROVIDER` | Calls | Who pays (Google's rules in November 2026) |
+|---|---|---|
+| `developer` (when not set) | Gemini Developer API | Nothing on a project **without** billing. On a project **with** billing it needs prepaid credit bought in Google AI Studio (smallest amount $5), and Google Cloud free trial credit cannot pay for it. With no prepaid credit every call is refused (we saw 429, "Your prepayment credits are depleted") |
+| `agent-platform` | Gemini on Agent Platform (formerly Vertex AI) | The project's own Cloud Billing account, per use. Needs the Blaze plan. Free trial credit pays for it only on a billing account opened before 16 Nov 2026 that has not been upgraded to a paid account since then |
+
+FISHY's functions need the Blaze plan, so a project that runs all of FISHY has billing: use `agent-platform` there, or buy prepaid credit and keep `developer`. Any other value stops the reader with a message that names the setting. Sources: [Firebase AI Logic pricing](https://firebase.google.com/docs/ai-logic/pricing), [its FAQ on free trial credit](https://firebase.google.com/docs/ai-logic/faq-and-troubleshooting), [Gemini API billing](https://ai.google.dev/gemini-api/docs/billing).
 
 ### Deploy to Firebase (Google Cloud)
 
@@ -115,15 +126,16 @@ What gets deployed: the rules of FISHY's own Firestore database, the Cloud Funct
 | Secrets | `FISHY_TWILIO_ACCOUNT_SID`, `FISHY_TWILIO_AUTH_TOKEN` |
 | Remote Config | `npm run remoteconfig` adds FISHY's three parameters and keeps every other one. Never deploy the template file directly: publishing replaces the whole project template |
 
-Three things are still shared by the whole project, so check them with whoever owns the other app first: **Anonymous sign-in** (an app whose rules allow "any signed-in user" would then allow FISHY's anonymous users too), **billing**, and the **Gemini Developer API** being switched on.
+Three things are still shared by the whole project, so check them with whoever owns the other app first: **Anonymous sign-in** (an app whose rules allow "any signed-in user" would then allow FISHY's anonymous users too), **billing**, and **Firebase AI Logic** being switched on (its Gemini APIs, and prepaid Gemini credit, belong to the whole project and its billing account).
 
 **Once per project, in the [Firebase console](https://console.firebase.google.com/)** (these steps need a person and a browser):
 
-1. Create the project, then upgrade it to the **Blaze** plan. Cloud Functions need it. Linking billing also ends the free tier of the Gemini Developer API for that project, so set a budget alert.
-2. **Authentication** → Sign-in method → enable **Anonymous**. In a shared project, read the note above first.
-3. **AI Logic** → get started with the **Gemini Developer API**.
+1. Create the project, then upgrade it to the **Blaze** plan. Cloud Functions need it. Linking billing also ends the no-cost tier of the Gemini Developer API for that project: see [Which Gemini API the cloud model uses](#which-gemini-api-the-cloud-model-uses). Set a budget alert.
+2. **Authentication** → Sign-in method → enable **Anonymous**. In a shared project, read the note above first. On a project that never had sign-in, this also sets the sign-in service up; ours came out as Identity Platform, which is free up to 50,000 monthly users on Blaze and counts anonymous users.
+3. **AI Logic** → get started, with the Gemini API you chose above.
 4. Project settings → add a **Web app**. Its config goes into `extension/.env.local` and `web/.env.local`.
 5. **App Check** → register that web app with **reCAPTCHA Enterprise** (the hosted pages use it; the site key goes into `web/.env.local`), and add a **debug token** for the extension (it goes into `extension/.env.local`).
+6. **App Check** → require it (**Enforce**) for **Firebase AI Logic**. The web API key ships inside the extension, so without this anyone who reads it can run Gemini on the project's bill. It took about five minutes to take effect for us.
 
 **On the machine that deploys:**
 
@@ -216,7 +228,7 @@ Three things are still shared by the whole project, so check them with whoever o
 12. Try it without a phone: set `APPROVAL_PAGE_ENABLED=true`, deploy again and start a call from the side panel. The panel says that no phone call was placed and shows **Open the approval page**. Answer **No** with the PIN: `checks/{id}.call.state` becomes `not_me`.
 13. Try it with a phone: set `CALLS_ENABLED=true` and put your own verified number in `CALL_ALLOWLIST`, then deploy again.
 
-Tried against a real, shared project on 22 Nov 2026: the database rules, all twelve functions and the web pages deploy, and the Hosting rewrite for `/voice/**` does reach a function in `asia-southeast2` (an unsigned request to `/voice/menu` is refused with 403; a callable without App Check is refused with 401). Not yet tried there: a check from the side panel, an answer on the approval page, and a real phone call. Those need Anonymous sign-in and App Check, which are console steps.
+Tried against a real, shared project on 22 Nov 2026: the database rules, all twelve functions and the web pages deploy, and the Hosting rewrite for `/voice/**` does reach a function in `asia-southeast2` (an unsigned request to `/voice/menu` is refused with 403; a callable without App Check is refused with 401). With Anonymous sign-in on and App Check set up: `checkLinks` lets a request in only with both a sign-in and an App Check token (401 without either), the approval page passes App Check in a browser, and Step 1's cloud request is answered through Firebase AI Logic with an App Check token and refused with 401 without one. The answer came from `agent-platform`; `developer` was refused for lack of prepaid credit. Not yet tried there: a whole check from the side panel, an answer on the approval page, and a real phone call.
 
 #### Phone call or approval page
 
