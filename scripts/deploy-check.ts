@@ -134,7 +134,12 @@ function allowlist(setting: string | undefined): { any: boolean; shown: string[]
   };
 }
 
-export function checkDeploy(files: DeployFiles): DeployCheck {
+export interface CheckOptions {
+  /** True when the output goes to a log anyone can read, such as GitHub Actions on a public repo. */
+  publicLog?: boolean;
+}
+
+export function checkDeploy(files: DeployFiles, options: CheckOptions = {}): DeployCheck {
   const findings: Finding[] = [];
   const error = (message: string) => findings.push({ level: 'error', message });
   const warning = (message: string) => findings.push({ level: 'warning', message });
@@ -194,7 +199,9 @@ export function checkDeploy(files: DeployFiles): DeployCheck {
       warning('Real phone calls are ON but no number is on CALL_ALLOWLIST, so nobody can be called.');
     } else {
       const count = allowed.shown.length;
-      warning(`Real phone calls are ON for ${count} number${count === 1 ? '' : 's'}: ${allowed.shown.join(', ')}.`);
+      // The last four digits help a person check the list. In a public log they are left out.
+      const which = options.publicLog ? '' : `: ${allowed.shown.join(', ')}`;
+      warning(`Real phone calls are ON for ${count} number${count === 1 ? '' : 's'}${which}.`);
     }
   }
   if (functionsText !== null && !callsOn && !pageOn) {

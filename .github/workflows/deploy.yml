@@ -1,0 +1,113 @@
+name: Deploy
+
+# Every merge to main updates what is live on Google Cloud: the database
+# rules, the Cloud Functions and the web pages. It can also be run by hand
+# (Actions > Deploy > Run workflow), for example after a setting was changed.
+#
+# One-time setup is in the README, under "Deploy on every merge". Until that
+# is done, this workflow skips the deploy instead of failing.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # to sign in to Google Cloud without a stored key
+
+# Two merges close together deploy one after the other, never at the same
+# time. A running deploy is never cancelled: half a deploy is worse than a late one.
+concurrency:
+  group: fishy-live
+  cancel-in-progress: false
+
+jobs:
+  ready:
+    name: Is deploy set up?
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+          PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          DEPLOY_SA: ${{ secrets.GCP_DEPLOY_SA }}
+        run: |
+          if [ -n "$PROJECT" ] && [ -n "$PROVIDER" ] && [ -n "$DEPLOY_SA" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Deploy is not set up for this repository yet, so it was skipped. See 'Deploy on every merge' in the README."
+          fi
+
+  deploy:
+    name: Check, then deploy
+    needs: ready
+    if: needs.ready.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      # A main branch that fails its checks is never deployed.
+      - run: npm run typecheck
+      - run: npm test
+
+      # On a laptop these files are written by hand. Here they are built from
+      # the repository's Actions secrets and variables. Switches that are not
+      # set stay off: no real phone calls, no web approval page.
+      - name: Write the settings files
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          HOSTING_SITE: ${{ vars.HOSTING_SITE }}
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+          RUNTIME_SERVICE_ACCOUNT: ${{ vars.RUNTIME_SERVICE_ACCOUNT }}
+          COMPANY_NAME: ${{ vars.COMPANY_NAME }}
+          COMPANY_DOMAIN: ${{ vars.COMPANY_DOMAIN }}
+          APPROVAL_PAGE_ENABLED: ${{ vars.APPROVAL_PAGE_ENABLED }}
+          CALLS_ENABLED: ${{ vars.CALLS_ENABLED }}
+          CALLS_DAILY_CAP: ${{ vars.CALLS_DAILY_CAP }}
+          # Phone numbers are personal data, so these two are secrets.
+          CALL_ALLOWLIST: ${{ secrets.CALL_ALLOWLIST }}
+          TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
+          FIREBASE_WEB_API_KEY: ${{ vars.FIREBASE_WEB_API_KEY }}
+          FIREBASE_WEB_APP_ID: ${{ vars.FIREBASE_WEB_APP_ID }}
+          FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
+          RECAPTCHA_ENTERPRISE_KEY: ${{ vars.RECAPTCHA_ENTERPRISE_KEY }}
+          FCM_VAPID_KEY: ${{ vars.FCM_VAPID_KEY }}
+        run: node scripts/ci-write-settings.ts
+
+      # Signs in as the deploy account, after the dependencies are installed
+      # and the tests have run. Only this repository's main branch may do this.
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      # Runs the pre-deploy check first, and stops if it finds a problem.
+      # It never touches Remote Config, the demo data or another app's site.
+      - name: Deploy rules, functions and pages
+        run: npm run deploy -- --non-interactive
+
+      - name: The live site must answer
+        env:
+          SITE: ${{ vars.HOSTING_SITE }}
+        run: |
+          base="https://${SITE}.web.app"
+          status() { curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$@"; }
+          page="$(status "$base/")"
+          echo "Approval page: $page"
+          test "$page" = 200
+          # The phone callback must refuse a request the phone provider did not sign.
+          unsigned="$(status -X POST "$base/voice/menu?v=deploy-check" -d 'Digits=1')"
+          echo "Unsigned phone callback: $unsigned (403 is right)"
+          test "$unsigned" = 403

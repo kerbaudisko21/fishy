@@ -25,12 +25,16 @@ for (const [key, value] of Object.entries(process.env)) {
   }
 }
 
-const result = checkDeploy({
-  firebaserc: read('.firebaserc'),
-  // The Firebase CLI reads functions/.env first, then the file for the project.
-  functionsEnv: (projectId) => (read(`functions/.env.${projectId}`) === null ? null : together(['functions/.env', `functions/.env.${projectId}`])),
-  webEnv,
-});
+const result = checkDeploy(
+  {
+    firebaserc: read('.firebaserc'),
+    // The Firebase CLI reads functions/.env first, then the file for the project.
+    functionsEnv: (projectId) => (read(`functions/.env.${projectId}`) === null ? null : together(['functions/.env', `functions/.env.${projectId}`])),
+    webEnv,
+  },
+  // A workflow log on a public repository can be read by anyone.
+  { publicLog: process.env.GITHUB_ACTIONS === 'true' },
+);
 
 console.log(result.summary);
 for (const finding of result.findings) {

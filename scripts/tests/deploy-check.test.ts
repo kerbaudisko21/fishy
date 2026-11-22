@@ -124,6 +124,19 @@ test('real calls switched on is said out loud, with how many numbers can be call
   assert.ok(everything.includes('0143'), 'the last four digits are shown so the list can be checked');
 });
 
+test('in a public log the numbers are counted but not shown, not even in part', () => {
+  const f = withFunctionsEnv(
+    FUNCTIONS_ENV.replace('CALLS_ENABLED=false', 'CALLS_ENABLED=true').replace('CALL_ALLOWLIST=', 'CALL_ALLOWLIST=+12025550143, +12025550144'),
+  );
+  const result = checkDeploy(f, { publicLog: true });
+
+  assert.ok(result.summary.includes('Real phone calls: ON'));
+  assert.match(result.findings.map((finding) => finding.message).join('\n'), /2 numbers/);
+  const everything = JSON.stringify(result);
+  assert.ok(!everything.includes('0143'));
+  assert.ok(!everything.includes('0144'));
+});
+
 test('an allowlist of "*" is called out as any number', () => {
   const f = withFunctionsEnv(FUNCTIONS_ENV.replace('CALLS_ENABLED=false', 'CALLS_ENABLED=true').replace('CALL_ALLOWLIST=', 'CALL_ALLOWLIST=*'));
 
