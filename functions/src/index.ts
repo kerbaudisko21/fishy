@@ -34,8 +34,10 @@ initializeApp();
 // and the rewrite for /voice in firebase.json.
 setGlobalOptions({ region: 'asia-southeast2' });
 
-const TWILIO_ACCOUNT_SID = defineSecret('TWILIO_ACCOUNT_SID');
-const TWILIO_AUTH_TOKEN = defineSecret('TWILIO_AUTH_TOKEN');
+// The secrets carry FISHY's name. In a project shared with another app, a plain
+// TWILIO_AUTH_TOKEN could be that app's secret, and setting ours would change theirs.
+const TWILIO_ACCOUNT_SID = defineSecret('FISHY_TWILIO_ACCOUNT_SID');
+const TWILIO_AUTH_TOKEN = defineSecret('FISHY_TWILIO_AUTH_TOKEN');
 const TWILIO_FROM = defineString('TWILIO_FROM', { default: '' });
 
 // Both locks on real calls are closed unless a deployment opens them.

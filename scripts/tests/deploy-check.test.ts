@@ -26,9 +26,15 @@ const WEB_ENV = {
   VITE_RECAPTCHA_ENTERPRISE_KEY: 'site-key',
 };
 
+const firebaserc = (site: string | null = 'fishy-demo-1234', project = 'fishy-demo-1234') =>
+  JSON.stringify({
+    projects: { default: project },
+    ...(site === null ? {} : { targets: { [project]: { hosting: { fishy: [site] } } } }),
+  });
+
 function files(overrides: Partial<DeployFiles> = {}): DeployFiles {
   return {
-    firebaserc: JSON.stringify({ projects: { default: 'fishy-demo-1234' } }),
+    firebaserc: firebaserc(),
     functionsEnv: (projectId) => (projectId === 'fishy-demo-1234' ? FUNCTIONS_ENV : null),
     webEnv: WEB_ENV,
     ...overrides,
@@ -61,7 +67,7 @@ test('a deploy without a project is stopped', () => {
 });
 
 test('the placeholder project ID from the example file is refused', () => {
-  const f = files({ firebaserc: JSON.stringify({ projects: { default: 'your-firebase-project-id' } }) });
+  const f = files({ firebaserc: firebaserc('fishy-demo-1234', 'your-firebase-project-id') });
 
   assert.equal(checkDeploy(f).ok, false);
   assert.match(errors(f)[0] ?? '', /your own project ID/);
@@ -151,7 +157,30 @@ test('a missing company name is a warning, not a stop', () => {
 });
 
 test('the phone secrets are always mentioned, because the check cannot see them', () => {
-  assert.ok(checkDeploy(files()).summary.includes('TWILIO_ACCOUNT_SID'));
+  assert.ok(checkDeploy(files()).summary.includes('FISHY_TWILIO_ACCOUNT_SID'));
+});
+
+test('a deploy that does not name its own Hosting site is stopped, so it cannot replace another site', () => {
+  for (const rc of [firebaserc(null), firebaserc('your-hosting-site-id')]) {
+    const f = files({ firebaserc: rc });
+
+    assert.equal(checkDeploy(f).ok, false);
+    assert.match(errors(f).join('\n'), /Hosting site/);
+  }
+});
+
+test('the summary names the Hosting site and the database, so a shared project can be checked at a glance', () => {
+  const { summary } = checkDeploy(files({ firebaserc: firebaserc('fishy-check-pages') }));
+
+  assert.ok(summary.includes('Hosting site: fishy-check-pages'));
+  assert.ok(summary.includes('Firestore database: fishy'));
+});
+
+test('a public address that is not this site is called out', () => {
+  const f = files({ firebaserc: firebaserc('fishy-check-pages') });
+
+  assert.equal(checkDeploy(f).ok, true, 'it may be a custom domain, so it is a warning');
+  assert.match(warnings(f).join('\n'), /fishy-check-pages\.web\.app/);
 });
 
 test('settings files are read the usual way: comments, blank lines, quotes and spaces', () => {

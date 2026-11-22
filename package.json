@@ -18,7 +18,8 @@
     "test-invoices": "node scripts/make-test-invoices.mjs",
     "seed": "node scripts/seed.ts",
     "deploy:check": "node scripts/predeploy.ts",
-    "deploy": "node scripts/predeploy.ts && npx -y firebase-tools@15 deploy --only firestore,functions,hosting,remoteconfig"
+    "deploy": "node scripts/predeploy.ts && npx -y firebase-tools@15 deploy --only firestore,functions:fishy,hosting:fishy",
+    "remoteconfig": "node scripts/remote-config.ts"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2"

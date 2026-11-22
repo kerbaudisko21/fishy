@@ -31,6 +31,9 @@ export interface DeployCheck {
 }
 
 const PLACEHOLDER_PROJECT = 'your-firebase-project-id';
+const PLACEHOLDER_SITE = 'your-hosting-site-id';
+/** The deploy target in firebase.json. .firebaserc says which Hosting site it stands for. */
+const HOSTING_TARGET = 'fishy';
 const WEB_REQUIRED = ['VITE_FIREBASE_API_KEY', 'VITE_FIREBASE_PROJECT_ID', 'VITE_FIREBASE_APP_ID'];
 
 /** Reads KEY=VALUE lines. Comments, blank lines and anything else are skipped. */
@@ -56,6 +59,18 @@ function readProjectId(firebaserc: string | null): string | null {
     const parsed: unknown = JSON.parse(firebaserc);
     const projects = (parsed as { projects?: Record<string, unknown> } | null)?.projects;
     return typeof projects?.default === 'string' && projects.default !== '' ? projects.default : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The Hosting site FISHY's pages go to, from the "targets" part of .firebaserc. */
+function readHostingSite(firebaserc: string | null, projectId: string): string | null {
+  try {
+    const parsed = JSON.parse(firebaserc ?? '') as { targets?: Record<string, { hosting?: Record<string, unknown> }> };
+    const sites = parsed.targets?.[projectId]?.hosting?.[HOSTING_TARGET];
+    const site: unknown = Array.isArray(sites) ? sites[0] : undefined;
+    return typeof site === 'string' && site !== '' ? site : null;
   } catch {
     return null;
   }
@@ -112,6 +127,15 @@ export function checkDeploy(files: DeployFiles): DeployCheck {
     return { ok: false, projectId: null, findings, summary: 'No project is set.' };
   }
 
+  // FISHY deploys to a Hosting site of its own, so it can never replace another app's site.
+  const site = readHostingSite(files.firebaserc, projectId);
+  if (site === null || site === PLACEHOLDER_SITE) {
+    error(
+      `.firebaserc does not say which Hosting site FISHY's pages go to. Create one and name it: ` +
+        `npx firebase-tools hosting:sites:create <site-id>, then npx firebase-tools target:apply hosting ${HOSTING_TARGET} <site-id>.`,
+    );
+  }
+
   const functionsText = files.functionsEnv(projectId);
   const settings = functionsText === null ? {} : parseEnv(functionsText);
   if (functionsText === null) {
@@ -120,6 +144,14 @@ export function checkDeploy(files: DeployFiles): DeployCheck {
     const problem = checkBaseUrl(settings.PUBLIC_BASE_URL);
     if (problem) {
       error(problem);
+    } else if (site !== null && site !== PLACEHOLDER_SITE) {
+      const host = new URL(settings.PUBLIC_BASE_URL ?? '').host;
+      if (host !== `${site}.web.app` && host !== `${site}.firebaseapp.com`) {
+        warning(
+          `PUBLIC_BASE_URL is ${host}, but the pages deploy to the site "${site}" (${site}.web.app). ` +
+            'Unless that is a custom domain of this site, the phone callbacks and the approval link will go to the wrong place.',
+        );
+      }
     }
     if (!settings.COMPANY_NAME) {
       warning('COMPANY_NAME is empty. The approval page will not say which company is asking.');
@@ -164,9 +196,11 @@ export function checkDeploy(files: DeployFiles): DeployCheck {
 
   const summary = [
     `Project: ${projectId}`,
+    `Hosting site: ${site !== null && site !== PLACEHOLDER_SITE ? site : 'not set'}`,
+    'Firestore database: fishy (FISHY\'s own; "(default)" is never touched)',
     `Real phone calls: ${callsOn ? 'ON' : 'OFF'}`,
     `Web approval page: ${pageOn ? 'ON' : 'OFF'}`,
-    'Not checked here: the secrets TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN must exist before the first deploy.',
+    'Not checked here: the secrets FISHY_TWILIO_ACCOUNT_SID and FISHY_TWILIO_AUTH_TOKEN must exist before the first deploy.',
     'Without a phone account yet, set both to the word not-set and leave calls off.',
   ].join('\n');
 

@@ -2,7 +2,7 @@ import { addDoc, collection, doc, getDocs, getFirestore, onSnapshot, serverTimes
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
 import { DEMO_DIRECTORY, DEMO_KNOWN_BAD, DEMO_SUPPLIERS } from '../demo/fixtures';
-import { DEMO, FIREBASE_READY, IN_EXTENSION, REGION } from './config';
+import { DATABASE, DEMO, FIREBASE_READY, IN_EXTENSION, REGION } from './config';
 import { DEFAULT_SELECTORS, SELECTORS_KEY, type PageSelectors } from './messages';
 import { ensureSignedIn, firebaseApp } from './firebase';
 import { DEFAULT_RULES, type RulesConfig } from './rules/engine';
@@ -13,7 +13,7 @@ import type { CallState, CallStatus, DirectoryPerson, KnownBadEntry, SignalKind,
  * function returns the synthetic demo data, so the panel always works.
  */
 
-const db = () => getFirestore(firebaseApp());
+const db = () => getFirestore(firebaseApp(), DATABASE);
 const fn = <I, O>(name: string) => httpsCallable<I, O>(getFunctions(firebaseApp(), REGION), name);
 
 export interface Directory {

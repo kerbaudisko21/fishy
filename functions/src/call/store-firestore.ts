@@ -1,5 +1,10 @@
 // Firestore as the store.
 //
+// FISHY keeps everything in its own named database, never in "(default)". It can
+// then share a Google Cloud project with another app: its rules and collections
+// cannot collide with that app's. The name must match DATABASE in
+// extension/src/lib/config.ts and the "database" in firebase.json.
+//
 // Collections, as firestore.rules and the README describe them:
 // - directory/{id}        name, role, phone, pinSalt, pinHash. Only this server code reads it.
 // - directoryPublic/{id}  the masked copy the side panel reads. Suppliers are read here
@@ -20,8 +25,10 @@ import { readCheck } from './check-record.ts';
 import type { Person, Store, Suspects, Verification } from './ports.ts';
 import { publicCall } from './public-call.ts';
 
+export const DATABASE_ID = 'fishy';
+
 export function firestoreStore(settings: { companyDomain: string }): Store {
-  const db = getFirestore();
+  const db = getFirestore(DATABASE_ID);
   const checks = db.collection('checks');
   const calls = db.collection('checkCalls');
 
