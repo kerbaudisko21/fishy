@@ -1,5 +1,6 @@
 ﻿import { createPortal } from 'react-dom';
 import { useFirstSeen } from '../motion';
+import { waitingFor } from '../../lib/call-wait';
 import type { CallStatus, CallTarget, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
 import { FlagRow, Icon, Privacy, Section, SourceBadge, StepTrack, Tile, type StepState } from '../components';
 import { money } from '../format';
@@ -54,12 +55,14 @@ export function Verdict(p: Props) {
   const now = useNow(call.state === 'ringing');
   const idle = call.state === 'idle';
   const waiting = !p.hasInput && idle;
+  // A phone call, or the approval page when no call was placed: the panel says which.
+  const wait = waitingFor({ who, phoneMasked: call.target?.phoneMasked ?? '' }, call.started);
 
   // The hero: one colour per state, one sentence.
   const hero: { tone: Tone; pill: string; title: string; line: string } | null = waiting
     ? { tone: 'navy', pill: 'Watching', title: 'Ready when money is asked for.', line: 'FISHY reads Meet captions and Gmail on this laptop, and stops you before you pay a scammer.' }
     : call.state === 'ringing'
-      ? { tone: 'navy', pill: 'Calling', title: `Calling the real ${who}…`, line: `${call.target?.phoneMasked ?? ''} from Directory. Waiting for them to press 1 or 2.` }
+      ? { tone: 'navy', pill: wait.pill, title: wait.title, line: wait.line }
       : call.state === 'no_answer' || call.state === 'escalated'
         ? { tone: 'navy', pill: 'No answer', title: call.escalatedTo ? `Calling ${first(call.escalatedTo)}…` : `${who} didn’t answer.`, line: 'Keep holding the payment.' }
         : call.state === 'not_me'
@@ -97,7 +100,12 @@ export function Verdict(p: Props) {
             <h1>{hero.title}</h1>
             <p>{hero.line}</p>
           </div>
-          {call.state === 'ringing' && call.escalateAt && p.escalateTo && (
+          {call.state === 'ringing' && wait.approvalUrl && (
+            <a className="escalate" href={wait.approvalUrl} target="_blank" rel="noreferrer">
+              {Icon.phone(14)} Open the approval page
+            </a>
+          )}
+          {call.state === 'ringing' && !wait.approvalUrl && call.escalateAt && p.escalateTo && (
             <p className="escalate">
               {Icon.clock()} No answer in {mmss(call.escalateAt - now)}: FISHY calls {p.escalateTo.name}, {p.escalateTo.role}
             </p>

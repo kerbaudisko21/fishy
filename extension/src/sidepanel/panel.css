@@ -48,6 +48,9 @@ h1, h2 { font-family: var(--font-head); margin: 0; }
 .hero h1 { font-size: 30px; line-height: 1.08; letter-spacing: -.01em; }
 .hero p { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--hero-sub); max-width: 34ch; }
 .hero .escalate { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--navy-2); font-size: 13px; color: #dbe3ea; max-width: none; }
+/* The same row as a link: the approval page, when no phone call was placed. */
+.hero a.escalate { color: #fff; font-weight: 600; text-decoration: none; }
+.hero a.escalate:hover, .hero a.escalate:focus-visible { text-decoration: underline; }
 .pulse { position: relative; width: 8px; height: 8px; border-radius: 999px; background: #6fd3b8; }
 
 /* The four steps on one line */

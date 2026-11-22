@@ -2,6 +2,7 @@ import { addDoc, collection, doc, getDocs, getFirestore, onSnapshot, serverTimes
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
 import { DEMO_DIRECTORY, DEMO_KNOWN_BAD, DEMO_SUPPLIERS } from '../demo/fixtures';
+import type { StartResult } from './call-wait';
 import { DATABASE, DEMO, FIREBASE_READY, IN_EXTENSION, REGION } from './config';
 import { DEFAULT_SELECTORS, SELECTORS_KEY, type PageSelectors } from './messages';
 import { ensureSignedIn, firebaseApp } from './firebase';
@@ -84,8 +85,10 @@ export async function createCheck(summary: CheckSummary): Promise<string> {
 }
 
 /** Step 4: asks Cloud Functions to call the target on the number on record (never a number from the message). */
-export async function startVerificationCall(checkId: string, targetId: string) {
-  await fn<{ checkId: string; personId: string }, { ok: true }>('startVerificationCall')({ checkId, personId: targetId });
+export async function startVerificationCall(checkId: string, targetId: string): Promise<StartResult> {
+  const { data } = await fn<{ checkId: string; personId: string }, Partial<StartResult>>('startVerificationCall')({ checkId, personId: targetId });
+  // The answer says whether a phone call was really placed, and gives the approval page when there is one.
+  return { call: data.call === 'placed' ? 'placed' : 'not_placed', reason: data.reason ?? null, approvalUrl: data.approvalUrl ?? null };
 }
 
 const CALL_STATES: CallState[] = ['idle', 'ringing', 'confirmed', 'not_me', 'no_answer', 'escalated'];
