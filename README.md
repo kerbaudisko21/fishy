@@ -235,6 +235,13 @@ So a demo needs no phone account at all: leave calls off and switch the approval
 
 It never deploys Remote Config and never loads the demo data. Those stay steps a person runs.
 
+Two things keep a deploy from stopping half-way:
+
+- **A function is replaced only when it changed.** The Firebase CLI compares the code, the settings and the secret versions with what is live, and skips a function that is the same. A merge that touches only the pages or the side panel replaces no function. The deploy command names no function for this reason: the CLI never skips one that is named.
+- **Functions that fail are tried again once**, a minute later, by name. A region gives a project only so much CPU, and twelve functions replaced at the same moment, twice within a few minutes, ran into that limit: nine went through and three were left on their previous version.
+
+If the second try fails too, the run fails and prints the command that finishes the job. Run it: the next deploy may not pick those functions up by itself, because it skips a function whose code looks the same as what is live.
+
 **Set up once.** With `gcloud` signed in as an owner of the project, and after the first deploy by hand (the secrets and the `fishy-functions` account must exist):
 
 ```bash
@@ -306,7 +313,7 @@ All of it lives in FISHY's own database, `fishy`, not in `(default)`.
 | `npm test` | Extension tests (rules engine, checks, redaction), Cloud Functions tests, and the tests of the seed and deploy scripts |
 | `npm run check` | Type check, tests and build in one go; CI runs the same steps |
 | `npm run deploy:check` | Says what a deploy would do and whether it may go ahead |
-| `npm run deploy` | The check, then FISHY's rules, functions and web pages to Firebase. The deploy workflow runs the same command on every merge to `main` |
+| `npm run deploy` | The check, then FISHY's rules, functions and web pages to Firebase. Functions that did not change are skipped, and ones that fail are tried again once. The deploy workflow runs the same command on every merge to `main` |
 | `npm run remoteconfig` | Adds FISHY's Remote Config parameters, keeping every other one |
 | `npm run seed` | Loads the demo company into Firestore (see "Deploy to Firebase") |
 | `npm run typecheck` | TypeScript in all three packages |
