@@ -5,9 +5,13 @@ import twilio from 'twilio';
 import type { CallProvider } from './ports.ts';
 
 export function twilioCalls(accountSid: string, authToken: string, from: string): CallProvider {
-  const client = twilio(accountSid, authToken);
   return {
     async placeCall({ to, twiml, statusCallbackUrl }) {
+      // The client is made here, not when the function starts. A project that has
+      // no phone account yet (placeholder secrets, calls switched off) can then
+      // still start a check and use the approval page: the gate stops it before
+      // this line is ever reached.
+      const client = twilio(accountSid, authToken);
       await client.calls.create({
         to,
         from,

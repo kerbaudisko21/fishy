@@ -99,14 +99,27 @@ Design preview without installing: `npm run build -w extension`, then `npx vite 
 
 - Enable **Firebase AI Logic** (Gemini Developer API), **App Check**, **Authentication** (Anonymous), **Firestore**, **Remote Config**, **Cloud Functions** (Blaze plan).
 - App Check: the extension cannot load reCAPTCHA, so it uses a **debug token** (accepted by #BuildHybridAI). Register it under App Check → Apps → Manage debug tokens and put it in `extension/.env.local`. Never commit it.
-- Copy `.firebaserc.example` to `.firebaserc` with your project id.
 
-### The phone check (Cloud Functions)
+### Deploy to Firebase (Google Cloud)
 
-Real calls are off until a deployment turns them on, and even then only numbers on an allowlist are called.
+What gets deployed: the Firestore rules, the Cloud Functions (Jakarta, `asia-southeast2`), the web pages in `web/` (Hosting) and the Remote Config template. The extension itself is not deployed: it is loaded from `extension/dist`.
 
-1. Copy `functions/.env.example` to `functions/.env.<your-project-id>` and fill it in. Leave `CALLS_ENABLED=false` for now. That file is never committed.
-2. Set the two Twilio secrets (they are stored in Secret Manager, never in a file):
+**Once per project, in the [Firebase console](https://console.firebase.google.com/)** (these steps need a person and a browser):
+
+1. Create the project, then upgrade it to the **Blaze** plan. Cloud Functions need it. Linking billing also ends the free tier of the Gemini Developer API for that project, so set a budget alert.
+2. Create the **Firestore** database (Jakarta, `asia-southeast2`, keeps it next to the functions).
+3. **Authentication** → Sign-in method → enable **Anonymous**.
+4. **AI Logic** → get started with the **Gemini Developer API**.
+5. Project settings → add a **Web app**. Its config goes into `extension/.env.local` and `web/.env.local`.
+6. **App Check** → register that web app with **reCAPTCHA Enterprise** (the hosted pages use it; the site key goes into `web/.env.local`), and add a **debug token** for the extension (it goes into `extension/.env.local`).
+
+**On the machine that deploys:**
+
+1. Sign in once: `npx firebase-tools login` (on a remote machine add `--no-localhost`). For CI, use a service account through Application Default Credentials; `login:ci` tokens are deprecated.
+2. Copy `.firebaserc.example` to `.firebaserc` with your project ID.
+3. Copy `functions/.env.example` to `functions/.env.<your-project-id>` and fill it in. Leave `CALLS_ENABLED=false` for now. That file is never committed.
+4. Copy `web/.env.example` to `web/.env.local` and fill it in. Without it the web pages build in demo mode.
+5. Set the two Twilio secrets (they are stored in Secret Manager, never in a file). They must exist before the first deploy. With no Twilio account yet, enter the word `not-set` for both and leave calls off: checks still start and the approval page still works.
 
    ```bash
    npx firebase-tools functions:secrets:set TWILIO_ACCOUNT_SID
@@ -116,20 +129,28 @@ Real calls are off until a deployment turns them on, and even then only numbers 
    npx firebase-tools functions:secrets:set TWILIO_AUTH_TOKEN
    ```
 
-3. Deploy the rules, the functions and the web pages:
+6. See what would be deployed. This reads the settings files, stops if the web pages would go up in demo mode or a setting is missing, and says out loud when real calls are on:
 
    ```bash
-   npx firebase-tools deploy --only firestore:rules,functions,hosting
+   npm run deploy:check
    ```
 
-4. Load the demo company into Firestore. Phone numbers and the PIN come from the environment, never from a file in this repo. The keys are the IDs in [extension/src/demo/fixtures.ts](extension/src/demo/fixtures.ts). Add `-- --dry-run` first to see what would be written.
+7. Deploy. It runs the same check first:
+
+   ```bash
+   npm run deploy
+   ```
+
+8. Load the demo company into Firestore. Phone numbers and the PIN come from the environment, never from a file in this repo. The keys are the IDs in [extension/src/demo/fixtures.ts](extension/src/demo/fixtures.ts). Add `-- --dry-run` first to see what would be written.
 
    ```bash
    SEED_PROJECT_ID=your-project-id SEED_PHONES='{"budi":"+00000000000"}' SEED_PIN=0000 npm run seed
    ```
 
-5. Try it without a phone: set `APPROVAL_PAGE_ENABLED=true`, deploy again, start a call from the side panel, and open the `approvalUrl` that `startVerificationCall` returns. Answer **No** with the PIN: `checks/{id}.call.state` becomes `not_me`.
-6. Try it with a phone: set `CALLS_ENABLED=true` and put your own verified number in `CALL_ALLOWLIST`, then deploy again.
+9. Try it without a phone: set `APPROVAL_PAGE_ENABLED=true`, deploy again, start a call from the side panel, and open the `approvalUrl` that `startVerificationCall` returns. Answer **No** with the PIN: `checks/{id}.call.state` becomes `not_me`.
+10. Try it with a phone: set `CALLS_ENABLED=true` and put your own verified number in `CALL_ALLOWLIST`, then deploy again.
+
+Not yet tried against a real project: this whole section, including whether the Hosting rewrite for `/voice/**` reaches a function in `asia-southeast2`. The Firebase docs list that region for Cloud Run rewrites but do not say so for Functions.
 
 | Setting | What it does | Default |
 |---|---|---|
@@ -160,7 +181,9 @@ What the phone menu does: pressing 2 sets `not_me` at once. Pressing 1 confirms 
 | `npm run build` | Builds extension, web page and functions |
 | `npm test` | Extension tests (rules engine, checks, redaction), Cloud Functions tests and seed tests |
 | `npm run check` | Type check, tests and build in one go; CI runs the same steps |
-| `npm run seed` | Loads the demo company into Firestore (see "The phone check") |
+| `npm run deploy:check` | Says what a deploy would do and whether it may go ahead |
+| `npm run deploy` | The check, then rules, functions, web pages and Remote Config to Firebase |
+| `npm run seed` | Loads the demo company into Firestore (see "Deploy to Firebase") |
 | `npm run typecheck` | TypeScript in all three packages |
 | `npm run icons` | Regenerates PNG icons from `brand/` |
 | `npm run test-invoices` | Writes the two test invoice PDFs into `test-fixtures/` |
