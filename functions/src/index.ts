@@ -38,7 +38,11 @@ initializeApp();
 // It is the full address, from the settings file: the Firebase CLI cannot give
 // secrets to the short form "name@".
 const RUNTIME_SERVICE_ACCOUNT = defineString('RUNTIME_SERVICE_ACCOUNT');
-setGlobalOptions({ region: 'asia-southeast2', serviceAccount: RUNTIME_SERVICE_ACCOUNT });
+// At most three copies of each function. Left alone, each may grow to 100, and
+// twelve functions then ask for more CPU than a region gives a project: the
+// second deploy was refused for that ("Quota exceeded for total allowable CPU
+// per project per region"). Three is plenty for a finance team, and it caps the bill.
+setGlobalOptions({ region: 'asia-southeast2', serviceAccount: RUNTIME_SERVICE_ACCOUNT, maxInstances: 3 });
 
 // The secrets carry FISHY's name. In a project shared with another app, a plain
 // TWILIO_AUTH_TOKEN could be that app's secret, and setting ours would change theirs.
