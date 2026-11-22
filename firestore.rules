@@ -5,7 +5,9 @@ rules_version = '2';
 //                         the panel reads directoryPublic/{personId} (masked) and Cloud Functions read directory.
 //   directoryPublic/{id}  masked copy for the side panel
 //   checks/{checkId}      one payment check: signals summary + call state. Never message text.
-//   knownBad/{hash}       confirmed bad accounts, domains, numbers, with a seen count
+//   knownBad/{kind:value} confirmed bad accounts, domains, numbers, with a seen count
+// Cloud Functions also keep checkCalls, checkSuspects and callCounters. No rule below
+// names them, so clients can neither read nor write them.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
@@ -15,7 +17,10 @@ service cloud.firestore {
     match /knownBad/{id} { allow read: if signedIn(); allow write: if false; }
 
     match /checks/{checkId} {
-      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      // The panel writes the summary only. `call` is written by Cloud Functions, so a client cannot fake an answer.
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['ownerUid', 'createdAt', 'summary']);
       allow read: if signedIn() && resource.data.ownerUid == request.auth.uid;
       allow update, delete: if false;                             // call state is written by Cloud Functions
     }
