@@ -1,0 +1,129 @@
+// Firestore as the store.
+//
+// Collections, as firestore.rules and the README describe them:
+// - directory/{id}        name, role, phone, pinSalt, pinHash. Only this server code reads it.
+// - directoryPublic/{id}  the masked copy the side panel reads. Suppliers are read here
+//                         for their domain and the last four digits of their account.
+// - checks/{id}           created by the side panel: a summary only. This code writes
+//                         its `call` field, which is what the side panel follows.
+// - knownBad/{kind:value} confirmed bad accounts, domains and numbers.
+//
+// Collections only this code uses. No rule lets a client read or write them:
+// - checkCalls/{id}       the full record of the phone check for checks/{id}.
+// - checkSuspects/{id}    the details of the request a check is about.
+// - callCounters/{day}    how many calls were placed that day.
+
+import { getFirestore } from 'firebase-admin/firestore';
+
+import { knownBadDoc, knownBadEntry, lastFour } from '../learn/known-bad-doc.ts';
+import { readCheck } from './check-record.ts';
+import type { Person, Store, Suspects, Verification } from './ports.ts';
+import { publicCall } from './public-call.ts';
+
+export function firestoreStore(settings: { companyDomain: string }): Store {
+  const db = getFirestore();
+  const checks = db.collection('checks');
+  const calls = db.collection('checkCalls');
+
+  return {
+    async getPerson(personId) {
+      const data = (await db.collection('directory').doc(personId).get()).data();
+      if (!data) {
+        return null;
+      }
+      const person: Person = {
+        id: personId,
+        name: String(data.name ?? ''),
+        role: String(data.role ?? ''),
+        phone: String(data.phone ?? ''),
+        pin: { salt: String(data.pinSalt ?? ''), hash: String(data.pinHash ?? '') },
+      };
+      return person;
+    },
+
+    async getCheck(checkId) {
+      return readCheck((await checks.doc(checkId).get()).data());
+    },
+
+    async createVerification(verification) {
+      await db.runTransaction(async (transaction) => {
+        const ref = calls.doc(verification.id);
+        if ((await transaction.get(ref)).exists) {
+          throw new Error('This check already has a phone check.');
+        }
+        transaction.create(ref, verification);
+        transaction.update(checks.doc(verification.id), { call: publicCall(verification) });
+      });
+    },
+
+    async getVerification(id) {
+      const snapshot = await calls.doc(id).get();
+      return (snapshot.data() as Verification | undefined) ?? null;
+    },
+
+    async updateVerification(id, change) {
+      const ref = calls.doc(id);
+      return db.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(ref);
+        const current = snapshot.data() as Verification | undefined;
+        if (!current) {
+          return null;
+        }
+        const next = change(current);
+        if (next) {
+          // The full record and its public version change together, or not at all.
+          transaction.set(ref, next);
+          transaction.update(checks.doc(id), { call: publicCall(next) });
+        }
+        return next ?? current;
+      });
+    },
+
+    async reserveCall(dayKey, dailyCap) {
+      const ref = db.collection('callCounters').doc(dayKey);
+      return db.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(ref);
+        const used = Number(snapshot.data()?.count ?? 0);
+        if (used >= dailyCap) {
+          return false;
+        }
+        transaction.set(ref, { count: used + 1 });
+        return true;
+      });
+    },
+
+    async saveSuspects(verificationId, suspects) {
+      await db.collection('checkSuspects').doc(verificationId).set(suspects);
+    },
+
+    async getSuspects(verificationId) {
+      const snapshot = await db.collection('checkSuspects').doc(verificationId).get();
+      return (snapshot.data() as Suspects | undefined) ?? null;
+    },
+
+    async raiseKnownBad(entries, now, what) {
+      await db.runTransaction(async (transaction) => {
+        const refs = entries.map((entry) => db.collection('knownBad').doc(knownBadEntry(entry).id));
+        const snapshots = await Promise.all(refs.map((ref) => transaction.get(ref)));
+        entries.forEach((entry, index) => {
+          const ref = refs[index];
+          if (ref) {
+            transaction.set(ref, knownBadDoc(snapshots[index]?.data(), entry, now, what));
+          }
+        });
+      });
+    },
+
+    async protectedValues() {
+      const suppliers = await db.collection('directoryPublic').where('type', '==', 'supplier').get();
+      const domains = [settings.companyDomain.trim().toLowerCase()];
+      const accounts: string[] = [];
+      for (const supplier of suppliers.docs) {
+        const data = supplier.data();
+        domains.push(String(data.domain ?? '').trim().toLowerCase());
+        accounts.push(lastFour(String(data.account?.masked ?? '')));
+      }
+      return { domains: domains.filter(Boolean), accounts: accounts.filter((account) => account.length === 4) };
+    },
+  };
+}

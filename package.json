@@ -11,15 +11,17 @@
   "scripts": {
     "dev": "npm run dev -w extension",
     "build": "npm run build -w extension && npm run build -w web && npm run build -w functions",
-    "test": "npm run test -w extension",
-    "typecheck": "npm run typecheck -w extension && npm run typecheck -w web && npm run typecheck -w functions",
+    "test": "npm run test -w extension && npm run test -w functions && node --test \"scripts/tests/**/*.test.ts\"",
+    "typecheck": "npm run typecheck -w extension && npm run typecheck -w web && npm run typecheck -w functions && tsc --noEmit -p scripts/tsconfig.json",
+    "check": "npm run typecheck && npm test && npm run build",
     "icons": "node scripts/make-icons.mjs",
-    "test-invoices": "node scripts/make-test-invoices.mjs"
+    "test-invoices": "node scripts/make-test-invoices.mjs",
+    "seed": "node scripts/seed.ts"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.18"
   }
 }

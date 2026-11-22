@@ -16,16 +16,17 @@ Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) 
 | Step 1 Read: Firebase AI Logic hybrid (Nano on device, cloud on redacted text) | Built; needs a Firebase config to call Gemini (offline it falls back to a labelled keyword reader) |
 | Step 2 Check: look-alike sender, invoice PDF (account vs record, edit traces) | Built, on device, with tests |
 | Step 2 Check: sender authentication (DMARC/SPF/DKIM, webmail reply-to) | Built, read from the opened email's own headers on the laptop |
-| Step 2 Check: Web Risk links, domain age | Frontend built; `checkLinks` and `domainAge` functions not built |
+| Step 2 Check: Web Risk links, domain age | Frontend built; `checkLinks` function built with tests, not yet deployed; `domainAge` not built |
 | Who asked and for how much, from captions (speaker + amount) | Built; the speaker is matched to Directory, so FISHY calls the real person by default |
 | Meet and Gmail selectors from Remote Config | Built (`meet_caption_selectors`, `gmail_selectors`) |
 | Step 3 Match: known bad accounts, domains, numbers | Built, on device, cached from Firestore |
-| Step 4 Call: create check, start call, follow state, escalation countdown | Frontend built; `startVerificationCall` and the Twilio webhooks not built |
-| Web approval page and incident report (+ team alerts) | Built; their functions are stubs |
+| Step 4 Call: create check, start call, follow state, escalation countdown | Frontend built; `startVerificationCall` and the Twilio webhooks (`voice`) built with tests, not yet deployed or tried on a real phone; escalation to the next approver not built |
+| Shared learning: a "not me" confirmed with the PIN adds to the known-scam list | `reportSuspects` function built with tests; the panel does not call it yet |
+| Web approval page and incident report (+ team alerts) | Pages built; `getApproval` and `answerApproval` built with tests, not yet deployed (the panel does not show the link yet); incident, audit and alert functions are stubs |
 | Voice check (P1) | Records 10 s of the Meet tab on click (`tabCapture`); `scoreVoice` function not built (demo score without Firebase) |
 | Face check (P1) | Screen only |
 
-Function contracts (inputs and outputs) are written above each stub in [functions/src/index.ts](functions/src/index.ts).
+Function contracts (inputs and outputs) are written above each function in [functions/src/index.ts](functions/src/index.ts). The rules behind them live in `functions/src/call`, `approve`, `learn` and `webrisk`, and are tested without a database or a phone (`npm test`).
 
 ## How it works
 
@@ -66,7 +67,7 @@ Designs: [FISHY · Screen designs](https://claude.ai/artifact/D2neF4bvCTBrrWq8ui
 
 ## Run it
 
-Requirements: Node 22+, desktop Chrome 139+.
+Requirements: Node 22.18 or newer (CI uses 24), desktop Chrome 139+.
 
 ```bash
 npm install
@@ -100,14 +101,56 @@ Design preview without installing: `npm run build -w extension`, then `npx vite 
 - App Check: the extension cannot load reCAPTCHA, so it uses a **debug token** (accepted by #BuildHybridAI). Register it under App Check → Apps → Manage debug tokens and put it in `extension/.env.local`. Never commit it.
 - Copy `.firebaserc.example` to `.firebaserc` with your project id.
 
+### The phone check (Cloud Functions)
+
+Real calls are off until a deployment turns them on, and even then only numbers on an allowlist are called.
+
+1. Copy `functions/.env.example` to `functions/.env.<your-project-id>` and fill it in. Leave `CALLS_ENABLED=false` for now. That file is never committed.
+2. Set the two Twilio secrets (they are stored in Secret Manager, never in a file):
+
+   ```bash
+   npx firebase-tools functions:secrets:set TWILIO_ACCOUNT_SID
+   ```
+
+   ```bash
+   npx firebase-tools functions:secrets:set TWILIO_AUTH_TOKEN
+   ```
+
+3. Deploy the rules, the functions and the web pages:
+
+   ```bash
+   npx firebase-tools deploy --only firestore:rules,functions,hosting
+   ```
+
+4. Load the demo company into Firestore. Phone numbers and the PIN come from the environment, never from a file in this repo. The keys are the IDs in [extension/src/demo/fixtures.ts](extension/src/demo/fixtures.ts). Add `-- --dry-run` first to see what would be written.
+
+   ```bash
+   SEED_PROJECT_ID=your-project-id SEED_PHONES='{"budi":"+00000000000"}' SEED_PIN=0000 npm run seed
+   ```
+
+5. Try it without a phone: set `APPROVAL_PAGE_ENABLED=true`, deploy again, start a call from the side panel, and open the `approvalUrl` that `startVerificationCall` returns. Answer **No** with the PIN: `checks/{id}.call.state` becomes `not_me`.
+6. Try it with a phone: set `CALLS_ENABLED=true` and put your own verified number in `CALL_ALLOWLIST`, then deploy again.
+
+| Setting | What it does | Default |
+|---|---|---|
+| `PUBLIC_BASE_URL` | The Hosting address. Twilio calls back to `/voice/…` on it, and the approval link starts with it | none, required |
+| `CALLS_ENABLED` | Master switch for real calls | `false` |
+| `CALL_ALLOWLIST` | The only numbers that may be called, comma-separated. `*` means any number | empty |
+| `CALLS_DAILY_CAP` | Most calls per day | `20` |
+| `APPROVAL_PAGE_ENABLED` | Web approval page for judges, who cannot receive a trial call. A demo device: the link goes to the person who asked for the check, so keep it off in real use. The PIN is still required | `false` |
+| `COMPANY_NAME`, `COMPANY_DOMAIN` | Shown on the approval page; the domain can never be added to the known-scam list | empty |
+
+What the phone menu does: pressing 2 sets `not_me` at once. Pressing 1 confirms nothing until the right PIN follows. Three wrong PINs close the check without confirming it. A `not_me` followed by the right PIN adds the reported account, domain and number to `knownBad`; the company's own domain and its suppliers' domains and accounts can never be added.
+
 ### Firestore data
 
 | Collection | Who reads it | Fields |
 |---|---|---|
-| `directory/{id}` | Cloud Functions only | full phone, PIN hash |
+| `directory/{id}` | Cloud Functions only | `{ type, name, role, phone, pinSalt, pinHash }` |
 | `directoryPublic/{id}` | the side panel | person: `{ type: 'person', name, role, phoneMasked, escalationOrder?, pinSet }` · supplier: `{ type: 'supplier', name, domain, contact: { name, role, phoneMasked }, account: { bank, masked, holder }, paidMonths: string[] }` |
-| `knownBad/{id}` | the side panel (cached 1 h) | `{ kind: 'account' \| 'domain' \| 'phone', value, display, count, events?: [{ date, what }] }` (accounts: last 4 digits) |
-| `checks/{id}` | owner; `call` written by Functions | `{ ownerUid, createdAt, summary: { flags, patterns, place, amount?, payee? }, call?: { state, escalateAt?, escalatedTo? } }` |
+| `knownBad/{kind:value}` | the side panel (cached 1 h) | `{ kind: 'account' \| 'domain' \| 'phone', value, display, count, events?: [{ date, what }] }` (accounts: last 4 digits) |
+| `checks/{id}` | owner; `call` written by Functions | `{ ownerUid, createdAt, summary: { flags, patterns, place, amount?, payee? }, call?: { state, personId, placed, pinVerified, reason } }` · `state`: `ringing`, `confirmed`, `not_me` or `no_answer` |
+| `checkCalls/{id}`, `checkSuspects/{id}`, `callCounters/{day}` | Cloud Functions only | the full record of each phone check, the reported details of the request, and the daily call count |
 
 ## Scripts
 
@@ -115,7 +158,9 @@ Design preview without installing: `npm run build -w extension`, then `npx vite 
 |---|---|
 | `npm run dev` | Extension with hot reload |
 | `npm run build` | Builds extension, web page and functions |
-| `npm test` | Rules engine and redaction tests |
+| `npm test` | Extension tests (rules engine, checks, redaction), Cloud Functions tests and seed tests |
+| `npm run check` | Type check, tests and build in one go; CI runs the same steps |
+| `npm run seed` | Loads the demo company into Firestore (see "The phone check") |
 | `npm run typecheck` | TypeScript in all three packages |
 | `npm run icons` | Regenerates PNG icons from `brand/` |
 | `npm run test-invoices` | Writes the two test invoice PDFs into `test-fixtures/` |
