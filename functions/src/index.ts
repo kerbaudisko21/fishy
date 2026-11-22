@@ -32,7 +32,13 @@ import { webRiskLookup } from './webrisk/web-risk-lookup.ts';
 initializeApp();
 // Jakarta region. It must match REGION in extension/src/lib/config.ts and web/src/api.ts,
 // and the rewrite for /voice in firebase.json.
-setGlobalOptions({ region: 'asia-southeast2' });
+// The functions run as an account of their own, which may use the "fishy"
+// database and nothing else. The project's default account is not used: in a
+// shared project it would let these functions reach the other app's data.
+// It is the full address, from the settings file: the Firebase CLI cannot give
+// secrets to the short form "name@".
+const RUNTIME_SERVICE_ACCOUNT = defineString('RUNTIME_SERVICE_ACCOUNT');
+setGlobalOptions({ region: 'asia-southeast2', serviceAccount: RUNTIME_SERVICE_ACCOUNT });
 
 // The secrets carry FISHY's name. In a project shared with another app, a plain
 // TWILIO_AUTH_TOKEN could be that app's secret, and setting ours would change theirs.

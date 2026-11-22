@@ -98,6 +98,28 @@ function checkBaseUrl(value: string | undefined): string | null {
   return null;
 }
 
+/**
+ * The account the functions run as must be one made for FISHY, in this project.
+ * The project's default accounts are refused: another app in the same project
+ * may run as them, and then the two apps could read each other's data.
+ */
+function checkRuntimeAccount(value: string | undefined, projectId: string): string | null {
+  const create = 'Create one with: gcloud iam service-accounts create fishy-functions, and give it access to the "fishy" database (see the README).';
+  if (!value) {
+    return `RUNTIME_SERVICE_ACCOUNT is not set. It is the account the functions run as, such as fishy-functions@${projectId}.iam.gserviceaccount.com. ${create}`;
+  }
+  if (/-compute@developer\.gserviceaccount\.com$|@appspot\.gserviceaccount\.com$/.test(value)) {
+    return `RUNTIME_SERVICE_ACCOUNT is one of the project's default accounts. Other apps in the project may run as it. ${create}`;
+  }
+  if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]@[a-z0-9.:-]+\.iam\.gserviceaccount\.com$/.test(value)) {
+    return 'RUNTIME_SERVICE_ACCOUNT must be the full address of a service account, ending in .iam.gserviceaccount.com. The short form "name@" does not work with secrets.';
+  }
+  if (value.split('@')[1] !== `${projectId}.iam.gserviceaccount.com`) {
+    return `RUNTIME_SERVICE_ACCOUNT belongs to another project, but this deploy goes to "${projectId}".`;
+  }
+  return null;
+}
+
 const isOn = (value: string | undefined): boolean => value?.trim().toLowerCase() === 'true';
 
 /** The numbers on the allowlist, shown by their last four digits only. */
@@ -156,6 +178,10 @@ export function checkDeploy(files: DeployFiles): DeployCheck {
     if (!settings.COMPANY_NAME) {
       warning('COMPANY_NAME is empty. The approval page will not say which company is asking.');
     }
+    const accountProblem = checkRuntimeAccount(settings.RUNTIME_SERVICE_ACCOUNT, projectId);
+    if (accountProblem) {
+      error(accountProblem);
+    }
   }
 
   const callsOn = isOn(settings.CALLS_ENABLED);
@@ -198,6 +224,7 @@ export function checkDeploy(files: DeployFiles): DeployCheck {
     `Project: ${projectId}`,
     `Hosting site: ${site !== null && site !== PLACEHOLDER_SITE ? site : 'not set'}`,
     'Firestore database: fishy (FISHY\'s own; "(default)" is never touched)',
+    `Functions run as: ${settings.RUNTIME_SERVICE_ACCOUNT || 'not set'}`,
     `Real phone calls: ${callsOn ? 'ON' : 'OFF'}`,
     `Web approval page: ${pageOn ? 'ON' : 'OFF'}`,
     'Not checked here: the secrets FISHY_TWILIO_ACCOUNT_SID and FISHY_TWILIO_AUTH_TOKEN must exist before the first deploy.',

@@ -14,6 +14,7 @@ const FUNCTIONS_ENV = `
 PUBLIC_BASE_URL=https://fishy-demo-1234.web.app
 COMPANY_NAME=Ombakura Freight
 COMPANY_DOMAIN=ombakura-freight.example
+RUNTIME_SERVICE_ACCOUNT=fishy-functions@fishy-demo-1234.iam.gserviceaccount.com
 CALLS_ENABLED=false
 CALL_ALLOWLIST=
 APPROVAL_PAGE_ENABLED=true
@@ -181,6 +182,34 @@ test('a public address that is not this site is called out', () => {
 
   assert.equal(checkDeploy(f).ok, true, 'it may be a custom domain, so it is a warning');
   assert.match(warnings(f).join('\n'), /fishy-check-pages\.web\.app/);
+});
+
+const RUNTIME_LINE = 'RUNTIME_SERVICE_ACCOUNT=fishy-functions@fishy-demo-1234.iam.gserviceaccount.com';
+
+test('a deploy that does not say which account the functions run as is stopped', () => {
+  const f = withFunctionsEnv(FUNCTIONS_ENV.replace(RUNTIME_LINE, 'RUNTIME_SERVICE_ACCOUNT='));
+
+  assert.equal(checkDeploy(f).ok, false);
+  assert.match(errors(f).join('\n'), /RUNTIME_SERVICE_ACCOUNT/);
+});
+
+for (const [name, account] of Object.entries({
+  'the short form, which the Firebase CLI cannot give secrets to': 'fishy-functions@',
+  'an account in another project': 'fishy-functions@some-other-project.iam.gserviceaccount.com',
+  'the default compute account, which other apps in the project may share': '123456789012-compute@developer.gserviceaccount.com',
+  'the default App Engine account': 'fishy-demo-1234@appspot.gserviceaccount.com',
+  'something that is not an account': 'fishy-functions',
+})) {
+  test(`functions set to run as ${name} are refused`, () => {
+    const f = withFunctionsEnv(FUNCTIONS_ENV.replace(RUNTIME_LINE, `RUNTIME_SERVICE_ACCOUNT=${account}`));
+
+    assert.equal(checkDeploy(f).ok, false);
+    assert.match(errors(f).join('\n'), /RUNTIME_SERVICE_ACCOUNT/);
+  });
+}
+
+test('the summary names the account the functions run as', () => {
+  assert.ok(checkDeploy(files()).summary.includes('Functions run as: fishy-functions@fishy-demo-1234.iam.gserviceaccount.com'));
 });
 
 test('settings files are read the usual way: comments, blank lines, quotes and spaces', () => {
