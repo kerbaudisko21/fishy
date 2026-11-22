@@ -1,9 +1,10 @@
-import { getAI, getGenerativeModel, GoogleAIBackend, InferenceMode, InferenceSource, Schema, type GenerativeModel } from 'firebase/ai';
+import { getAI, getGenerativeModel, InferenceMode, InferenceSource, Schema, type GenerativeModel } from 'firebase/ai';
 import { FIREBASE_READY } from '../config';
 import { firebaseApp } from '../firebase';
 import { redact } from '../redact';
 import type { Source, Tactic } from '../types';
 import { keywordTactics } from './keywords';
+import { cloudBackend } from './provider';
 
 /**
  * Step 1 · Read: tag pressure tactics with Firebase AI Logic hybrid inference.
@@ -35,7 +36,7 @@ let models: { onDevice: GenerativeModel; inCloud: GenerativeModel } | undefined;
 
 function getModels() {
   if (models) return models;
-  const ai = getAI(firebaseApp(), { backend: new GoogleAIBackend() });
+  const ai = getAI(firebaseApp(), { backend: cloudBackend(import.meta.env.VITE_AI_PROVIDER) });
   models = {
     onDevice: getGenerativeModel(ai, {
       mode: InferenceMode.ONLY_ON_DEVICE,
