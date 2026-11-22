@@ -9,6 +9,13 @@ export const FIREBASE_READY = Boolean(env.VITE_FIREBASE_API_KEY && env.VITE_FIRE
 /** False when the panel is opened as a plain web page (design preview), where chrome.* APIs do not exist. */
 export const IN_EXTENSION = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
 
+/**
+ * The Firestore database FISHY keeps its data in. A named one, not "(default)", so FISHY can
+ * share a Google Cloud project with another app without touching that app's rules or data.
+ * Must match DATABASE_ID in functions/src/call/store-firestore.ts and "database" in firebase.json.
+ */
+export const DATABASE = 'fishy';
+
 /** Cloud Functions region; must match functions/src/index.ts. */
 export const REGION = 'asia-southeast2';
 

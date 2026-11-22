@@ -32,10 +32,22 @@ import { webRiskLookup } from './webrisk/web-risk-lookup.ts';
 initializeApp();
 // Jakarta region. It must match REGION in extension/src/lib/config.ts and web/src/api.ts,
 // and the rewrite for /voice in firebase.json.
-setGlobalOptions({ region: 'asia-southeast2' });
+// The functions run as an account of their own, which may use the "fishy"
+// database and nothing else. The project's default account is not used: in a
+// shared project it would let these functions reach the other app's data.
+// It is the full address, from the settings file: the Firebase CLI cannot give
+// secrets to the short form "name@".
+const RUNTIME_SERVICE_ACCOUNT = defineString('RUNTIME_SERVICE_ACCOUNT');
+// At most three copies of each function. Left alone, each may grow to 100, and
+// twelve functions then ask for more CPU than a region gives a project: the
+// second deploy was refused for that ("Quota exceeded for total allowable CPU
+// per project per region"). Three is plenty for a finance team, and it caps the bill.
+setGlobalOptions({ region: 'asia-southeast2', serviceAccount: RUNTIME_SERVICE_ACCOUNT, maxInstances: 3 });
 
-const TWILIO_ACCOUNT_SID = defineSecret('TWILIO_ACCOUNT_SID');
-const TWILIO_AUTH_TOKEN = defineSecret('TWILIO_AUTH_TOKEN');
+// The secrets carry FISHY's name. In a project shared with another app, a plain
+// TWILIO_AUTH_TOKEN could be that app's secret, and setting ours would change theirs.
+const TWILIO_ACCOUNT_SID = defineSecret('FISHY_TWILIO_ACCOUNT_SID');
+const TWILIO_AUTH_TOKEN = defineSecret('FISHY_TWILIO_AUTH_TOKEN');
 const TWILIO_FROM = defineString('TWILIO_FROM', { default: '' });
 
 // Both locks on real calls are closed unless a deployment opens them.

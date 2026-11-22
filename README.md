@@ -16,13 +16,13 @@ Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) 
 | Step 1 Read: Firebase AI Logic hybrid (Nano on device, cloud on redacted text) | Built; needs a Firebase config to call Gemini (offline it falls back to a labelled keyword reader) |
 | Step 2 Check: look-alike sender, invoice PDF (account vs record, edit traces) | Built, on device, with tests |
 | Step 2 Check: sender authentication (DMARC/SPF/DKIM, webmail reply-to) | Built, read from the opened email's own headers on the laptop |
-| Step 2 Check: Web Risk links, domain age | Frontend built; `checkLinks` function built with tests, not yet deployed; `domainAge` not built |
+| Step 2 Check: Web Risk links, domain age | Frontend built; `checkLinks` function built with tests and deployed, not yet tried live; `domainAge` not built |
 | Who asked and for how much, from captions (speaker + amount) | Built; the speaker is matched to Directory, so FISHY calls the real person by default |
 | Meet and Gmail selectors from Remote Config | Built (`meet_caption_selectors`, `gmail_selectors`) |
 | Step 3 Match: known bad accounts, domains, numbers | Built, on device, cached from Firestore |
-| Step 4 Call: create check, start call, follow state, escalation countdown | Frontend built; `startVerificationCall` and the Twilio webhooks (`voice`) built with tests, not yet deployed or tried on a real phone; escalation to the next approver not built |
+| Step 4 Call: create check, start call, follow state, escalation countdown | Frontend built; `startVerificationCall` and the Twilio webhooks (`voice`) built with tests and deployed, not yet tried on a real phone; with no call placed the panel says so and links the approval page; escalation to the next approver not built |
 | Shared learning: a "not me" confirmed with the PIN adds to the known-scam list | `reportSuspects` function built with tests; the panel does not call it yet |
-| Web approval page and incident report (+ team alerts) | Pages built; `getApproval` and `answerApproval` built with tests, not yet deployed (the panel does not show the link yet); incident, audit and alert functions are stubs |
+| Web approval page and incident report (+ team alerts) | Pages built; `getApproval` and `answerApproval` built with tests and deployed, not yet tried live (that needs App Check on the pages); the panel shows the link; incident, audit and alert functions are stubs |
 | Voice check (P1) | Records 10 s of the Meet tab on click (`tabCapture`); `scoreVoice` function not built (demo score without Firebase) |
 | Face check (P1) | Screen only |
 
@@ -99,50 +99,186 @@ Design preview without installing: `npm run build -w extension`, then `npx vite 
 
 - Enable **Firebase AI Logic** (Gemini Developer API), **App Check**, **Authentication** (Anonymous), **Firestore**, **Remote Config**, **Cloud Functions** (Blaze plan).
 - App Check: the extension cannot load reCAPTCHA, so it uses a **debug token** (accepted by #BuildHybridAI). Register it under App Check → Apps → Manage debug tokens and put it in `extension/.env.local`. Never commit it.
-- Copy `.firebaserc.example` to `.firebaserc` with your project id.
 
-### The phone check (Cloud Functions)
+### Deploy to Firebase (Google Cloud)
 
-Real calls are off until a deployment turns them on, and even then only numbers on an allowlist are called.
+What gets deployed: the rules of FISHY's own Firestore database, the Cloud Functions (Jakarta, `asia-southeast2`) and the web pages in `web/` (Hosting). The extension itself is not deployed: it is loaded from `extension/dist`.
 
-1. Copy `functions/.env.example` to `functions/.env.<your-project-id>` and fill it in. Leave `CALLS_ENABLED=false` for now. That file is never committed.
-2. Set the two Twilio secrets (they are stored in Secret Manager, never in a file):
+**FISHY can share a Google Cloud project with another app.** Everything it deploys is its own, so a deploy cannot replace the other app's:
+
+| FISHY's own | How |
+|---|---|
+| Firestore data and rules | a named database, `fishy`. The `(default)` database is never touched |
+| Web pages | a Hosting site of its own, named in `.firebaserc` |
+| Functions | the `fishy` group (codebase) in `firebase.json` |
+| What the functions may reach | they run as an account of their own, `fishy-functions`, which may use the `fishy` database and nothing else |
+| Secrets | `FISHY_TWILIO_ACCOUNT_SID`, `FISHY_TWILIO_AUTH_TOKEN` |
+| Remote Config | `npm run remoteconfig` adds FISHY's three parameters and keeps every other one. Never deploy the template file directly: publishing replaces the whole project template |
+
+Three things are still shared by the whole project, so check them with whoever owns the other app first: **Anonymous sign-in** (an app whose rules allow "any signed-in user" would then allow FISHY's anonymous users too), **billing**, and the **Gemini Developer API** being switched on.
+
+**Once per project, in the [Firebase console](https://console.firebase.google.com/)** (these steps need a person and a browser):
+
+1. Create the project, then upgrade it to the **Blaze** plan. Cloud Functions need it. Linking billing also ends the free tier of the Gemini Developer API for that project, so set a budget alert.
+2. **Authentication** → Sign-in method → enable **Anonymous**. In a shared project, read the note above first.
+3. **AI Logic** → get started with the **Gemini Developer API**.
+4. Project settings → add a **Web app**. Its config goes into `extension/.env.local` and `web/.env.local`.
+5. **App Check** → register that web app with **reCAPTCHA Enterprise** (the hosted pages use it; the site key goes into `web/.env.local`), and add a **debug token** for the extension (it goes into `extension/.env.local`).
+
+**On the machine that deploys:**
+
+1. Sign in once: `npx firebase-tools login` (on a remote machine add `--no-localhost`). For CI, use a service account through Application Default Credentials; `login:ci` tokens are deprecated.
+2. Copy `.firebaserc.example` to `.firebaserc` with your project ID.
+3. Create FISHY's database and its Hosting site, and tell the deploy which site is FISHY's. Site IDs are unique across all of Firebase, so pick your own; the pages will be at `https://<site-id>.web.app`.
 
    ```bash
-   npx firebase-tools functions:secrets:set TWILIO_ACCOUNT_SID
+   npx firebase-tools firestore:databases:create fishy --location=asia-southeast2
    ```
 
    ```bash
-   npx firebase-tools functions:secrets:set TWILIO_AUTH_TOKEN
+   npx firebase-tools hosting:sites:create your-site-id
    ```
-
-3. Deploy the rules, the functions and the web pages:
 
    ```bash
-   npx firebase-tools deploy --only firestore:rules,functions,hosting
+   npx firebase-tools target:apply hosting fishy your-site-id
    ```
 
-4. Load the demo company into Firestore. Phone numbers and the PIN come from the environment, never from a file in this repo. The keys are the IDs in [extension/src/demo/fixtures.ts](extension/src/demo/fixtures.ts). Add `-- --dry-run` first to see what would be written.
+4. Create the account the functions run as, and let it use FISHY's database only. Its full address goes into `RUNTIME_SERVICE_ACCOUNT` in the next step. The functions do not run as the project's default account: another app in the same project may run as that one too.
+
+   ```bash
+   gcloud iam service-accounts create fishy-functions --display-name="FISHY functions runtime"
+   ```
+
+   ```bash
+   gcloud projects add-iam-policy-binding your-project-id --member="serviceAccount:fishy-functions@your-project-id.iam.gserviceaccount.com" --role="roles/datastore.user" --condition='expression=resource.name=="projects/your-project-id/databases/fishy",title=fishy-database-only'
+   ```
+
+5. Copy `functions/.env.example` to `functions/.env.<your-project-id>` and fill it in. Leave `CALLS_ENABLED=false` for now. That file is never committed.
+6. Copy `web/.env.example` to `web/.env.local` and fill it in. Without it the web pages build in demo mode.
+7. Set the two Twilio secrets (they are stored in Secret Manager, never in a file). They must exist before the first deploy. With no Twilio account yet, enter the word `not-set` for both and leave calls off: checks still start and the approval page still works.
+
+   ```bash
+   npx firebase-tools functions:secrets:set FISHY_TWILIO_ACCOUNT_SID
+   ```
+
+   ```bash
+   npx firebase-tools functions:secrets:set FISHY_TWILIO_AUTH_TOKEN
+   ```
+
+8. See what would be deployed. This reads the settings files, names the project, the Hosting site, the database and the account the functions run as, stops if the web pages would go up in demo mode or a setting is missing, and says out loud when real calls are on:
+
+   ```bash
+   npm run deploy:check
+   ```
+
+9. Deploy. It runs the same check first, then deploys only FISHY's own pieces:
+
+   ```bash
+   npm run deploy
+   ```
+
+   If every function fails with "missing permission on the build service account", the project's default compute account (`<project-number>-compute@developer.gserviceaccount.com`) has no roles. Functions are built as that account. Google's fix is to give it the role `roles/cloudbuild.builds.builder`. In a shared project that role is too wide, because it can read and delete every storage bucket in the project. Give it only what a FISHY build needs, then deploy again. The bucket and the image store below exist once the first deploy has failed:
+
+   ```bash
+   gcloud projects add-iam-policy-binding your-project-id --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" --role="roles/logging.logWriter" --condition=None
+   ```
+
+   ```bash
+   gcloud artifacts repositories add-iam-policy-binding gcf-artifacts --location=asia-southeast2 --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" --role="roles/artifactregistry.writer"
+   ```
+
+   ```bash
+   gcloud storage buckets add-iam-policy-binding gs://gcf-v2-sources-PROJECT_NUMBER-asia-southeast2 --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" --role="roles/storage.objectViewer"
+   ```
+
+   ```bash
+   gcloud storage buckets add-iam-policy-binding gs://gcf-v2-uploads-PROJECT_NUMBER.asia-southeast2.cloudfunctions.appspot.com --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" --role="roles/storage.objectViewer"
+   ```
+
+   Before giving that account anything, see which services already run as it: `gcloud run services list --format="table(metadata.name,spec.template.spec.serviceAccountName)"`. Whatever it is given, they get too.
+
+10. Add the scam rules and page selectors to Remote Config. This step and the next one use Google application default credentials for the project (`gcloud auth application-default login`, or a service account). Look first, then publish:
+
+   ```bash
+   npm run remoteconfig -- --dry-run
+   ```
+
+   ```bash
+   npm run remoteconfig
+   ```
+
+11. Load the demo company into Firestore. Phone numbers and the PIN come from the environment, never from a file in this repo. The keys are the IDs in [extension/src/demo/fixtures.ts](extension/src/demo/fixtures.ts). Add `-- --dry-run` first to see what would be written.
 
    ```bash
    SEED_PROJECT_ID=your-project-id SEED_PHONES='{"budi":"+00000000000"}' SEED_PIN=0000 npm run seed
    ```
 
-5. Try it without a phone: set `APPROVAL_PAGE_ENABLED=true`, deploy again, start a call from the side panel, and open the `approvalUrl` that `startVerificationCall` returns. Answer **No** with the PIN: `checks/{id}.call.state` becomes `not_me`.
-6. Try it with a phone: set `CALLS_ENABLED=true` and put your own verified number in `CALL_ALLOWLIST`, then deploy again.
+12. Try it without a phone: set `APPROVAL_PAGE_ENABLED=true`, deploy again and start a call from the side panel. The panel says that no phone call was placed and shows **Open the approval page**. Answer **No** with the PIN: `checks/{id}.call.state` becomes `not_me`.
+13. Try it with a phone: set `CALLS_ENABLED=true` and put your own verified number in `CALL_ALLOWLIST`, then deploy again.
+
+Tried against a real, shared project on 22 Nov 2026: the database rules, all twelve functions and the web pages deploy, and the Hosting rewrite for `/voice/**` does reach a function in `asia-southeast2` (an unsigned request to `/voice/menu` is refused with 403; a callable without App Check is refused with 401). Not yet tried there: a check from the side panel, an answer on the approval page, and a real phone call. Those need Anonymous sign-in and App Check, which are console steps.
+
+#### Phone call or approval page
+
+A check is answered in one of two ways. Which one is used is decided by the settings below, never by a button on a screen: nothing can be switched on by a wrong click in front of an audience.
+
+| The approver's number is… | `CALLS_ENABLED` | What happens |
+|---|---|---|
+| on `CALL_ALLOWLIST` | `true` | A real phone call. Press 1 or 2, then the PIN |
+| not on the list, or calls are off | any | No call. With `APPROVAL_PAGE_ENABLED=true` the side panel shows a link to the web approval page, which asks the same two things: yes or no, then the PIN. With the page off, the check ends as "no answer" |
+
+So a demo needs no phone account at all: leave calls off and switch the approval page on. To show a real call as well, put one number you own on the allowlist. Every other person in the directory still goes to the approval page. A closed switch never falls through silently: the panel says that no call was placed, and why.
+
+### Deploy on every merge
+
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml) runs on every push to `main`: type check and tests first, then the same `npm run deploy` as above, then two requests to the live site to see that it answers. It can also be started by hand (Actions → Deploy → Run workflow), which is how a changed setting goes live. Until the setup below is done, it skips the deploy and says so.
+
+It never deploys Remote Config and never loads the demo data. Those stay steps a person runs.
+
+**Set up once.** With `gcloud` signed in as an owner of the project, and after the first deploy by hand (the secrets and the `fishy-functions` account must exist):
+
+```bash
+PROJECT_ID=your-project-id GITHUB_REPO=owner/name bash scripts/setup-ci.sh
+```
+
+The script creates a sign-in pool that accepts only this repository's `main` branch, and a deploy account, `fishy-deployer`. No key is created: GitHub proves to Google Cloud which repository and branch a run belongs to. It ends by printing the three secrets to store.
+
+Then, in the repository: Settings → Secrets and variables → Actions.
+
+| Name | Kind | What it is |
+|---|---|---|
+| `GCP_PROJECT_ID` | secret | The project ID |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | secret | Printed by the script |
+| `GCP_DEPLOY_SA` | secret | The deploy account, printed by the script |
+| `HOSTING_SITE` | variable | FISHY's Hosting site ID |
+| `FIREBASE_WEB_API_KEY`, `FIREBASE_WEB_APP_ID` | variable | From the web app in the Firebase console. Both are public values: they are in the pages anyone can load |
+| `FIREBASE_MESSAGING_SENDER_ID`, `RECAPTCHA_ENTERPRISE_KEY`, `FCM_VAPID_KEY` | variable, optional | The rest of `web/.env.example` |
+| `COMPANY_NAME`, `COMPANY_DOMAIN` | variable, optional | As in the settings table below |
+| `APPROVAL_PAGE_ENABLED`, `CALLS_ENABLED`, `CALLS_DAILY_CAP` | variable, optional | The switches. Anything but the word `true` is off |
+| `CALL_ALLOWLIST`, `TWILIO_FROM` | secret, optional | Phone numbers, so they are secrets |
+| `PUBLIC_BASE_URL`, `RUNTIME_SERVICE_ACCOUNT`, `FIREBASE_AUTH_DOMAIN` | variable, optional | Only when they differ from `https://<site>.web.app`, `fishy-functions@<project>…` and `<project>.firebaseapp.com` |
+
+Three things to know before switching it on:
+
+- **Whoever can push to `main` can deploy.** Protect the branch. The deploy account's roles cover the whole project (Google Cloud has no role limited to one Hosting site or one set of functions), so in a shared project a bad merge here could reach the other app's services.
+- **The workflow log is public** when the repository is. The pre-deploy check never prints a phone number there, only how many are on the allowlist.
+- **An App Check debug token never goes into the hosted pages.** The workflow has no setting for one.
 
 | Setting | What it does | Default |
 |---|---|---|
 | `PUBLIC_BASE_URL` | The Hosting address. Twilio calls back to `/voice/…` on it, and the approval link starts with it | none, required |
+| `RUNTIME_SERVICE_ACCOUNT` | The full address of the account the functions run as. One of the project's default accounts is refused | none, required |
 | `CALLS_ENABLED` | Master switch for real calls | `false` |
 | `CALL_ALLOWLIST` | The only numbers that may be called, comma-separated. `*` means any number | empty |
 | `CALLS_DAILY_CAP` | Most calls per day | `20` |
-| `APPROVAL_PAGE_ENABLED` | Web approval page for judges, who cannot receive a trial call. A demo device: the link goes to the person who asked for the check, so keep it off in real use. The PIN is still required | `false` |
+| `APPROVAL_PAGE_ENABLED` | Web approval page, for a demo without a phone account and for judges, who cannot receive a trial call. A demo device: the link goes to the person who asked for the check, so keep it off in real use. The PIN is still required | `false` |
 | `COMPANY_NAME`, `COMPANY_DOMAIN` | Shown on the approval page; the domain can never be added to the known-scam list | empty |
 
 What the phone menu does: pressing 2 sets `not_me` at once. Pressing 1 confirms nothing until the right PIN follows. Three wrong PINs close the check without confirming it. A `not_me` followed by the right PIN adds the reported account, domain and number to `knownBad`; the company's own domain and its suppliers' domains and accounts can never be added.
 
 ### Firestore data
+
+All of it lives in FISHY's own database, `fishy`, not in `(default)`.
 
 | Collection | Who reads it | Fields |
 |---|---|---|
@@ -158,9 +294,12 @@ What the phone menu does: pressing 2 sets `not_me` at once. Pressing 1 confirms 
 |---|---|
 | `npm run dev` | Extension with hot reload |
 | `npm run build` | Builds extension, web page and functions |
-| `npm test` | Extension tests (rules engine, checks, redaction), Cloud Functions tests and seed tests |
+| `npm test` | Extension tests (rules engine, checks, redaction), Cloud Functions tests, and the tests of the seed and deploy scripts |
 | `npm run check` | Type check, tests and build in one go; CI runs the same steps |
-| `npm run seed` | Loads the demo company into Firestore (see "The phone check") |
+| `npm run deploy:check` | Says what a deploy would do and whether it may go ahead |
+| `npm run deploy` | The check, then FISHY's rules, functions and web pages to Firebase. The deploy workflow runs the same command on every merge to `main` |
+| `npm run remoteconfig` | Adds FISHY's Remote Config parameters, keeping every other one |
+| `npm run seed` | Loads the demo company into Firestore (see "Deploy to Firebase") |
 | `npm run typecheck` | TypeScript in all three packages |
 | `npm run icons` | Regenerates PNG icons from `brand/` |
 | `npm run test-invoices` | Writes the two test invoice PDFs into `test-fixtures/` |

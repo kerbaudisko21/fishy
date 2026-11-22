@@ -33,7 +33,8 @@ export function useCall() {
     try {
       const checkId = await createCheck(summary);
       stop.current = watchCall(checkId, (s) => setCall((c) => ({ ...c, ...s })));
-      await startVerificationCall(checkId, target.id);
+      const started = await startVerificationCall(checkId, target.id);
+      setCall((c) => ({ ...c, started }));
     } catch (e) {
       stop.current();
       setError(`The call could not start: ${(e as Error).message}`);

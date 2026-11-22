@@ -2,30 +2,56 @@
   "functions": [
     {
       "source": "functions",
-      "codebase": "default",
-      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
+      "codebase": "fishy",
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
     }
   ],
   "hosting": {
+    "target": "fishy",
     "public": "web/dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "predeploy": ["npm run build -w web"],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "predeploy": [
+      "npm run build -w web"
+    ],
     "rewrites": [
-      { "source": "/voice/**", "function": { "functionId": "voice", "region": "asia-southeast2" } },
-      { "source": "**", "destination": "/index.html" }
+      {
+        "source": "/voice/**",
+        "function": {
+          "functionId": "voice",
+          "region": "asia-southeast2"
+        }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
     ]
   },
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
-  "remoteconfig": {
-    "template": "remoteconfig.template.json"
-  },
+  "firestore": [
+    {
+      "database": "fishy",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    }
+  ],
   "emulators": {
-    "functions": { "port": 5001 },
-    "firestore": { "port": 8080 },
-    "hosting": { "port": 5000 },
-    "ui": { "enabled": true }
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "hosting": {
+      "port": 5000
+    },
+    "ui": {
+      "enabled": true
+    }
   }
 }

@@ -19,6 +19,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 import { DEMO_DIRECTORY, DEMO_KNOWN_BAD, DEMO_SUPPLIERS } from '../extension/src/demo/fixtures.ts';
+import { DATABASE_ID } from '../functions/src/call/store-firestore.ts';
 import { buildSeed } from './seed-data.ts';
 
 function required(name: string): string {
@@ -81,7 +82,7 @@ if (dryRun) {
 }
 
 initializeApp({ projectId: required('SEED_PROJECT_ID') });
-const db = getFirestore();
+const db = getFirestore(DATABASE_ID);
 const batch = db.batch();
 for (const [id, entry] of Object.entries(seed.directory)) {
   batch.set(db.collection('directory').doc(id), entry);
@@ -93,4 +94,4 @@ for (const [id, entry] of Object.entries(seed.knownBad)) {
   batch.set(db.collection('knownBad').doc(id), entry);
 }
 await batch.commit();
-console.log([`Written to ${required('SEED_PROJECT_ID')}.`, ...summary].join('\n'));
+console.log([`Written to the "${DATABASE_ID}" database of ${required('SEED_PROJECT_ID')}.`, ...summary].join('\n'));

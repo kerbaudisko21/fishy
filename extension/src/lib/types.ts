@@ -184,4 +184,6 @@ export interface CallStatus {
   /** When the call escalates to the next approver (ms since epoch). */
   escalateAt?: number;
   escalatedTo?: string;
+  /** What Cloud Functions answered: whether a phone call was placed, or the approval page to use instead. */
+  started?: { call: 'placed' | 'not_placed'; reason: string | null; approvalUrl: string | null };
 }
