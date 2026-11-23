@@ -125,6 +125,7 @@ export function Media({ items, busy, onBack, onCheckMore }: Props) {
               <span className="row-detail media-name">{item.name}</span>
               <Preview item={item} />
               <ScorePart item={item} />
+              {item.checks.length > 0 && <span className="eyebrow">{item.kind === 'document' ? 'In the document' : 'In the file'}</span>}
               {item.checks.length > 0 && (
                 <ul className="rows media-facts" aria-label="In the file">
                   {item.checks.map((c) => (

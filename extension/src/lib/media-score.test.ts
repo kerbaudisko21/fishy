@@ -26,7 +26,8 @@ describe('the FISHY score', () => {
   });
 
   it('keeps "hard to tell" and "no clear signs" low', () => {
-    expect(scoreMedia(item({ gemini: g('unclear', 0) })).band).toBe('some');
+    expect(scoreMedia(item({ gemini: g('unclear', 0) })).band).toBe('low');
+    expect(scoreMedia(item({ gemini: g('unclear', 2) })).band).toBe('some');
     expect(scoreMedia(item({ gemini: g('no_clear_signs', 0) }))).toMatchObject({ score: 10, band: 'low' });
   });
 

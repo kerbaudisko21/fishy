@@ -3,7 +3,7 @@ import { FIREBASE_READY } from '../config';
 import { firebaseApp } from '../firebase';
 import type { Source } from '../types';
 import { mediaSchema, parseMedia, PICTURE_PROMPT, VOICE_PROMPT, type MediaReading } from './prompts';
-import { pictureForGemini, toBase64 } from './files';
+import { audioForGemini, pictureForGemini, toBase64 } from './files';
 import { cloudBackend } from './provider';
 
 export { pictureForGemini, toBase64 } from './files';
@@ -55,7 +55,8 @@ export async function readPicture(blob: Blob): Promise<MediaResult | null> {
 
 export async function readVoice(blob: Blob, mime: string): Promise<MediaResult | null> {
   if (!FIREBASE_READY) return null;
-  const mimeType = mime.split(';')[0] || 'audio/webm';
-  const result = await getModels().voice.generateContent([VOICE_PROMPT, { type: 'inlineData', inlineData: { mimeType, data: await toBase64(blob) } }]);
+  // WAV, which every Gemini API accepts (Chrome records WebM, which the Developer API refuses).
+  const wav = await audioForGemini(new Blob([blob], { type: mime }));
+  const result = await getModels().voice.generateContent([VOICE_PROMPT, { type: 'inlineData', inlineData: { mimeType: 'audio/wav', data: await toBase64(wav) } }]);
   return answer(result);
 }

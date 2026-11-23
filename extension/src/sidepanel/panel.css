@@ -62,7 +62,7 @@ h1[tabindex='-1']:focus { outline: none; }
 .pulse { position: relative; width: 8px; height: 8px; border-radius: 999px; background: #6fd3b8; }
 
 /* The four steps on one line */
-.track { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.track { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .track-step { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .track-step + .track-step::before { content: ''; position: absolute; top: 11px; right: 50%; width: 100%; height: 2px; background: var(--track-line); }
 .track-node { position: relative; z-index: 1; width: 24px; height: 24px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
@@ -73,7 +73,7 @@ h1[tabindex='-1']:focus { outline: none; }
 .track-step.todo .track-node { background: var(--hero-bg); color: var(--hero-sub); box-shadow: inset 0 0 0 2px var(--track-line); }
 .track-step.todo .track-label { opacity: .7; }
 
-.track.small { margin: 0; width: 132px; }
+.track.small { margin: 0; width: 100px; }
 .track.small .track-node { width: 14px; height: 14px; }
 .track.small .track-step + .track-step::before { top: 6px; background: var(--line); }
 .track.small .track-label { display: none; }
@@ -171,6 +171,7 @@ h1[tabindex='-1']:focus { outline: none; }
 .score-band { flex-basis: 100%; font-size: 15px; font-weight: 700; }
 .why { display: flex; flex-direction: column; gap: 4px; }
 .why ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+.changes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
 .signs { list-style: none; margin: 0; padding: 0 0 0 36px; display: flex; flex-direction: column; gap: 8px; }
 .signs li { display: flex; flex-direction: column; gap: 1px; }
 .start-row.action:disabled { opacity: .5; cursor: default; }

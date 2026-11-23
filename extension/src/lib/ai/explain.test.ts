@@ -48,3 +48,15 @@ describe('explainVerdict', () => {
     expect(r.text).toBe(templateExplanation(fishy));
   });
 });
+
+describe('parseMedia', () => {
+  it('drops a "sign" that says there is no sign, so a clean result stays clean', async () => {
+    const { parseMedia } = await import('./prompts');
+    const r = parseMedia(JSON.stringify({ assessment: 'no_clear_signs', signs: [{ sign: 'No visible signs of AI or edits', where: 'Overall image' }] }));
+    expect(r).toEqual({ assessment: 'no_clear_signs', signs: [] });
+    expect(parseMedia(JSON.stringify({ assessment: 'unclear', signs: [{ sign: 'The face appears natural', where: '' }, { sign: 'Warped fingers', where: 'left hand' }] })).signs).toEqual([
+      { sign: 'Warped fingers', where: 'left hand' },
+    ]);
+  });
+});
+

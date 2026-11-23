@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CHANGES } from '../../lib/changes';
 import { builtWhen, COMMIT, VERSION } from '../../lib/version';
 import { nanoStatus, prepareNano, type NanoStatus } from '../../lib/ai/tactics';
 import { FIREBASE_READY } from '../../lib/config';
@@ -111,6 +112,17 @@ export function Settings({ mode, rulesVersion, knownCount, onBack, onDemo, onCle
             <span className="row-detail">
               Build <span className="mono">{COMMIT}</span>, {builtWhen()}
             </span>
+          </div>
+        </Section>
+
+        <Section title="What’s new" aside={CHANGES[0].version === VERSION ? `in v${VERSION}` : `latest notes: v${CHANGES[0].version}`}>
+          <div className="surface card-pad">
+            <ul className="changes">
+              {CHANGES[0].items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            <span className="row-detail">Every version is listed in CHANGELOG.md.</span>
           </div>
         </Section>
       </main>

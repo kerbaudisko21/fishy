@@ -152,31 +152,35 @@ function Tabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   );
 }
 
-export const STEPS: Array<{ id: Step; label: string }> = [
-  { id: 'read', label: 'Read' },
-  { id: 'check', label: 'Check' },
-  { id: 'match', label: 'Match' },
-  { id: 'call', label: 'Call' },
+/**
+ * The three steps a person sees, the same as "How it works": Check what you were sent, See the
+ * signs, Call the real person. (Internally each red flag still records where it came from:
+ * read, check or match. All of those are signs.)
+ */
+export type TrackStep = 'checked' | 'signs' | 'call';
+
+export const STEPS: Array<{ id: TrackStep; label: string; long: string }> = [
+  { id: 'checked', label: 'Check', long: 'Check' },
+  { id: 'signs', label: 'Signs', long: 'See the signs' },
+  { id: 'call', label: 'Call', long: 'Call the real person' },
 ];
 
 export type StepState = 'done' | 'now' | 'todo' | 'flagged';
 
 /** What each step found for the current check: the same states on the verdict and on every evidence screen. */
-export function trackFor(verdict: Verdict, call: CallState): Record<Step, StepState> {
-  const flagged = (s: Exclude<Step, 'call'>) => (verdict.flags.some((f) => f.step === s) ? 'flagged' : 'done');
+export function trackFor(verdict: Verdict, call: CallState): Record<TrackStep, StepState> {
   return {
-    read: flagged('read'),
-    check: flagged('check'),
-    match: flagged('match'),
+    checked: 'done',
+    signs: verdict.flags.length ? 'flagged' : 'done',
     call: call === 'confirmed' ? 'done' : call === 'not_me' ? 'flagged' : 'now',
   };
 }
 
 /** The current check's step states, for the small track on evidence screens. */
-export const TrackContext = createContext<Record<Step, StepState> | null>(null);
+export const TrackContext = createContext<Record<TrackStep, StepState> | null>(null);
 
-/** The four steps on one line. Used in the verdict and, small, on every evidence screen. */
-export function StepTrack({ states, small, intro, live, current }: { states: Record<Step, StepState>; small?: boolean; intro?: boolean; live?: Step; current?: Step }) {
+/** The three steps on one line. Used in the verdict and, small, on every evidence screen. */
+export function StepTrack({ states, small, intro, live, current }: { states: Record<TrackStep, StepState>; small?: boolean; intro?: boolean; live?: TrackStep; current?: TrackStep }) {
   return (
     <ol className={`track${small ? ' small' : ''}${intro ? ' intro' : ''}`} aria-label="Steps">
       {STEPS.map((s, i) => (
@@ -253,7 +257,6 @@ export function Tile({ icon, title, detail, onClick, disabled }: { icon: ReactNo
 
 /* ---------- Detail screens ---------- */
 
-const NUMBER: Record<Step, number> = { read: 1, check: 2, match: 3, call: 4 };
 
 export function DetailHead({
   title,
@@ -272,11 +275,10 @@ export function DetailHead({
   onBack: () => void;
   backLabel?: string;
 }) {
-  // The verdict's own step states, so a step flagged there is flagged here too.
+  // The verdict's own step states, so a step flagged there is flagged here too. Every evidence
+  // screen shows a sign, so it belongs to step 2 whichever check found it.
   const track = useContext(TrackContext);
-  const states = step
-    ? (track ?? (Object.fromEntries(Object.entries(NUMBER).map(([k, n]) => [k, n < NUMBER[step] ? 'done' : n === NUMBER[step] ? 'now' : 'todo'])) as Record<Step, StepState>))
-    : undefined;
+  const states = step ? (track ?? ({ checked: 'done', signs: 'now', call: 'todo' } as Record<TrackStep, StepState>)) : undefined;
   return (
     <div className="detail-head">
       <button className="back" onClick={onBack}>
@@ -286,9 +288,9 @@ export function DetailHead({
       {states ? (
         <div className="detail-step">
           <span>
-            Step {NUMBER[step!]} of 4 · {step![0].toUpperCase() + step!.slice(1)}
+            Step 2 of 3 · See the signs
           </span>
-          <StepTrack states={states} small current={step} />
+          <StepTrack states={states} small current="signs" />
         </div>
       ) : (
         kicker && <span className="detail-kicker">{kicker}</span>

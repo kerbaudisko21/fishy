@@ -39,7 +39,7 @@ export function scoreMedia(item: MediaCheck): MediaScore {
     const top = g.signs.slice(0, 3).map((s) => `Gemini ${where}: ${s.sign.replace(/\.$/, '')}${s.where ? ` (${s.where})` : ''}.`);
     if (g.assessment === 'likely_ai') raise(Math.min(95, 70 + 5 * n), top[0] ?? `Gemini ${where} signs of AI.`);
     else if (g.assessment === 'likely_edited') raise(Math.min(90, 65 + 5 * n), top[0] ?? `Gemini ${where} signs of editing.`);
-    else if (g.assessment === 'unclear') raise(n ? Math.min(55, 35 + 5 * n) : 25, top[0] ?? `Gemini couldn’t tell from this ${item.kind === 'voice' ? 'clip' : 'picture'}.`);
+    else if (g.assessment === 'unclear') raise(n ? Math.min(55, 35 + 5 * n) : 15, top[0] ?? `Gemini couldn’t tell from this ${item.kind === 'voice' ? 'clip' : 'picture'} (too small, quiet or blurry), and found nothing to point at.`);
     else raise(10, `Gemini ${where} no clear signs of AI or editing.`);
     reasons.push(...top.slice(1));
   }
@@ -62,6 +62,6 @@ export function scoreMedia(item: MediaCheck): MediaScore {
 export const BAND_LABEL: Record<ScoreBand, string> = {
   high: 'Strong signs of AI or tampering',
   some: 'Some signs: take a closer look',
-  low: 'No clear signs',
+  low: 'No clear signs found',
   pending: 'Not scored yet',
 };

@@ -20,7 +20,8 @@ export default defineManifest({
   background: { service_worker: 'src/background/service-worker.ts', type: 'module' },
   // tabCapture: the voice check records a 10-second clip of the meeting, only on the user's click (R8).
   // No 'tabs': FISHY never reads a tab's address or title (security review L4).
-  permissions: ['sidePanel', 'storage', 'tabCapture'],
+  // activeTab: clicking the FISHY icon on the call's tab is what lets Chrome capture that tab.
+  permissions: ['sidePanel', 'storage', 'tabCapture', 'activeTab'],
   host_permissions: ['https://meet.google.com/*', 'https://mail.google.com/*'],
   content_scripts: [
     { matches: ['https://meet.google.com/*'], js: ['src/content/meet.ts'], run_at: 'document_idle' },
