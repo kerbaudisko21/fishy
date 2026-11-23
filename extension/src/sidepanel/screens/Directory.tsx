@@ -10,6 +10,8 @@ export function Directory({ people, suppliers }: { people: DirectoryPerson[]; su
   const ordered = [...people].sort((a, b) => (a.escalationOrder ?? 0) - (b.escalationOrder ?? 0));
   return (
     <main className="main">
+      {/* The screen's name for screen readers; the tab above already shows it. */}
+      <h1 className="visually-hidden">Directory</h1>
       <Section title="Approvers" aside="Called in this order">
         <ol className="rows surface">
           {ordered.length === 0 && <li className="check-row row-detail">No approvers on record yet.</li>}
