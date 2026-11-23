@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { demoData } from '../demo/dataset';
 import { readPicture, readVoice, type MediaResult } from '../lib/ai/media';
 import { readTactics } from '../lib/ai/tactics';
-import { DEMO, IN_EXTENSION } from '../lib/config';
+import { DEMO, FIREBASE_READY, IN_EXTENSION } from '../lib/config';
 import { domainOf, findLookalike, registrable } from '../lib/checks/domain';
 import { judgeAuth } from '../lib/checks/email';
 import { compareAccount, editTraces, findAccounts, invoiceNumber, invoiceTotal, mask } from '../lib/checks/invoice';
@@ -24,6 +24,25 @@ const NOT_A_PERSON = /^(you|anda|kamu|speaker|pasted|email)$/i;
 const clock = (t = Date.now()) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 const EMPTY: Findings = { place: 'meet', known: [] };
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
+
+/** The video and the voice have no file marks to read: without Gemini there is nothing to check. */
+const NEEDS_GEMINI =
+  'Checking the video or the voice needs Gemini, and Gemini isn’t connected in this build. Add the Firebase settings to extension/.env.local and reload FISHY. Pictures and PDFs still show their own marks without it.';
+
+/** Chrome's capture errors, in words a person can act on. */
+function captureError(what: 'video' | 'voice', e: unknown): string {
+  const message = (e as Error)?.message ?? String(e);
+  if (/not been invoked|activeTab|invoked for the current page/i.test(message)) {
+    return `Chrome lets FISHY capture a tab only after you click the FISHY icon on that tab. Go to the call’s tab, click the FISHY icon in the toolbar, then check the ${what} again.`;
+  }
+  if (/chrome:\/\/|cannot be captured|Chrome pages/i.test(message)) {
+    return `This tab can’t be captured. Open the call (Meet, Zoom or Teams in Chrome) and check the ${what} there.`;
+  }
+  if (/active stream|already being captured|another capture/i.test(message)) {
+    return `The tab is already being captured (screen sharing or another extension). Stop that, then check the ${what} again.`;
+  }
+  return `The ${what} check didn’t start: ${message}`;
+}
 const NO_GEMINI = 'Gemini is not set up in this build, so only the file’s own marks were checked.';
 const newId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now() + Math.random()));
 
@@ -302,6 +321,7 @@ export function useAnalysis() {
   /** Records 10 s of the call in this tab, only on the user's click, and has Gemini listen to it. */
   const checkVoice = useCallback(async () => {
     if (!IN_EXTENSION) return setError('Open this in the extension to record the call.');
+    if (!FIREBASE_READY) return setError(NEEDS_GEMINI);
     const tab = await activeTab();
     if (tab?.id === undefined) return setError('Open the call’s tab first.');
     setError(null);
@@ -310,7 +330,7 @@ export function useAnalysis() {
       const speaker = [...transcript.current].reverse().find((l) => !NOT_A_PERSON.test(l.speaker))?.speaker;
       await checkVoiceClip(clip.blob, clip.mime, speaker ? `${clip.seconds} s of ${speaker}` : `${clip.seconds} s of the call`, clip.levels);
     } catch (e) {
-      setError(`Voice check: ${(e as Error).message}`);
+      setError(captureError('voice', e));
       setBusy(null);
     }
   }, [checkVoiceClip]);
@@ -318,6 +338,7 @@ export function useAnalysis() {
   /** One frame of the video call in this tab, only on the user's click, for Gemini to look at. */
   const checkFrame = useCallback(async () => {
     if (!IN_EXTENSION) return setError('Open this in the extension to check the video call.');
+    if (!FIREBASE_READY) return setError(NEEDS_GEMINI);
     const tab = await activeTab();
     if (tab?.id === undefined) return setError('Open the call’s tab first.');
     setError(null);
@@ -325,7 +346,7 @@ export function useAnalysis() {
       setBusy('Capturing the video…');
       await checkPicture(await captureTabFrame(tab.id), `Video call at ${clock()}`, 'frame');
     } catch (e) {
-      setError(`Video check: ${(e as Error).message}`);
+      setError(captureError('video', e));
       setBusy(null);
     }
   }, [checkPicture]);
