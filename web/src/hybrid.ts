@@ -1,7 +1,8 @@
 import { getAI, getGenerativeModel, InferenceMode, InferenceSource, type GenerativeModel } from 'firebase/ai';
 // The extension's own logic, so the hosted page reads a message exactly the way the extension does.
 import { keywordTactics } from '../../extension/src/lib/ai/keywords';
-import { explainPrompt, parseTactics, TACTIC_PROMPT, tacticSchema, templateExplanation, type TacticHit } from '../../extension/src/lib/ai/prompts';
+import { pictureForGemini, toBase64 } from '../../extension/src/lib/ai/files';
+import { explainPrompt, mediaSchema, parseMedia, parseTactics, PICTURE_PROMPT, TACTIC_PROMPT, tacticSchema, templateExplanation, type MediaReading, type TacticHit } from '../../extension/src/lib/ai/prompts';
 import { cloudBackend } from '../../extension/src/lib/ai/provider';
 import { redact } from '../../extension/src/lib/redact';
 import type { Source, Verdict } from '../../extension/src/lib/types';
@@ -38,7 +39,7 @@ export async function nanoStatus(): Promise<NanoStatus> {
   }
 }
 
-let models: { onDevice: GenerativeModel; inCloud: GenerativeModel; explain: GenerativeModel } | undefined;
+let models: { onDevice: GenerativeModel; inCloud: GenerativeModel; explain: GenerativeModel; picture: GenerativeModel } | undefined;
 
 function getModels() {
   if (models) return models;
@@ -52,6 +53,11 @@ function getModels() {
     inCloud: getGenerativeModel(ai, {
       mode: InferenceMode.ONLY_IN_CLOUD,
       inCloudParams: { model: cloudModel, generationConfig: { responseMimeType: 'application/json', responseSchema: tacticSchema } },
+    }),
+    picture: getGenerativeModel(ai, {
+      mode: InferenceMode.PREFER_ON_DEVICE,
+      onDeviceParams: { createOptions: { expectedInputs: [{ type: 'image' }, { type: 'text' }] }, promptOptions: { responseConstraint: mediaSchema } },
+      inCloudParams: { model: cloudModel, generationConfig: { responseMimeType: 'application/json', responseSchema: mediaSchema } },
     }),
     explain: getGenerativeModel(ai, {
       mode: InferenceMode.PREFER_ON_DEVICE,
@@ -91,4 +97,18 @@ export async function explain(verdict: Verdict): Promise<Explanation> {
     source: onDevice ? 'on_device' : 'cloud',
     reader: onDevice ? 'gemini-nano' : 'gemini-cloud',
   };
+}
+
+export interface PictureReading extends MediaReading {
+  source: Source;
+  reader: 'gemini-nano' | 'gemini-cloud';
+}
+
+/** What Gemini sees in a picture: Gemini Nano in this browser when it can, the cloud model otherwise. Null without Firebase. */
+export async function readPicture(blob: Blob): Promise<PictureReading | null> {
+  if (!CONFIGURED) return null;
+  const picture = await pictureForGemini(blob);
+  const result = await getModels().picture.generateContent([PICTURE_PROMPT, { type: 'inlineData', inlineData: { mimeType: picture.type, data: await toBase64(picture) } }]);
+  const onDevice = result.response.inferenceSource === InferenceSource.ON_DEVICE;
+  return { ...parseMedia(result.response.text()), source: onDevice ? 'on_device' : 'cloud', reader: onDevice ? 'gemini-nano' : 'gemini-cloud' };
 }

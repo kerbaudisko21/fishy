@@ -6,6 +6,7 @@ import type { Signal, Source, Tactic, Verdict } from '../../extension/src/lib/ty
 import { CONFIGURED } from './api';
 import { explain, nanoStatus, readTactics, type Explanation, type NanoStatus, type ReadResult } from './hybrid';
 import { line, Reveal } from '../../extension/src/lib/transitions';
+import { PictureCheck } from './PictureCheck';
 import { Brand, Version } from './ui';
 
 /*
@@ -109,10 +110,10 @@ export function TryPage() {
       <Brand sub="Try it in your browser" />
 
       <section className="stack">
-        <h1>Paste a payment request</h1>
+        <h1>Is it real?</h1>
         <p className="lead">
-          FISHY reads it with Gemini through Firebase AI Logic. With Gemini Nano in this browser, the text stays on this device. Without it, only a
-          redacted copy goes to the cloud model.
+          Check a picture or a message the way the FISHY extension does. Gemini runs through Firebase AI Logic: on this device with Gemini Nano when
+          your browser has it, in the cloud otherwise.
         </p>
         <p className={`nano ${nano === 'available' ? 'on' : ''}`} role="status">
           {!CONFIGURED
@@ -125,8 +126,14 @@ export function TryPage() {
         </p>
       </section>
 
+      <section className="stack" aria-label="A picture">
+        <h2 className="try-h2">A picture</h2>
+        <PictureCheck />
+      </section>
+
       <div className="stack">
-        <label htmlFor="message">The message</label>
+        <h2 className="try-h2">A message</h2>
+        <label htmlFor="message">Paste a payment request</label>
         <textarea id="message" autoCapitalize="sentences" spellCheck={false} value={text} onChange={(e) => setText(e.target.value)} placeholder="An email, a chat message or meeting captions…" rows={7} />
         <div className="row">
           <button className="link" onClick={() => setText(SAMPLE)}>

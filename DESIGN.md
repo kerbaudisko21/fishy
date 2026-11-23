@@ -1,7 +1,7 @@
 ---
 version: 1
 name: FISHY
-description: A finance-team guard that lives beside Google Meet and Gmail. Navy and coral from the logo, a cool tide-grey canvas, white rounded surfaces, Space Grotesk headings over Inter text, and one colour per verdict state. Calm while watching, loud only when money is at risk.
+description: An "is it real?" checker for pictures, documents, voices and video calls, beside Google Meet and Gmail. Navy and coral from the logo, a cool tide-grey canvas, white rounded surfaces, Atkinson Hyperlegible Next for everything, and one colour per verdict state. Calm while watching, loud only when money is at risk.
 
 colors:
   ink: "#10202e"          # navy, from the logo: text, primary buttons, the header
@@ -31,12 +31,12 @@ colors:
   focus: "#10202e"        # focus ring (white on navy and on the red hero)
 
 typography:
-  hero:      { fontFamily: Space Grotesk Variable, fontSize: 30px (22px at the narrowest), fontWeight: 700, lineHeight: 1.08, letterSpacing: -0.01em }
-  detail-h1: { fontFamily: Space Grotesk Variable, fontSize: 26px, fontWeight: 700, lineHeight: 1.12 }
-  amount:    { fontFamily: Space Grotesk Variable, fontSize: 24px (scales with its card), fontWeight: 700, fontVariantNumeric: tabular-nums }
-  section:   { fontFamily: Space Grotesk Variable, fontSize: 17px, fontWeight: 700 }
-  body:      { fontFamily: Inter Variable, fontSize: 14–14.5px, lineHeight: 1.45–1.55 }
-  meta:      { fontFamily: Inter Variable, fontSize: 12.5–13px, color: muted }
+  hero:      { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 30px (22px at the narrowest), fontWeight: 700, lineHeight: 1.08, letterSpacing: -0.01em }
+  detail-h1: { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 26px, fontWeight: 700, lineHeight: 1.12 }
+  amount:    { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 24px (scales with its card), fontWeight: 700, fontVariantNumeric: tabular-nums }
+  section:   { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 17px, fontWeight: 700 }
+  body:      { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 14–14.5px, lineHeight: 1.45–1.55 }
+  meta:      { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 12.5–13px, color: muted }
   mono:      { fontFamily: JetBrains Mono, use: bank accounts, masked numbers, sender addresses }
 
 radius: { sm: 10px, md: 14px, lg: 18px, hero-bottom: 26px, pill: 999px }
@@ -46,13 +46,13 @@ radius: { sm: 10px, md: 14px, lg: 18px, hero-bottom: 26px, pill: 999px }
 
 ## Overview
 
-FISHY is a tool someone uses under pressure: a "CFO" is on a video call asking for an urgent transfer, and the person at the keyboard has seconds to decide. The interface is built for that moment. It stays quiet (navy, white, tide grey) while it watches, and gives the whole top of the panel to one colour and one sentence when something is wrong. Every screen answers *why* with a comparison (this email against the one on record, this account against six months of payments), not with prose.
+FISHY is a tool someone uses under pressure: a "CFO" is on a video call asking for an urgent transfer, or a receipt or a voice note arrives that asks them to act, and they have seconds to decide whether it is real. The interface is built for that moment. It stays quiet (navy, white, tide grey) while it watches, and gives the whole top of the panel to one colour and one sentence when something is wrong. Every screen answers *why* with a comparison (this email against the one on record, this account against six months of payments), not with prose.
 
 The surface mode is **Operate**: scanability, plain finance language and native expectations come before expression. Brand lives in the details: the navy header, the coral hero, the four-step track, the On device / Cloud badges.
 
 ## Where it comes from
 
-The language was set in the FISHY deck (#BuildHybridAI 2026): navy `#0E1C27`, coral `#F2694B`, a warm bone canvas `#F1EFE7`, cards `#FAF9F4`, Space Grotesk for headings, Inter for text, JetBrains Mono for data. The product keeps the navy, the coral and the three typefaces, with two deliberate changes:
+The language was set in the FISHY deck (#BuildHybridAI 2026): navy `#0E1C27`, coral `#F2694B`, a warm bone canvas `#F1EFE7`, cards `#FAF9F4`, Space Grotesk for headings, Inter for text, JetBrains Mono for data. The product keeps the navy, the coral and JetBrains Mono. It replaced the deck's Inter and Space Grotesk with Atkinson Hyperlegible Next (see Typography), and made these deliberate changes:
 
 | Deck | Product | Why |
 |---|---|---|
@@ -82,7 +82,7 @@ The original screen wireframes are the deck's slide 11 ("Nine screens, one side 
 
 ## Typography
 
-Space Grotesk carries headings, the hero sentence and amounts; Inter carries everything else; JetBrains Mono is for things people compare character by character: bank accounts, masked phone numbers, sender addresses. Emphasis comes from weight, never from a new size.
+One family, **Atkinson Hyperlegible Next**, carries headings and text. The Braille Institute drew it to stay readable in hard conditions, which is when FISHY is read, and it replaced Inter and Space Grotesk (Nov 23): that pairing is the default of countless generated interfaces. JetBrains Mono stays for what people compare character by character: bank accounts, masked phone numbers, sender addresses. Emphasis comes from weight, never from a new size.
 
 - The hero is one short sentence: "Something’s fishy." "Not verified." "Budi confirmed."
 - Amounts are never truncated. A currency code (IDR) wraps above the number when the number needs the width; a one-character symbol ($) stays attached. Tabular figures.
@@ -111,6 +111,8 @@ Radius 10 (small controls), 14 (buttons, tiles), 18 (surfaces), 26 (bottom of th
 - **Step track**: done is a check, flagged is "!", now is a ring. The small track on evidence screens shows the same states, with an outline on the current step.
 - **Red flag row**: icon tile, title, one line of evidence, chevron to the evidence screen. Grouped by step, with one source badge per group.
 - **Why this is risky**: Gemini's two or three sentences in a plain surface, with where it ran.
+- **What the checks found**: one card per picture, document, voice or video frame: the preview (or the waveform), what the file says about itself, then what Gemini saw or heard with where it ran, and the reminder that these are signs, not proof.
+- **Take a closer look**: when there are signs but not enough to call it fishy, the hero goes navy (amber on the web) instead of saying "looks normal".
 - **Evidence screens**: a comparison first (red-tinted "on this invoice" over green-tinted "paid the last 6 times"), then the checks list, then a privacy line.
 - **End states**: "What to say now" (a line to get off the call), then "Start a new check" and "Copy the incident report link".
 - **Approval page (phone)**: who is asked and how much, then two big buttons, "No, it wasn’t me" first in red, then the PIN with its own keyboard.
