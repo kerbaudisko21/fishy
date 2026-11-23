@@ -17,7 +17,8 @@ const config = {
 export const CONFIGURED = Boolean(config.apiKey && config.projectId && config.appId);
 
 let app: FirebaseApp | undefined;
-function firebase() {
+/** The Firebase app, with App Check through reCAPTCHA Enterprise (no debug token on the hosted pages). */
+export function firebase() {
   if (app) return app;
   app = initializeApp(config);
   if (env.DEV && env.VITE_APPCHECK_DEBUG_TOKEN) {

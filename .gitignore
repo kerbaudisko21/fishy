@@ -20,3 +20,7 @@ service-account*.json
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Built for release
+extension/dist-demo/
+release/

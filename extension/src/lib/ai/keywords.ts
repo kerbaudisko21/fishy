@@ -1,5 +1,5 @@
 import type { Tactic } from '../types';
-import type { TacticHit } from './tactics';
+import type { TacticHit } from './prompts';
 
 /**
  * Offline stand-in for the tactic reader, used only when Firebase is not configured

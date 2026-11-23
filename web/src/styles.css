@@ -54,3 +54,32 @@ html:has(.page.dark), body:has(.page.dark) { background: #0f1c28; }
 .btn.brand { background: var(--brand); color: #0f1c28; }
 .btn.ghost { background: transparent; color: #fff; border: 1px solid #34495c; font-weight: 600; }
 .link.light { color: #ffd3c8; }
+
+/* Try FISHY (/try) */
+.lead { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+.nano { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--cloud-bg); color: var(--cloud-text); font-size: 13px; line-height: 1.45; }
+.nano.on { background: var(--ink); color: #fff; }
+textarea { width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font: 15px/1.5 var(--font-body); color: var(--ink); resize: vertical; }
+textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.row { display: flex; align-items: center; gap: 12px; }
+.grow { flex: 1; }
+.verdict { border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.5; }
+.verdict h2 { margin: 0; font-family: var(--font-head); font-size: 28px; line-height: 1.1; }
+.verdict h2:focus { outline: none; }
+.verdict.fishy { background: var(--brand); color: var(--ink); }
+.verdict.clear { background: var(--ok-bg); color: #073a33; }
+.verdict-pill { align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 12.5px; font-weight: 700; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ran { font-size: 11.5px; font-weight: 600; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+.ran.on_device { background: var(--ink); color: #fff; }
+.ran.cloud { background: var(--cloud-bg); color: var(--cloud-text); }
+.explain { margin: 0; font-size: 14.5px; line-height: 1.55; }
+.hits, .flags { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.hits li, .flags li { display: flex; flex-direction: column; gap: 3px; }
+.hit-label { font-size: 12px; font-weight: 700; color: var(--muted); }
+mark { align-self: flex-start; background: var(--danger-bg); color: var(--ink); border-radius: 4px; padding: 1px 4px; }
+.flag-title { font-weight: 650; }
+details { font-size: 13px; color: var(--ink-2); }
+summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.sent { margin: 6px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--surface-muted); font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; }
+.next a.btn { text-decoration: none; margin-top: 4px; }

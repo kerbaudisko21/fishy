@@ -1,9 +1,11 @@
 import { getAI, getGenerativeModel, InferenceMode, InferenceSource, type GenerativeModel } from 'firebase/ai';
 import { FIREBASE_READY } from '../config';
 import { firebaseApp } from '../firebase';
-import { redact } from '../redact';
 import type { Source, Verdict } from '../types';
+import { explainPrompt, templateExplanation, type ExplainContext } from './prompts';
 import { cloudBackend } from './provider';
+
+export { explainPrompt, templateExplanation, type ExplainContext } from './prompts';
 
 /**
  * Step 3 · "Why it's fishy": Gemini turns the red flags into a short explanation in plain words.
@@ -23,13 +25,6 @@ export interface Explanation {
   model: ExplainModel;
 }
 
-export interface ExplainContext {
-  /** Who asked, e.g. "Budi Santoso (CFO)". */
-  askedBy?: string;
-  /** e.g. "Rp 1,250,000,000". */
-  amount?: string;
-}
-
 let model: GenerativeModel | undefined;
 
 function getModel() {
@@ -43,32 +38,6 @@ function getModel() {
     },
   });
   return model;
-}
-
-/** The prompt. Exported for tests: it must carry the flags and nothing else from the message. */
-export function explainPrompt(verdict: Verdict, ctx: ExplainContext = {}): string {
-  const flags = verdict.flags.map((f) => `- ${f.title}: ${f.detail}`).join('\n');
-  const patterns = verdict.patterns.length ? `Matches the known scam pattern: ${verdict.patterns.join(', ')}.\n` : '';
-  const request = [ctx.askedBy && `Asked by: ${ctx.askedBy}.`, ctx.amount && `Amount: ${ctx.amount}.`].filter(Boolean).join(' ');
-  return redact(`You help a company finance employee who was just asked to send money.
-In at most 3 short sentences of plain English, say why this request is risky and what to do.
-Say "call the person on the number on record before paying". Do not invent facts beyond the list.
-Do not say it is certainly a scam; say what the signs are.
-
-${request}
-${patterns}Red flags:
-${flags}`);
-}
-
-/** The offline stand-in: the same facts, joined into a sentence. */
-export function templateExplanation(verdict: Verdict): string {
-  if (verdict.flags.length === 0) {
-    return 'No red flags found. For any payment, still confirm with the person on the number on record.';
-  }
-  const top = verdict.flags.slice(0, 3).map((f) => f.title.toLowerCase());
-  const list = top.length > 1 ? `${top.slice(0, -1).join(', ')} and ${top[top.length - 1]}` : top[0];
-  const more = verdict.flags.length > 3 ? ` (plus ${verdict.flags.length - 3} more)` : '';
-  return `This request shows ${list}${more}. Hold the payment and call the person on the number on record before paying.`;
 }
 
 export async function explainVerdict(verdict: Verdict, ctx: ExplainContext = {}): Promise<Explanation> {
