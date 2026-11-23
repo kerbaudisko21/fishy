@@ -6,7 +6,35 @@ A Chrome extension that spots social-engineering scams in Google Meet and Gmail,
 
 Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) (Web / Chrome) with **Firebase AI Logic hybrid inference**: Gemini Nano reads private content on the laptop, and Gemini in the cloud takes over (on redacted text) when Nano is not available.
 
-> The build runs 22–30 Nov 2026; submission is due 1 Dec 2026, 05:00 WIB.
+> Built 21–30 Nov 2026 for the submission due 1 Dec 2026, 05:00 WIB (30 Nov, 2:00 PM PT).
+
+## Why it matters
+
+A fake boss on a video call or a fake supplier invoice needs no malware, only one person who pays. In 2024 one employee moved $25.6M after a video call where every other face was fake (Arup, Hong Kong). Email filters and deepfake detectors score the message; none of them asks the real person. FISHY reads the request, checks the evidence on the laptop, and then calls the real person on a number on record, never one from the message. However real the fake looks, it can't answer the real phone.
+
+## Try it
+
+| What | How | Needs |
+|---|---|---|
+| **Try FISHY in a browser** | Open `/try` on the hosted pages, press **Use the sample**, then **Check it**. It shows where each step ran (Gemini Nano on your device, or Gemini in the cloud on a redacted copy) and exactly what the cloud was sent | Nothing to install. App Check runs through reCAPTCHA Enterprise, with no debug token |
+| **The approver's page** | Open `/?demo` on the hosted pages: what the real person sees when a phone call can't reach them (yes or no, then a PIN) | Nothing |
+| **The extension, demo mode** | Download `fishy-extension-demo.zip` from the release, unzip it, then `chrome://extensions` → Developer mode → **Load unpacked**. It runs on a fictional company; the keyword reader stands in for Gemini and says so | Chrome 139+ |
+| **The extension, live** | Build it with your own Firebase project (see [Run it](#run-it)) | A Firebase project with AI Logic and an App Check debug token |
+
+The hosted address and the release are filled in at submission. `npm run package` builds the demo zip; it refuses to package a build that carries a Firebase key.
+
+## How FISHY uses Firebase AI Logic
+
+Two different hybrid patterns, chosen by what the model is given:
+
+| Task | What the model gets | Mode | Why |
+|---|---|---|---|
+| **Read** the request for pressure tactics ([tactics.ts](extension/src/lib/ai/tactics.ts)) | The message itself | FISHY checks `LanguageModel.availability()` first: `ONLY_ON_DEVICE` with the raw text when Gemini Nano is ready, otherwise `ONLY_IN_CLOUD` with a **redacted** copy (accounts, numbers, emails and links removed, [redact.ts](extension/src/lib/redact.ts)) | Private message text may only reach Gemini Nano on the laptop. The SDK's automatic fallback would send the raw text to the cloud, so FISHY chooses itself |
+| **Explain** the red flags in plain words ([explain.ts](extension/src/lib/ai/explain.ts)) | The red flags only (titles and one line of masked evidence), never the message | `PREFER_ON_DEVICE`: Firebase AI Logic runs Nano when it can and falls back to the cloud by itself | Nothing private is in the input, so the SDK may decide |
+
+Both answer in JSON or short text, and `inferenceSource` tells the panel which badge to show: **On device** or **Cloud** on every step. The verdict itself never comes from the model: a fixed rules engine decides it from the signals, so the same signals always give the same verdict. Firebase App Check protects every call (a debug token in the extension, reCAPTCHA Enterprise on the hosted pages), and the same prompts run in the extension and on `/try` ([prompts.ts](extension/src/lib/ai/prompts.ts)).
+
+Other Firebase products: **Authentication** (anonymous) for the checks a person owns, **Firestore** for the directory, known scams and call state, **Remote Config** for scam rules and the Meet and Gmail page selectors, **Cloud Functions** for the call, the approval page, the link check, domain age and the incident report, and **Hosting** for the pages.
 
 ## Status
 
@@ -28,7 +56,7 @@ Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) 
 | Team push alerts | Not built (`registerAlertToken` is a stub); the incident page does not offer them |
 | Try FISHY (`/try`) and a demo extension build | Built: the hosted page runs the tactic reader and the explanation through Firebase AI Logic with reCAPTCHA App Check, no debug token; `npm run package` zips the extension in demo mode. Not yet deployed |
 | Voice check (P1) | Records 10 s of the Meet tab on click (`tabCapture`); `scoreVoice` function not built (demo score without Firebase) |
-| Face check (P1) | Screen only |
+| Face check (P1) | Not built; removed from the panel |
 
 Function contracts (inputs and outputs) are written above each function in [functions/src/index.ts](functions/src/index.ts). The rules behind them live in `functions/src/call`, `approve`, `learn` and `webrisk`, and are tested without a database or a phone (`npm test`).
 
@@ -343,6 +371,24 @@ All of it lives in FISHY's own database, `fishy`, not in `(default)`.
 - Voice clips and video frames leave the laptop only when the user clicks.
 - FISHY never calls a number taken from a message.
 - The team sees a summary, never the message.
+
+## Built during #BuildHybridAI
+
+FISHY is a new project: the first commit is from 21 Nov 2026, after the submission period opened, and everything in this repository was written between 21 and 30 Nov 2026. The commit history shows each step:
+
+- The side panel, its five evidence screens, Directory and the on-device checks (look-alike sender, sender authentication, invoice bank details and edit traces, known scams)
+- Step 1 with Firebase AI Logic hybrid inference, and the explanation of the red flags
+- The phone check with Twilio, the PIN, escalation to the next approver and the web approval page
+- Shared learning, link checks with Web Risk, domain age through RDAP, and the incident report and audit log
+- The hosted Try FISHY page and the demo build of the extension
+- The deploy setup that keeps FISHY separate in a shared Google Cloud project
+
+## What we did not write
+
+- Open-source libraries, under their own licenses: React, Vite, `@crxjs/vite-plugin`, the Firebase JS SDK and Admin SDK, `firebase-functions`, pdf.js (`pdfjs-dist`), the Twilio Node library, `@google-cloud/web-risk`, `@resvg/resvg-js`, Vitest, and the Inter, Space Grotesk and JetBrains Mono fonts (Fontsource)
+- Services: Gemini through Firebase AI Logic, Google Web Risk, rdap.org for domain registration dates, and Twilio Voice
+- The code was written with an AI coding assistant (Claude Code), with Firebase Agent Skills installed
+- All people, companies, bank accounts and phone numbers in the demo data are made up
 
 ## License
 
