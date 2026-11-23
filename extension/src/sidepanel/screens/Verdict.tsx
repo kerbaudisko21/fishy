@@ -2,10 +2,11 @@
 import { useFirstSeen } from '../motion';
 import { waitingFor } from '../../lib/call-wait';
 import type { CallStatus, CallTarget, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
-import { FlagRow, Icon, Privacy, Section, SourceBadge, StepTrack, Tile, type StepState } from '../components';
+import { FlagRow, Icon, Privacy, Section, SourceBadge, StepTrack, Tile, trackFor } from '../components';
 import { money } from '../format';
 import type { Screen } from '../routes';
 import { useNow } from '../useCall';
+import { useExplanation } from '../useExplanation';
 
 interface Props {
   request?: PaymentRequest;
@@ -19,6 +20,8 @@ interface Props {
   escalateTo?: CallTarget;
   onCall: () => void;
   onCancel: () => void;
+  /** Clears this check and starts over. */
+  onNewCheck: () => void;
   onOpenFlag: (kind: VerdictT['flags'][number]['kind']) => Screen | null;
   onOpen: (s: Screen) => void;
   onPaste: () => void;
@@ -66,9 +69,9 @@ export function Verdict(p: Props) {
       : call.state === 'no_answer' || call.state === 'escalated'
         ? { tone: 'navy', pill: 'No answer', title: call.escalatedTo ? `Calling ${first(call.escalatedTo)}…` : `${who} didn’t answer.`, line: 'Keep holding the payment.' }
         : call.state === 'not_me'
-          ? { tone: 'red', pill: 'Do not pay', title: 'Not verified.', line: `The real ${who} pressed 2: they did not ask for this. Your finance manager has been told.` }
+          ? { tone: 'red', pill: 'Do not pay', title: 'Not verified.', line: `The real ${who} says they did not ask for this. Stop the payment.` }
           : call.state === 'confirmed'
-            ? { tone: 'green', pill: 'Confirmed by phone', title: `${who} confirmed.`, line: 'Pressed 1 and entered the PIN. Pay through the normal approval.' }
+            ? { tone: 'green', pill: 'Confirmed', title: `${who} confirmed.`, line: 'They said yes and entered their PIN. Pay through the normal approval.' }
             : verdict.level === 'fishy'
               ? { tone: 'coral', pill: 'Hold the payment', title: 'Something’s fishy.', line: `${n} red flag${n === 1 ? '' : 's'}. Don’t pay until ${who} confirms on the number on record.` }
               : { tone: 'green', pill: 'No red flags', title: 'Looks normal.', line: 'For a payment, a call on the number on record is still the safe step.' };
@@ -80,13 +83,19 @@ export function Verdict(p: Props) {
   const heroIntro = useFirstSeen(`hero:${sig}:${heroKey}`);
   let flagIndex = 0;
 
-  const flagged = (s: Exclude<Step, 'call'>) => verdict.flags.some((f) => f.step === s);
-  const track: Record<Step, StepState> = {
-    read: flagged('read') ? 'flagged' : 'done',
-    check: flagged('check') ? 'flagged' : 'done',
-    match: flagged('match') ? 'flagged' : 'done',
-    call: call.state === 'confirmed' ? 'done' : call.state === 'not_me' ? 'flagged' : 'now',
-  };
+  const track = trackFor(verdict, call.state);
+  const ended = call.state === 'not_me' || call.state === 'confirmed';
+  const calling = call.state === 'ringing' || call.state === 'escalated';
+
+  // "Why this is risky": Gemini on the red flags only, never the message.
+  const { explanation, writing } = useExplanation(
+    verdict,
+    {
+      askedBy: request?.askedBy.name ? `${request.askedBy.name}${request.askedBy.role ? ` (${request.askedBy.role})` : ''}` : undefined,
+      amount: request && request.amount.value > 0 ? money(request.amount.value, request.amount.currency) : undefined,
+    },
+    p.hasInput,
+  );
 
   return (
     <>
@@ -114,7 +123,7 @@ export function Verdict(p: Props) {
         </section>
       )}
 
-      <main className={`main${p.hasInput && (idle || call.state === 'ringing') ? ' with-bar' : ''}${intro ? ' intro' : ''}`}>
+      <main className={`main${p.hasInput && (idle || calling || ended) ? ' with-bar' : ''}${intro ? ' intro' : ''}`}>
         {p.busy && (
           <p className="status-line" role="status">
             <span className="spinner" aria-hidden="true" />
@@ -126,14 +135,14 @@ export function Verdict(p: Props) {
           <>
             <Section title="Start a check">
               <div className="surface">
-                <div className="start-row">
+                <div className="start-row passive">
                   <span className="start-icon">{Icon.video()}</span>
                   <span className="grow">
                     <span className="row-title">In Google Meet</span>
                     <span className="row-detail">Turn on captions (CC). FISHY listens from there.</span>
                   </span>
                 </div>
-                <div className="start-row">
+                <div className="start-row passive">
                   <span className="start-icon">{Icon.mail(18)}</span>
                   <span className="grow">
                     <span className="row-title">In Gmail</span>
@@ -190,6 +199,15 @@ export function Verdict(p: Props) {
           </>
         )}
 
+        {call.state === 'not_me' && (
+          <Section title="What to say now">
+            <div className="surface card-pad script">
+              <p className="script-line">“I have to verify payment requests through our approval policy. I’ll call you back on the number we have on file.”</p>
+              <span className="row-detail">Then leave the call. Don’t repeat the account details or send anything while you’re still on it.</span>
+            </div>
+          </Section>
+        )}
+
         {request && (
           <Section title="The request">
             <dl className="request surface">
@@ -230,6 +248,18 @@ export function Verdict(p: Props) {
           </Section>
         )}
 
+        {/* Once the person has answered, the call decided it; the advice to call would be stale. */}
+        {(explanation || writing) && !ended && (
+          <Section
+            title="Why this is risky"
+            aside={explanation ? explanation.model === 'template' ? 'Built from the red flags' : <SourceBadge source={explanation.source} label={explanation.source === 'on_device' ? 'Gemini Nano, on device' : 'Gemini, cloud'} /> : undefined}
+          >
+            <div className="surface card-pad" aria-live="polite" aria-busy={writing}>
+              {explanation ? <p className="explain">{explanation.text}</p> : <p className="explain writing">Gemini is reading the red flags</p>}
+            </div>
+          </Section>
+        )}
+
         {n > 0 && (
           <Section title={`${n} red flag${n === 1 ? '' : 's'}`} label="Red flags" aside="Tap one for the evidence">
             <div className="surface flags">
@@ -257,7 +287,7 @@ export function Verdict(p: Props) {
         {call.state === 'not_me' && (
           <p className="note">
             <span className="note-icon" style={{ color: 'var(--ok)' }}>{Icon.check(15)}</span>
-            The account, domain and number in this request went on the known-scam list.
+            Once {who} confirms with their PIN, the account, domain and number in this request join the known-scam list.
           </p>
         )}
 
@@ -265,8 +295,7 @@ export function Verdict(p: Props) {
           <Section title="Check more">
             <div className="tiles">
               {p.onVoice && <Tile icon={Icon.wave(20)} title="Voice" detail="10 s clip" onClick={p.onVoice} disabled={!!p.busy} />}
-              <Tile icon={Icon.clipboard(20)} title="Paste text" detail="A message" onClick={p.onPaste} />
-              <Tile icon={Icon.file(20)} title="Invoice" detail="PDF file" onClick={p.onPaste} />
+              <Tile icon={Icon.clipboard(20)} title="Paste or drop" detail="A message or invoice" onClick={p.onPaste} />
             </div>
           </Section>
         )}
@@ -297,12 +326,22 @@ export function Verdict(p: Props) {
         </div>,
         document.body,
       )}
-      {call.state === 'ringing' &&
+      {calling &&
         createPortal(
           <div className="action-bar">
             <button className="btn secondary" onClick={p.onCancel}>
               Cancel call
             </button>
+          </div>,
+          document.body,
+        )}
+      {p.hasInput && ended &&
+        createPortal(
+          <div className="action-bar">
+            <button className="btn primary" onClick={p.onNewCheck}>
+              {call.state === 'confirmed' ? 'Done, start a new check' : 'Start a new check'}
+            </button>
+            {call.state === 'not_me' && <span className="bar-hint">This result stays on the check’s record.</span>}
           </div>,
           document.body,
         )}

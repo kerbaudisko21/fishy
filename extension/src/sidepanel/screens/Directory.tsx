@@ -1,3 +1,4 @@
+import { ESCALATE_MINUTES } from '../../lib/config';
 import type { DirectoryPerson, Supplier } from '../../lib/types';
 import { Privacy, Section } from '../components';
 
@@ -29,13 +30,10 @@ export function Directory({ people, suppliers }: { people: DirectoryPerson[]; su
                   {p.role}, <span className="mono">{p.phoneMasked}</span>
                 </span>
               </span>
-              {p.escalationOrder ? (
-                <span className="pill none">After {p.escalationOrder * 10} min</span>
-              ) : (
-                <span className="pill" style={{ background: p.pinSet ? 'var(--ok-bg)' : 'var(--amber-bg)', color: p.pinSet ? 'var(--ok)' : 'var(--amber-text)' }}>
-                  {p.pinSet ? 'PIN set' : 'No PIN'}
-                </span>
-              )}
+              <span className="pills">
+                <span className={`pill ${p.pinSet ? 'ok' : 'warn'}`}>{p.pinSet ? 'PIN set' : 'No PIN'}</span>
+                {p.escalationOrder ? <span className="pill none">After {p.escalationOrder * ESCALATE_MINUTES} min</span> : null}
+              </span>
             </li>
           ))}
         </ol>

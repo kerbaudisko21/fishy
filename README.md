@@ -16,12 +16,13 @@ Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) 
 | Step 1 Read: Firebase AI Logic hybrid (Nano on device, cloud on redacted text) | Built; needs a Firebase config to call Gemini (offline it falls back to a labelled keyword reader). The cloud request was answered live through Firebase AI Logic with App Check; not yet tried from the side panel or with Nano |
 | Step 2 Check: look-alike sender, invoice PDF (account vs record, edit traces) | Built, on device, with tests |
 | Step 2 Check: sender authentication (DMARC/SPF/DKIM, webmail reply-to) | Built, read from the opened email's own headers on the laptop |
-| Step 2 Check: Web Risk links, domain age | Frontend built; `checkLinks` function built with tests and deployed, not yet tried live; `domainAge` not built |
+| Step 2 Check: Web Risk links, domain age | Frontend built; `checkLinks` function built with tests and deployed, not yet tried live; `domainAge` built with tests (RDAP through rdap.org, tried live from a laptop), not yet deployed |
 | Who asked and for how much, from captions (speaker + amount) | Built; the speaker is matched to Directory, so FISHY calls the real person by default |
 | Meet and Gmail selectors from Remote Config | Built (`meet_caption_selectors`, `gmail_selectors`) |
 | Step 3 Match: known bad accounts, domains, numbers | Built, on device, cached from Firestore |
-| Step 4 Call: create check, start call, follow state, escalation countdown | Frontend built; `startVerificationCall` and the Twilio webhooks (`voice`) built with tests and deployed, not yet tried on a real phone; with no call placed the panel says so and links the approval page; escalation to the next approver not built |
-| Shared learning: a "not me" confirmed with the PIN adds to the known-scam list | `reportSuspects` function built with tests; the panel does not call it yet |
+| Step 4 Call: create check, start call, follow state, escalation countdown | Frontend built; `startVerificationCall` and the Twilio webhooks (`voice`) built with tests and deployed, not yet tried on a real phone; with no call placed the panel says so and links the approval page; no answer within 10 minutes (or a call that ends unanswered) starts a new check and calls the next approver on record |
+| Shared learning: a "not me" confirmed with the PIN adds to the known-scam list | `reportSuspects` function built with tests; the panel sends the request's accounts, domains and numbers with every call |
+| "Why it's fishy": Gemini explains the red flags | `explainVerdict` built with tests: Firebase AI Logic in PREFER_ON_DEVICE mode, on the signals only (never the message); shown on the Verdict screen as "Why this is risky", labelled with where it ran. Without Firebase, a fixed sentence built from the flags stands in and says so. Not yet tried with Nano or the cloud model |
 | Web approval page and incident report (+ team alerts) | Pages built; `getApproval` and `answerApproval` built with tests and deployed; tried live only as far as a made-up link (the page passes App Check and says the link has expired), a real approval not yet; the panel shows the link; incident, audit and alert functions are stubs |
 | Voice check (P1) | Records 10 s of the Meet tab on click (`tabCapture`); `scoreVoice` function not built (demo score without Firebase) |
 | Face check (P1) | Screen only |

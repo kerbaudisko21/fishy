@@ -1,8 +1,9 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
+import { suspectsFrom } from '../lib/checks/known';
 import { IN_EXTENSION } from '../lib/config';
 import { isPageMessage, type BannerState, type PanelMessage } from '../lib/messages';
 import type { CallTarget, Evidence, SignalKind } from '../lib/types';
-import { Header } from './components';
+import { Header, TrackContext, trackFor } from './components';
 import { placeFor, screenFor, type Screen } from './routes';
 import { CheckYourself } from './screens/CheckYourself';
 import { Directory } from './screens/Directory';
@@ -80,16 +81,22 @@ export function App() {
   // Keep the in-page banner in step with the panel.
   const who = first(call.target?.name);
   useEffect(() => {
-    if (call.state === 'not_me') void sendBanner('red', 'Not verified. Do not pay.', `The real ${who} pressed 2.`);
-    else if (call.state === 'confirmed') void sendBanner('confirmed', `${who} confirmed by phone.`, 'Pay through the normal approval.');
+    if (call.state === 'not_me') void sendBanner('red', 'Not verified. Do not pay.', `The real ${who} says they did not ask for this.`);
+    else if (call.state === 'confirmed') void sendBanner('confirmed', `${who} confirmed with their PIN.`, 'Pay through the normal approval.');
     else if (a.hasInput && a.verdict.level === 'fishy') void sendBanner('amber', `Something’s fishy: ${a.verdict.flags.length} red flags`, 'Hold the payment.');
     else void sendBanner('hidden', '', '');
   }, [call.state, who, a.hasInput, a.verdict]);
 
-  // A new screen starts at the top.
+  // A new screen starts at the top, and a screen reader hears its heading.
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [screen]);
+    if (nav.dir === 'none') return;
+    const heading = document.querySelector<HTMLElement>('.screen h1');
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    }
+  }, [screen, nav.dir]);
 
   const startCall = () => {
     if (!target) return;
@@ -99,7 +106,7 @@ export function App() {
       place: a.place,
       amount: a.request?.amount.value ? a.request.amount : undefined,
       payee: a.request?.payee ? `${a.request.payee.name} · ${a.request.payee.bank} ${a.request.payee.accountMasked}` : undefined,
-    });
+    }, { suspects: suspectsFrom(a.candidates), escalateTo });
   };
 
   const back = () => setScreen('verdict');
@@ -119,6 +126,12 @@ export function App() {
     a.loadDemo();
     back();
   };
+  const newCheck = () => {
+    cancel();
+    a.clear();
+    back();
+  };
+  const track = useMemo(() => trackFor(a.verdict, call.state), [a.verdict, call.state]);
 
   return (
     <>
@@ -135,6 +148,7 @@ export function App() {
         </div>
       )}
 
+      <TrackContext.Provider value={a.hasInput ? track : null}>
       <div key={screen} className={`screen nav-${nav.dir}`}>
       {screen === 'verdict' && (
         <Verdict
@@ -149,6 +163,7 @@ export function App() {
           escalateTo={escalateTo}
           onCall={startCall}
           onCancel={cancel}
+          onNewCheck={newCheck}
           onOpenFlag={flagScreen}
           onOpen={open}
           onPaste={() => setScreen('paste')}
@@ -181,14 +196,11 @@ export function App() {
           knownCount={a.knownCount}
           onBack={back}
           onDemo={loadDemo}
-          onClear={() => {
-            cancel();
-            a.clear();
-            back();
-          }}
+          onClear={newCheck}
         />
       )}
       </div>
+      </TrackContext.Provider>
     </>
   );
 }

@@ -264,6 +264,8 @@ export function useAnalysis() {
     mode,
     ...out,
     hasInput,
+    /** Accounts, domains and numbers seen in the request, for shared learning on a call. */
+    candidates,
     directory,
     rules,
     knownCount: known.list.length,

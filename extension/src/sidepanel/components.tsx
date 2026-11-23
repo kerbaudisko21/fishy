@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import type { CheckItem, Signal, SignalKind, Source, Step } from '../lib/types';
+import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import type { CallState, CheckItem, Signal, SignalKind, Source, Step, Verdict } from '../lib/types';
 
 /* ---------- Icons (inline stroke SVG, decorative) ---------- */
 
@@ -106,7 +106,7 @@ export function Header({
   );
 }
 
-/** Check / Directory, with one underline that slides between them. */
+/** Verdict / Directory, with one underline that slides between them. */
 function Tabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const refs = useRef<Record<Tab, HTMLButtonElement | null>>({ verdict: null, directory: null });
   const [bar, setBar] = useState<{ x: number; w: number } | null>(null);
@@ -135,7 +135,7 @@ function Tabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
           aria-current={tab === t ? 'page' : undefined}
           onClick={() => onTab(t)}
         >
-          {t === 'verdict' ? 'Check' : 'Directory'}
+          {t === 'verdict' ? 'Verdict' : 'Directory'}
         </button>
       ))}
       {bar && <span className={`tab-bar${ready ? ' ready' : ''}`} aria-hidden="true" style={{ transform: `translateX(${bar.x}px) scaleX(${bar.w / 100})` }} />}
@@ -152,12 +152,26 @@ export const STEPS: Array<{ id: Step; label: string }> = [
 
 export type StepState = 'done' | 'now' | 'todo' | 'flagged';
 
+/** What each step found for the current check: the same states on the verdict and on every evidence screen. */
+export function trackFor(verdict: Verdict, call: CallState): Record<Step, StepState> {
+  const flagged = (s: Exclude<Step, 'call'>) => (verdict.flags.some((f) => f.step === s) ? 'flagged' : 'done');
+  return {
+    read: flagged('read'),
+    check: flagged('check'),
+    match: flagged('match'),
+    call: call === 'confirmed' ? 'done' : call === 'not_me' ? 'flagged' : 'now',
+  };
+}
+
+/** The current check's step states, for the small track on evidence screens. */
+export const TrackContext = createContext<Record<Step, StepState> | null>(null);
+
 /** The four steps on one line. Used in the verdict and, small, on every evidence screen. */
-export function StepTrack({ states, small, intro, live }: { states: Record<Step, StepState>; small?: boolean; intro?: boolean; live?: Step }) {
+export function StepTrack({ states, small, intro, live, current }: { states: Record<Step, StepState>; small?: boolean; intro?: boolean; live?: Step; current?: Step }) {
   return (
     <ol className={`track${small ? ' small' : ''}${intro ? ' intro' : ''}`} aria-label="Steps">
       {STEPS.map((s, i) => (
-        <li key={s.id} className={`track-step ${states[s.id]}${live === s.id ? ' live' : ''}`} style={{ '--i': i } as CSSProperties}>
+        <li key={s.id} className={`track-step ${states[s.id]}${live === s.id ? ' live' : ''}${current === s.id ? ' current' : ''}`} aria-current={current === s.id ? 'step' : undefined} style={{ '--i': i } as CSSProperties}>
           <span className="track-node" aria-hidden="true">
             {states[s.id] === 'done' ? Icon.check(small ? 9 : 11) : states[s.id] === 'flagged' ? Icon.bang(small ? 9 : 11) : small ? null : i + 1}
           </span>
@@ -238,7 +252,7 @@ export function DetailHead({
   kicker,
   badges,
   onBack,
-  backLabel = 'Back to the check',
+  backLabel = 'Back to the verdict',
 }: {
   title: string;
   /** The step this evidence belongs to; draws the small step track. */
@@ -249,8 +263,10 @@ export function DetailHead({
   onBack: () => void;
   backLabel?: string;
 }) {
+  // The verdict's own step states, so a step flagged there is flagged here too.
+  const track = useContext(TrackContext);
   const states = step
-    ? (Object.fromEntries(Object.entries(NUMBER).map(([k, n]) => [k, n < NUMBER[step] ? 'done' : n === NUMBER[step] ? 'now' : 'todo'])) as Record<Step, StepState>)
+    ? (track ?? (Object.fromEntries(Object.entries(NUMBER).map(([k, n]) => [k, n < NUMBER[step] ? 'done' : n === NUMBER[step] ? 'now' : 'todo'])) as Record<Step, StepState>))
     : undefined;
   return (
     <div className="detail-head">
@@ -263,12 +279,12 @@ export function DetailHead({
           <span>
             Step {NUMBER[step!]} of 4 · {step![0].toUpperCase() + step!.slice(1)}
           </span>
-          <StepTrack states={states} small />
+          <StepTrack states={states} small current={step} />
         </div>
       ) : (
         kicker && <span className="detail-kicker">{kicker}</span>
       )}
-      <h1>{title}</h1>
+      <h1 tabIndex={-1}>{title}</h1>
       {badges.length > 0 && (
         <div className="meta wrap">
           {badges.map((b, i) => (

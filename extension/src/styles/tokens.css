@@ -17,6 +17,9 @@
   --on-navy: #c8d3dc;
 
   --brand: #f26b4e; /* coral, from the logo: fills only, too light for text on white */
+  /* Coral means "hold the payment" (and the logo). Focus and selection stay in ink, so the warning keeps its weight. */
+  --focus: var(--ink);
+  --demo: #f2c14e;
   --brand-text: #b83a22;
 
   --amber-bg: #fff1d6;
