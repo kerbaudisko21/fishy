@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { answerApproval, CONFIGURED, getApproval, type ApprovalRequest } from './api';
 import { DEMO_APPROVAL } from './demo';
 import { firstName, moneyParts } from '../../extension/src/lib/names';
+import { line, Reveal, useErrorShake } from '../../extension/src/lib/transitions';
 import { Brand } from './ui';
 
 type Step = 'loading' | 'ask' | 'pin' | 'done' | 'invalid' | 'offline';
@@ -30,6 +31,7 @@ export function Approval() {
   const [busy, setBusy] = useState(false);
   const [wrong, setWrong] = useState(0);
   const [now, setNow] = useState(Date.now());
+  const pinField = useErrorShake();
 
   // The time left on the link, so the person on the phone knows how long they have.
   useEffect(() => {
@@ -78,6 +80,7 @@ export function Approval() {
         setWrong((w) => w + 1);
         setPin('');
         setError(left > 0 ? `That PIN is not right. ${left} ${left === 1 ? 'try' : 'tries'} left.` : 'That PIN is not right.');
+        pinField.shake();
       } else if (code === 'not-found') {
         setStep('invalid');
       } else {
@@ -137,24 +140,33 @@ export function Approval() {
       )}
 
       {step === 'ask' && (
-        <div className="stack">
-          <h1>Did you ask for this payment?</h1>
-          <button className="btn danger" onClick={() => pick('no')}>
-            No, it wasn’t me
-          </button>
-          <button className="btn secondary" onClick={() => pick('yes')}>
-            Yes, I asked for it
-          </button>
-        </div>
+        <Reveal key="ask" className="stack">
+          <h1 className={line(1)}>Did you ask for this payment?</h1>
+          {/* The reveal moves a wrapper, so a button keeps its own states (pressed, disabled). */}
+          <div className={line(2)}>
+            <button className="btn danger" onClick={() => pick('no')}>
+              No, it wasn’t me
+            </button>
+          </div>
+          <div className={line(3)}>
+            <button className="btn secondary" onClick={() => pick('yes')}>
+              Yes, I asked for it
+            </button>
+          </div>
+        </Reveal>
       )}
 
       {step === 'pin' && (
-        <div className="stack">
-          <h1>Enter your PIN</h1>
-          <p className="muted" style={{ margin: 0 }}>
+        <Reveal key="pin" className="stack">
+          <h1 className={line(1)}>Enter your PIN</h1>
+          <p className={line(2, 'muted')} style={{ margin: 0 }}>
             You answered <strong>{answer === 'yes' ? '“Yes, I asked for it”' : '“No, it wasn’t me”'}</strong>. Your PIN proves it’s you.
           </p>
-          <label htmlFor="pin">4-digit PIN</label>
+          <label htmlFor="pin" className={line(3)}>
+            4-digit PIN
+          </label>
+          <div ref={pinField.wrap} className={line(4, 't-input-wrap')}>
+          <div ref={pinField.input} className="t-input">
           <input
             id="pin"
             type="password"
@@ -164,35 +176,44 @@ export function Approval() {
             autoFocus
             maxLength={4}
             value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+            onChange={(e) => {
+              setPin(e.target.value.replace(/\D/g, ''));
+              pinField.clear();
+            }}
             onKeyDown={(e) => e.key === 'Enter' && void confirm()}
           />
+          </div>
+          </div>
           {error && (
             <p role="alert" className="error">
               {error}
             </p>
           )}
-          <button className="btn primary" onClick={confirm} disabled={busy || pin.length !== 4}>
-            {busy ? 'Checking…' : 'Confirm'}
-          </button>
-          <button className="link" onClick={() => setStep('ask')}>
-            Change my answer
-          </button>
-        </div>
+          <div className={line(5)}>
+            <button className="btn primary" onClick={confirm} disabled={busy || pin.length !== 4}>
+              {busy ? 'Checking…' : 'Confirm'}
+            </button>
+          </div>
+          <div className={line(6)}>
+            <button className="link" onClick={() => setStep('ask')}>
+              Change my answer
+            </button>
+          </div>
+        </Reveal>
       )}
 
       {step === 'done' && answer === 'no' && (
-        <section role="status" className="result danger">
-          <strong>Payment stopped</strong>
-          <span>The finance team now sees “Not verified. Do not pay.”</span>
-          <span>Someone is using your name. Tell your team that any payment “from you” today needs a call back on the number on record.</span>
-        </section>
+        <Reveal as="section" role="status" className="result danger">
+          <strong className={line(1)}>Payment stopped</strong>
+          <span className={line(2)}>The finance team now sees “Not verified. Do not pay.”</span>
+          <span className={line(3)}>Someone is using your name. Tell your team that any payment “from you” today needs a call back on the number on record.</span>
+        </Reveal>
       )}
       {step === 'done' && answer === 'yes' && (
-        <section role="status" className="result ok">
-          <strong>Confirmed</strong>
-          <span>The finance team now sees that you approved. The red flags stay on the check’s record.</span>
-        </section>
+        <Reveal as="section" role="status" className="result ok">
+          <strong className={line(1)}>Confirmed</strong>
+          <span className={line(2)}>The finance team now sees that you approved. The red flags stay on the check’s record.</span>
+        </Reveal>
       )}
 
       <p className="foot">

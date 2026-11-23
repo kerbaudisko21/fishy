@@ -5,6 +5,7 @@ import { decide } from '../../extension/src/lib/rules/engine';
 import type { Signal, Source, Tactic, Verdict } from '../../extension/src/lib/types';
 import { CONFIGURED } from './api';
 import { explain, nanoStatus, readTactics, type Explanation, type NanoStatus, type ReadResult } from './hybrid';
+import { line, Reveal } from '../../extension/src/lib/transitions';
 import { Brand } from './ui';
 
 /*
@@ -148,8 +149,8 @@ export function TryPage() {
       </div>
 
       {result && (
-        <section className="stack" aria-label="Result">
-          <div className={`verdict ${fishy ? 'fishy' : 'clear'}`}>
+        <Reveal as="section" key={result.read.hits.map((h) => h.quote).join('|') + result.verdict.flags.length} className="stack" aria-label="Result">
+          <div className={line(1, `verdict ${fishy ? 'fishy' : 'clear'}`)}>
             <span className="verdict-pill">{fishy ? 'Hold the payment' : 'No red flags'}</span>
             <h2 tabIndex={-1} ref={resultRef}>
               {fishy ? 'Something’s fishy.' : 'Looks normal.'}
@@ -162,7 +163,7 @@ export function TryPage() {
           </div>
 
           {why && (
-            <div className="card">
+            <div className={line(2, 'card')}>
               <div className="card-head">
                 <strong>Why this is risky</strong>
                 <Ran source={why.source} reader={why.reader} />
@@ -171,7 +172,7 @@ export function TryPage() {
             </div>
           )}
 
-          <div className="card">
+          <div className={line(3, 'card')}>
             <div className="card-head">
               <strong>Pressure found</strong>
               <Ran source={result.read.source} reader={result.read.reader} />
@@ -197,7 +198,7 @@ export function TryPage() {
           </div>
 
           {result.verdict.flags.length > 0 && (
-            <div className="card">
+            <div className={line(4, 'card')}>
               <strong>Red flags</strong>
               <ul className="flags">
                 {result.verdict.flags.map((f) => (
@@ -212,7 +213,7 @@ export function TryPage() {
           )}
 
           {fishy && (
-            <div className="card next">
+            <div className={line(5, 'card next')}>
               <strong>In the extension, FISHY would now call the real person</strong>
               <span className="muted">On the number on record, never one from the message. They press 1 or 2, then enter their PIN.</span>
               <a className="btn secondary" href="/?demo">
@@ -220,7 +221,7 @@ export function TryPage() {
               </a>
             </div>
           )}
-        </section>
+        </Reveal>
       )}
 
       <p className="foot">

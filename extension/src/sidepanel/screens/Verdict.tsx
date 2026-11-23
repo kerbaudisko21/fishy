@@ -2,6 +2,7 @@
 import { createPortal } from 'react-dom';
 import { shareIncident } from '../../lib/data';
 import { firstName } from '../../lib/names';
+import { line, Reveal, useTextSwap } from '../../lib/transitions';
 import { useFirstSeen } from '../motion';
 import { waitingFor } from '../../lib/call-wait';
 import type { CallStatus, CallTarget, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
@@ -101,6 +102,9 @@ export function Verdict(p: Props) {
     }
   };
   const sharedLine = shared && shared.checkId === call.checkId ? shared.text : null;
+  // Entrances play once per result, not on every return from an evidence screen.
+  const scriptIntro = useFirstSeen(`script:${call.checkId ?? sig}`);
+  const hint = useTextSwap(sharedLine ?? 'This result stays on the check’s record.');
   const ended = call.state === 'not_me' || call.state === 'confirmed';
   const calling = call.state === 'ringing' || call.state === 'escalated';
 
@@ -113,6 +117,7 @@ export function Verdict(p: Props) {
     },
     p.hasInput,
   );
+  const whyIntro = useFirstSeen(`why:${explanation?.text ?? ''}`);
 
   return (
     <>
@@ -218,10 +223,10 @@ export function Verdict(p: Props) {
 
         {call.state === 'not_me' && (
           <Section title="What to say now">
-            <div className="surface card-pad script">
-              <p className="script-line">“I have to verify payment requests through our approval policy. I’ll call you back on the number we have on file.”</p>
-              <span className="row-detail">Then leave the call. Don’t repeat the account details or send anything while you’re still on it.</span>
-            </div>
+            <Reveal className="surface card-pad script" play={scriptIntro}>
+              <p className={line(1, 'script-line')}>“I have to verify payment requests through our approval policy. I’ll call you back on the number we have on file.”</p>
+              <span className={line(2, 'row-detail')}>Then leave the call. Don’t repeat the account details or send anything while you’re still on it.</span>
+            </Reveal>
           </Section>
         )}
 
@@ -272,7 +277,17 @@ export function Verdict(p: Props) {
             aside={explanation ? explanation.model === 'template' ? 'Built from the red flags' : <SourceBadge source={explanation.source} label={explanation.source === 'on_device' ? 'Gemini Nano, on device' : 'Gemini, cloud'} /> : undefined}
           >
             <div className="surface card-pad" aria-live="polite" aria-busy={writing}>
-              {explanation ? <p className="explain">{explanation.text}</p> : <p className="explain writing">Gemini is reading the red flags</p>}
+              {explanation ? (
+                <Reveal key={explanation.text} play={whyIntro}>
+                  <p className={line(1, 'explain')}>{explanation.text}</p>
+                </Reveal>
+              ) : (
+                <p className="explain">
+                  <span className="t-shimmer" data-text="Gemini is reading the red flags…">
+                    Gemini is reading the red flags…
+                  </span>
+                </p>
+              )}
             </div>
           </Section>
         )}
@@ -354,7 +369,7 @@ export function Verdict(p: Props) {
         )}
       {p.hasInput && ended &&
         createPortal(
-          <div className="action-bar">
+          <div className="action-bar intro">
             <button className="btn primary" onClick={p.onNewCheck}>
               {call.state === 'confirmed' ? 'Done, start a new check' : 'Start a new check'}
             </button>
@@ -364,7 +379,9 @@ export function Verdict(p: Props) {
               </button>
             )}
             <span className="bar-hint" role="status">
-              {sharedLine ?? 'This result stays on the check’s record.'}
+              <span ref={hint.ref} className="t-text-swap">
+                {hint.shown}
+              </span>
             </span>
           </div>,
           document.body,

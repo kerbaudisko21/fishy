@@ -25,15 +25,18 @@ h1 { margin: 0; font-family: var(--font-head); font-size: 22px; }
 
 .stack { display: flex; flex-direction: column; gap: 10px; }
 label { font-size: 13px; font-weight: 600; }
+/* The PIN field: a red border while a wrong PIN shakes it */
+.t-input input { width: 100%; }
+.t-input.is-error input { border-color: var(--danger); }
 input { height: 52px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-size: 22px; letter-spacing: .4em; color: var(--ink); }
 
-.btn { height: 54px; border-radius: 14px; border: 0; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .12s ease; }
+.btn { width: 100%; height: 54px; border-radius: 14px; border: 0; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .12s ease; }
 .btn:active { transform: scale(.98); }
 .btn:disabled { opacity: .5; cursor: default; }
 .btn.danger { background: var(--danger); color: #fff; font-size: 16px; }
 .btn.primary { background: var(--ink); color: #fff; }
 .btn.secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line); font-weight: 600; }
-.link { min-height: 44px; padding: 0 8px; border: 0; border-radius: 10px; background: none; color: var(--ink-2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color .12s ease; }
+.link { width: 100%; min-height: 44px; padding: 0 8px; border: 0; border-radius: 10px; background: none; color: var(--ink-2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color .12s ease; }
 .link:active { background: var(--note); }
 .btn.secondary:active { background: var(--surface-muted); }
 .error { margin: 0; color: var(--danger); font-size: 13px; }

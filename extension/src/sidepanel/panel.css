@@ -150,9 +150,6 @@ h1[tabindex='-1']:focus { outline: none; }
 
 /* Why this is risky: Gemini's few sentences, read like a note from a colleague */
 .explain { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--ink); max-width: 60ch; }
-.explain.writing { color: var(--muted); }
-.explain.writing::after { content: ''; display: inline-block; width: 1.2em; text-align: left; animation: dots 1.2s steps(4, end) infinite; }
-@keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
 
 /* What to say on the call after "not me" */
 .script-line { margin: 0; font-family: var(--font-head); font-size: 17px; line-height: 1.4; font-weight: 600; color: var(--ink); }
@@ -375,6 +372,6 @@ mark { background: var(--danger-bg); color: var(--ink); border-radius: 4px; padd
 /* Reduced motion: keep the fades and colour changes that explain a change, drop the movement */
 @media (prefers-reduced-motion: reduce) {
   .track.intro .track-step + .track-step::before, .wave span, .meter-pos, .history li span, .action-bar.intro { animation-name: fade; }
-  .pulse::after, .track-step.live .track-node::after, .ringing, .explain.writing::after { animation: none; }
+  .pulse::after, .track-step.live .track-node::after, .ringing { animation: none; }
   .btn:active, .tile-btn:active, .icon-btn:active, .link-card:active, .flag:active, .start-row.action:active, .back:active { transform: none; }
 }

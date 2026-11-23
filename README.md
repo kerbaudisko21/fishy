@@ -95,7 +95,7 @@ fishy/
 └─ remoteconfig.template.json  scam rules and Meet caption selectors
 ```
 
-Designs: [FISHY · Screen designs](https://claude.ai/artifact/D2neF4bvCTBrrWq8uiohMN).
+Design system: [DESIGN.md](DESIGN.md) (colours, type, components, motion, and how they came from the FISHY deck).
 
 ## Run it
 
