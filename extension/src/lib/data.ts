@@ -106,6 +106,17 @@ export async function reportSuspects(checkId: string, suspects: Suspects): Promi
   }
 }
 
+/** A link to this check's incident report, for the finance manager. Null when it cannot be made. */
+export async function shareIncident(checkId: string): Promise<string | null> {
+  if (!FIREBASE_READY) return null;
+  try {
+    return (await fn<{ checkId: string }, { url: string }>('shareIncident')({ checkId })).data.url;
+  } catch (e) {
+    console.warn('[FISHY] sharing the incident report failed', e);
+    return null;
+  }
+}
+
 const CALL_STATES: CallState[] = ['idle', 'ringing', 'confirmed', 'not_me', 'no_answer', 'escalated'];
 
 /** Call progress, written by Cloud Functions from the phone menu. */

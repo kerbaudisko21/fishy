@@ -6,7 +6,7 @@ rules_version = '2';
 //   directoryPublic/{id}  masked copy for the side panel
 //   checks/{checkId}      one payment check: signals summary + call state. Never message text.
 //   knownBad/{kind:value} confirmed bad accounts, domains, numbers, with a seen count
-// Cloud Functions also keep checkCalls, checkSuspects and callCounters. No rule below
+// Cloud Functions also keep checkCalls, checkSuspects, callCounters and incidentLinks. No rule below
 // names them, so clients can neither read nor write them.
 service cloud.firestore {
   match /databases/{database}/documents {

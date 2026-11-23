@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CONFIGURED, getAuditLog, getIncident, markHandled, turnOnAlerts, type Incident } from './api';
+import { CONFIGURED, getAuditLog, getIncident, markHandled, type Incident } from './api';
 import { DEMO_AUDIT, DEMO_INCIDENT } from './demo';
 import { Brand, when } from './ui';
 
@@ -11,7 +11,6 @@ const DEMO = !CONFIGURED || params.has('demo');
 export function IncidentPage() {
   const [inc, setInc] = useState<Incident | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'missing'>('loading');
-  const [alerts, setAlerts] = useState<string>('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -50,15 +49,9 @@ export function IncidentPage() {
     URL.revokeObjectURL(url);
   };
 
-  const alertsOn = async () => {
-    if (DEMO) return setAlerts('Alerts need the live Firebase project.');
-    const r = await turnOnAlerts().catch(() => 'unsupported' as const);
-    setAlerts(r === 'on' ? 'Alerts are on for this browser.' : r === 'denied' ? 'Notifications are blocked for this site.' : 'This browser cannot receive alerts.');
-  };
-
   return (
     <main className="page dark">
-      <Brand sub="Team alert" />
+      <Brand sub="Incident report" />
 
       {state === 'loading' && (
         <p className="muted" role="status">
@@ -67,8 +60,8 @@ export function IncidentPage() {
       )}
       {state === 'missing' && (
         <section className="panel" role="alert">
-          <h1>Incident not found</h1>
-          <span className="muted">Open it from the alert, or check that you are signed in as a finance manager.</span>
+          <h1>This report link doesn’t work</h1>
+          <span className="muted">It is not valid or has expired (links work for 7 days). Ask the colleague who ran the check to copy a new one from FISHY.</span>
         </section>
       )}
 
@@ -87,7 +80,7 @@ export function IncidentPage() {
             <dd>{inc.posedAs}</dd>
             <dt>Asked for</dt>
             <dd>{inc.askedFor}</dd>
-            <dt>Confirmed</dt>
+            <dt>Answer</dt>
             <dd>{inc.confirmed}</dd>
           </dl>
           <div className="stack" style={{ gap: 8 }}>
@@ -114,16 +107,6 @@ export function IncidentPage() {
         </section>
       )}
 
-      <div className="stack" style={{ gap: 6 }}>
-        <button className="link light" onClick={alertsOn}>
-          Turn on team alerts in this browser
-        </button>
-        {alerts && (
-          <p className="muted" role="status" style={{ margin: 0, textAlign: 'center' }}>
-            {alerts}
-          </p>
-        )}
-      </div>
       {DEMO && <p className="foot">Demo data.</p>}
     </main>
   );

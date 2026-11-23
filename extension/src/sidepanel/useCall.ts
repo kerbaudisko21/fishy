@@ -44,6 +44,7 @@ export function useCall() {
   /** Creates a check and calls one person. Returns false when the call could not start. */
   const place = useCallback(async (target: CallTarget, summary: CheckSummary, suspects?: Suspects) => {
     const checkId = await createCheck(summary);
+    setCall((c) => ({ ...c, checkId }));
     if (suspects) await reportSuspects(checkId, suspects);
     stop.current = watchCall(checkId, (s) => setCall((c) => ({ ...c, ...s })));
     const started = await startVerificationCall(checkId, target.id);

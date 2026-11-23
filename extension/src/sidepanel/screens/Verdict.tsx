@@ -1,4 +1,6 @@
-﻿import { createPortal } from 'react-dom';
+﻿import { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { shareIncident } from '../../lib/data';
 import { useFirstSeen } from '../motion';
 import { waitingFor } from '../../lib/call-wait';
 import type { CallStatus, CallTarget, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
@@ -84,6 +86,20 @@ export function Verdict(p: Props) {
   let flagIndex = 0;
 
   const track = trackFor(verdict, call.state);
+  // The incident report link, copied for the finance manager.
+  const [shared, setShared] = useState<{ checkId: string; text: string } | null>(null);
+  const copyReport = async () => {
+    if (!call.checkId) return;
+    const url = await shareIncident(call.checkId);
+    if (!url) return setShared({ checkId: call.checkId, text: 'The report link could not be made. Try again in a moment.' });
+    try {
+      await navigator.clipboard.writeText(url);
+      setShared({ checkId: call.checkId, text: 'Link copied. Send it to your finance manager; it works for 7 days.' });
+    } catch {
+      setShared({ checkId: call.checkId, text: url });
+    }
+  };
+  const sharedLine = shared && shared.checkId === call.checkId ? shared.text : null;
   const ended = call.state === 'not_me' || call.state === 'confirmed';
   const calling = call.state === 'ringing' || call.state === 'escalated';
 
@@ -341,7 +357,14 @@ export function Verdict(p: Props) {
             <button className="btn primary" onClick={p.onNewCheck}>
               {call.state === 'confirmed' ? 'Done, start a new check' : 'Start a new check'}
             </button>
-            {call.state === 'not_me' && <span className="bar-hint">This result stays on the check’s record.</span>}
+            {call.checkId && (
+              <button className="btn secondary" onClick={() => void copyReport()}>
+                Copy the incident report link
+              </button>
+            )}
+            <span className="bar-hint" role="status">
+              {sharedLine ?? 'This result stays on the check’s record.'}
+            </span>
           </div>,
           document.body,
         )}

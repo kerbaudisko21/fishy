@@ -180,6 +180,8 @@ export interface CallTarget {
 
 export interface CallStatus {
   state: CallState;
+  /** The check this call belongs to (live only), for sharing its incident report. */
+  checkId?: string;
   target?: CallTarget;
   /** When the call escalates to the next approver (ms since epoch). */
   escalateAt?: number;

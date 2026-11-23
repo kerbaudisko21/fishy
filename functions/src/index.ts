@@ -27,6 +27,9 @@ import { twilioCalls } from './call/twilio-calls.ts';
 import { handleVoice } from './call/webhooks.ts';
 import { reportSuspects as report } from './learn/suspects.ts';
 import { domainAge as ageOf, rdapOrg } from './rdap/domainAge.ts';
+import { getAuditLog as auditOf, getIncident as incidentOf, markIncidentHandled as markHandled, shareIncident as share } from './incident/incident.ts';
+import type { IncidentDeps } from './incident/incident.ts';
+import { firestoreIncidents } from './incident/store-firestore.ts';
 import { checkLinks as checkAll } from './webrisk/checkLinks.ts';
 import { webRiskLookup } from './webrisk/web-risk-lookup.ts';
 
@@ -197,30 +200,41 @@ export const checkLinks = onCall({ enforceAppCheck: true }, async (request) => {
   }
 });
 
+function incidentDeps(): IncidentDeps {
+  return {
+    store: firestoreIncidents({ companyDomain: COMPANY_DOMAIN.value() }),
+    now: () => Date.now(),
+    newToken: () => randomBytes(32).toString('base64url'),
+    publicBaseUrl: PUBLIC_BASE_URL.value(),
+  };
+}
+
+/**
+ * The person who ran a check shares its incident report with the finance manager.
+ * In: { checkId } · Out: { url, expiresAt (ms) }. Only the check's owner, and only once the
+ * real person was asked. The link works for 7 days; only its hash is kept.
+ */
+export const shareIncident = onCall({ enforceAppCheck: true }, (request) =>
+  answering(() => share(incidentDeps(), callerOf(request), request.data)),
+);
+
+/**
+ * Finance manager's incident report (summary only, never message text).
+ * In: { id } (the token from the shared link)
+ * Out: { id, at (ms), status: 'stopped' | 'confirmed' | 'open', where, targeted, posedAs, askedFor, confirmed, flags: string[], handled }
+ */
+export const getIncident = onCall({ enforceAppCheck: true }, (request) => answering(() => incidentOf(incidentDeps(), request.data)));
+
+/** In: { id } · Out: { ok: true } */
+export const markIncidentHandled = onCall({ enforceAppCheck: true }, (request) => answering(() => markHandled(incidentDeps(), request.data)));
+
+/** Audit and compliance: what was checked and who answered. In: { id } · Out: { entries: [{ at (ms), what }] } */
+export const getAuditLog = onCall({ enforceAppCheck: true }, (request) => answering(() => auditOf(incidentDeps(), request.data)));
+
 /*
  * ---------- Not built yet ----------
  * The contracts below are the ones the frontend already calls.
  */
-
-/**
- * Finance manager's incident report (summary only, never message text).
- * In: { id }
- * Out: { id, at (ms), status: 'stopped' | 'confirmed' | 'open', where, targeted, posedAs, askedFor, confirmed, flags: string[], handled }
- * Only for users with the finance-manager role (custom claim).
- */
-export const getIncident = onCall({ enforceAppCheck: true }, async () => {
-  throw new HttpsError('unimplemented', 'getIncident is not built yet.');
-});
-
-/** In: { id } · Out: { ok: true } */
-export const markIncidentHandled = onCall({ enforceAppCheck: true }, async () => {
-  throw new HttpsError('unimplemented', 'markIncidentHandled is not built yet.');
-});
-
-/** Audit and compliance: what was checked and who confirmed. In: { id } · Out: { entries: [{ at (ms), what }] } */
-export const getAuditLog = onCall({ enforceAppCheck: true }, async () => {
-  throw new HttpsError('unimplemented', 'getAuditLog is not built yet.');
-});
 
 /**
  * Stores this browser's FCM token for team alerts. In: { token } · Out: { ok: true }

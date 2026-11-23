@@ -15,10 +15,10 @@ export const DEMO_INCIDENT: Incident = {
   at: Date.now() - 4 * 60 * 1000,
   status: 'stopped',
   where: 'Video meeting + invoice email',
-  targeted: 'Rina Kartika, Finance staff',
+  targeted: 'The finance colleague who ran the check',
   posedAs: 'Budi Santoso, CFO',
   askedFor: '$186,400 to Mandiri •••• 9032',
-  confirmed: 'Budi by phone, PIN correct',
+  confirmed: 'Budi said “not me” and entered the right PIN',
   flags: ['Pressure', 'Bank changed', 'Lookalike sender', 'Known scam account', 'Voice 87%'],
   handled: false,
 };
