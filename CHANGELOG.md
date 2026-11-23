@@ -2,6 +2,12 @@
 
 Each version's build also shows in the extension under **Settings → About** (version, commit, build time and what's new). The same list lives in `extension/src/lib/changes.ts`.
 
+## 0.3.2 · 23 Nov 2026
+- FISHY opens as a floating window on top of the page: drag it, minimise it, click the icon again to close it
+- The page is no longer squeezed by a side panel (the side panel is still in Chrome's side panel menu)
+- While checking the video call, FISHY steps out of the picture so the frame shows only the call
+- The step track is gone: each screen says what was found and what to do next
+
 ## 0.3.1 · 23 Nov 2026
 - A FISHY score out of 100 and a "Why" list for every picture, document, voice and video check
 - Fixed: a clean file no longer shows "Take a closer look" when Gemini lists "no signs" as a sign

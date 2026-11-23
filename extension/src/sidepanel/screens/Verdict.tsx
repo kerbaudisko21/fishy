@@ -6,7 +6,7 @@ import { line, Reveal, useTextSwap } from '../../lib/transitions';
 import { useFirstSeen } from '../motion';
 import { waitingFor } from '../../lib/call-wait';
 import type { CallStatus, CallTarget, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
-import { FlagRow, Icon, Privacy, Section, SourceBadge, StepTrack, Tile, trackFor } from '../components';
+import { FlagRow, Icon, Privacy, Section, SourceBadge, Tile } from '../components';
 import { Amount, money } from '../format';
 import type { Screen } from '../routes';
 import { useNow } from '../useCall';
@@ -91,7 +91,6 @@ export function Verdict(p: Props) {
   const heroIntro = useFirstSeen(`hero:${sig}:${heroKey}`);
   let flagIndex = 0;
 
-  const track = trackFor(verdict, call.state);
   // The incident report link, copied for the finance manager.
   const [shared, setShared] = useState<{ checkId: string; text: string } | null>(null);
   const copyReport = async () => {
@@ -145,7 +144,6 @@ export function Verdict(p: Props) {
               {Icon.clock()} No answer in {mmss(call.escalateAt - now)}: FISHY calls {p.escalateTo.name}, {p.escalateTo.role}
             </p>
           )}
-          {!waiting && <StepTrack states={track} intro={intro} live={call.state === 'ringing' ? 'call' : undefined} />}
         </section>
       )}
 

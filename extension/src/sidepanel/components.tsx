@@ -1,4 +1,4 @@
-import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { versionLine } from '../lib/version';
 import type { CallState, CheckItem, Signal, SignalKind, Source, Step, Verdict } from '../lib/types';
 
@@ -260,14 +260,13 @@ export function Tile({ icon, title, detail, onClick, disabled }: { icon: ReactNo
 
 export function DetailHead({
   title,
-  step,
   kicker,
   badges,
   onBack,
   backLabel = 'Back to the verdict',
 }: {
   title: string;
-  /** The step this evidence belongs to; draws the small step track. */
+  /** Where this evidence came from (read, check, match). Kept for reference; no step track is drawn any more. */
   step?: Step;
   /** A short line above the title on screens that are not a step. */
   kicker?: string;
@@ -275,26 +274,13 @@ export function DetailHead({
   onBack: () => void;
   backLabel?: string;
 }) {
-  // The verdict's own step states, so a step flagged there is flagged here too. Every evidence
-  // screen shows a sign, so it belongs to step 2 whichever check found it.
-  const track = useContext(TrackContext);
-  const states = step ? (track ?? ({ checked: 'done', signs: 'now', call: 'todo' } as Record<TrackStep, StepState>)) : undefined;
   return (
     <div className="detail-head">
       <button className="back" onClick={onBack}>
         {Icon.back()}
         {backLabel}
       </button>
-      {states ? (
-        <div className="detail-step">
-          <span>
-            Step 2 of 3 · See the signs
-          </span>
-          <StepTrack states={states} small current="signs" />
-        </div>
-      ) : (
-        kicker && <span className="detail-kicker">{kicker}</span>
-      )}
+      {kicker && <span className="detail-kicker">{kicker}</span>}
       <h1 tabIndex={-1}>{title}</h1>
       {badges.length > 0 && (
         <div className="meta wrap">

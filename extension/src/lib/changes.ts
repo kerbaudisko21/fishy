@@ -9,6 +9,16 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '0.3.2',
+    date: '23 Nov 2026',
+    items: [
+      'FISHY opens as a floating window on top of the page: drag it, minimise it, click the icon again to close it',
+      'The page is no longer squeezed by a side panel (the side panel is still in Chrome’s side panel menu)',
+      'While checking the video call, FISHY steps out of the picture so the frame shows only the call',
+      'The step track is gone: each screen says what was found and what to do next',
+    ],
+  },
+  {
     version: '0.3.1',
     date: '23 Nov 2026',
     items: [

@@ -344,7 +344,19 @@ export function useAnalysis() {
     setError(null);
     try {
       setBusy('Capturing the video…');
-      await checkPicture(await captureTabFrame(tab.id), `Video call at ${clock()}`, 'frame');
+      // In the floating window, step out of the picture for the moment of capture.
+      const floating = window.parent !== window;
+      if (floating) {
+        window.parent.postMessage({ fishy: 'hide' }, '*');
+        await new Promise((r) => setTimeout(r, 120));
+      }
+      let frame: Blob;
+      try {
+        frame = await captureTabFrame(tab.id);
+      } finally {
+        if (floating) window.parent.postMessage({ fishy: 'show' }, '*');
+      }
+      await checkPicture(frame, `Video call at ${clock()}`, 'frame');
     } catch (e) {
       setError(captureError('video', e));
       setBusy(null);

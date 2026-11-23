@@ -1,15 +1,28 @@
-// Opens the side panel when the toolbar icon is clicked.
-// Page messages go straight from the content scripts to the side panel (chrome.runtime.sendMessage),
-// so the worker stays small. Gemini Nano runs in the side panel page, not here.
+// The toolbar icon opens FISHY as a floating window on top of the page (content/overlay.ts),
+// instead of a side panel that squeezes the page. Clicking it again closes the window.
+// Clicking the icon also grants activeTab for that tab, which is what lets FISHY capture the
+// call's video or voice there. The side panel stays available from Chrome's side panel menu.
+import overlayScript from '../content/overlay.ts?script';
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(console.error);
 });
 
-// "See why" on the in-page banner. Chrome only opens the panel from a user gesture,
-// so this may be refused; the toolbar icon always works.
-chrome.runtime.onMessage.addListener((msg: { type?: string }, sender) => {
-  if (msg?.type === 'open_panel' && sender.tab?.id !== undefined) {
-    chrome.sidePanel.open({ tabId: sender.tab.id }).catch(console.warn);
+async function showOverlay(tabId: number) {
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: [overlayScript] });
+  } catch (e) {
+    // Chrome pages and the Web Store can't be scripted: fall back to the side panel there.
+    console.warn('[FISHY] floating window unavailable here, opening the side panel', e);
+    await chrome.sidePanel.open({ tabId }).catch(console.warn);
   }
+}
+
+chrome.action.onClicked.addListener((tab) => {
+  if (tab.id !== undefined) void showOverlay(tab.id);
+});
+
+// "See why" on the in-page banner opens the floating window on that tab.
+chrome.runtime.onMessage.addListener((msg: { type?: string }, sender) => {
+  if (msg?.type === 'open_panel' && sender.tab?.id !== undefined) void showOverlay(sender.tab.id);
 });
