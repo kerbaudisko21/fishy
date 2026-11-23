@@ -5,7 +5,7 @@ import { redact } from '../redact';
 import type { Source } from '../types';
 import { keywordTactics } from './keywords';
 import { cloudBackend } from './provider';
-import { parseTactics, TACTIC_PROMPT, tacticSchema, type TacticHit } from './prompts';
+import { parseTactics, tacticInput, tacticSchema, type TacticHit } from './prompts';
 
 export { TACTICS, type TacticHit } from './prompts';
 
@@ -68,15 +68,23 @@ export interface TacticResult {
   model: ReaderModel;
 }
 
+/** The model's hits plus any keyword hit for a tactic the model did not report. */
+export function unionHits(model: TacticHit[], keywords: TacticHit[]): TacticHit[] {
+  const seen = new Set(model.map((h) => h.tactic));
+  return [...model, ...keywords.filter((h) => !seen.has(h.tactic))];
+}
+
 export async function readTactics(text: string): Promise<TacticResult> {
   if (!FIREBASE_READY) return { hits: keywordTactics(text), source: 'on_device', model: 'keywords' };
 
   const local = (await nanoStatus()) === 'available';
   const { onDevice, inCloud } = getModels();
-  const result = await (local ? onDevice : inCloud).generateContent(TACTIC_PROMPT + (local ? text : redact(text)));
+  const result = await (local ? onDevice : inCloud).generateContent(tacticInput(local ? text : redact(text)));
   const onDeviceRan = result.response.inferenceSource === InferenceSource.ON_DEVICE;
   return {
-    hits: parseTactics(result.response.text()),
+    // The fixed keyword reader always runs too: a message that talks the model out of seeing
+    // pressure still trips the keywords (security review M5).
+    hits: unionHits(parseTactics(result.response.text()), keywordTactics(text)),
     source: onDeviceRan ? 'on_device' : 'cloud',
     model: onDeviceRan ? 'gemini-nano' : 'gemini-cloud',
   };

@@ -10,13 +10,13 @@ export function mediaSignals(items: MediaCheck[]): Signal[] {
   for (const m of items) {
     const facts = m.facts ?? {};
     if (facts.aiLabel && first('ai_label')) {
-      out.push({ kind: 'ai_label', step: 'check', source: 'on_device', title: 'Labelled as made by AI', detail: `${m.name}: ${facts.aiLabel}.` });
+      out.push({ kind: 'ai_label', step: 'check', source: 'on_device', title: 'Labelled as made by AI', detail: `${facts.aiLabel}.` });
     }
     if (facts.aiTool && first('ai_tool')) {
-      out.push({ kind: 'ai_tool', step: 'check', source: 'on_device', title: `Made with ${facts.aiTool}`, detail: `${m.name}: the AI tool is named in the file’s data.` });
+      out.push({ kind: 'ai_tool', step: 'check', source: 'on_device', title: `Made with ${facts.aiTool}`, detail: 'The AI tool is named in the file’s data.' });
     }
     if (facts.editedWith && first('edited_with')) {
-      out.push({ kind: 'edited_with', step: 'check', source: 'on_device', title: `Edited in ${facts.editedWith}`, detail: `${m.name}: the editor is named in the file’s data.` });
+      out.push({ kind: 'edited_with', step: 'check', source: 'on_device', title: `Edited in ${facts.editedWith}`, detail: 'The editor is named in the file’s data.' });
     }
     const g = m.gemini;
     if (!g || g.assessment === 'no_clear_signs' || (g.assessment === 'unclear' && !g.signs.length)) continue;

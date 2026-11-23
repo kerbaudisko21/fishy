@@ -37,7 +37,8 @@ export function PictureCheck() {
 
   const check = async (file?: File) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    // A picture up to 20 MB: bigger would freeze the page and is too big for Gemini anyway.
+    if (!file.type.startsWith('image/') || file.size > 20 * 1024 * 1024) {
       setResult(null);
       return;
     }

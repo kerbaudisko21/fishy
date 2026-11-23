@@ -2,7 +2,7 @@ import { getAI, getGenerativeModel, InferenceMode, InferenceSource, type Generat
 // The extension's own logic, so the hosted page reads a message exactly the way the extension does.
 import { keywordTactics } from '../../extension/src/lib/ai/keywords';
 import { pictureForGemini, toBase64 } from '../../extension/src/lib/ai/files';
-import { explainPrompt, mediaSchema, parseMedia, parseTactics, PICTURE_PROMPT, TACTIC_PROMPT, tacticSchema, templateExplanation, type MediaReading, type TacticHit } from '../../extension/src/lib/ai/prompts';
+import { explainPrompt, mediaSchema, parseMedia, parseTactics, PICTURE_PROMPT, tacticInput, tacticSchema, templateExplanation, type MediaReading, type TacticHit } from '../../extension/src/lib/ai/prompts';
 import { cloudBackend } from '../../extension/src/lib/ai/provider';
 import { redact } from '../../extension/src/lib/redact';
 import type { Source, Verdict } from '../../extension/src/lib/types';
@@ -72,10 +72,11 @@ export async function readTactics(text: string): Promise<ReadResult> {
   const local = (await nanoStatus()) === 'available';
   const { onDevice, inCloud } = getModels();
   const sent = local ? text : redact(text);
-  const result = await (local ? onDevice : inCloud).generateContent(TACTIC_PROMPT + sent);
+  const result = await (local ? onDevice : inCloud).generateContent(tacticInput(sent));
   const onDeviceRan = result.response.inferenceSource === InferenceSource.ON_DEVICE;
   return {
-    hits: parseTactics(result.response.text()),
+    // The keyword reader always runs too, so a message cannot talk the model out of seeing pressure.
+    hits: (() => { const model = parseTactics(result.response.text()); const seen = new Set(model.map((h) => h.tactic)); return [...model, ...keywordTactics(text).filter((h) => !seen.has(h.tactic))]; })(),
     source: onDeviceRan ? 'on_device' : 'cloud',
     reader: onDeviceRan ? 'gemini-nano' : 'gemini-cloud',
     sentToCloud: onDeviceRan ? undefined : sent,

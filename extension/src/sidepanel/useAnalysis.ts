@@ -23,6 +23,7 @@ const NOT_A_PERSON = /^(you|anda|kamu|speaker|pasted|email)$/i;
 
 const clock = (t = Date.now()) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 const EMPTY: Findings = { place: 'meet', known: [] };
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const NO_GEMINI = 'Gemini is not set up in this build, so only the file’s own marks were checked.';
 const newId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now() + Math.random()));
 
@@ -288,6 +289,8 @@ export function useAnalysis() {
   /** Whatever the person dropped or chose: a picture, a PDF or a voice recording. */
   const checkFile = useCallback(
     async (file: File) => {
+      // Checked before reading: a huge file would freeze the panel and is too big for Gemini anyway.
+      if (file.size > MAX_FILE_BYTES) return setError(`That file is ${Math.round(file.size / 1048576)} MB. FISHY checks files up to 20 MB.`);
       if (file.type.startsWith('image/')) return checkPicture(file, file.name);
       if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return checkDocument(await file.arrayBuffer(), file.name);
       if (file.type.startsWith('audio/') || /\.(m4a|mp3|wav|ogg|webm|opus)$/i.test(file.name)) return checkVoiceClip(file, file.type || 'audio/webm', file.name);

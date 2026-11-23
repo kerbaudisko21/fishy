@@ -6,11 +6,21 @@ rules_version = '2';
 //   directoryPublic/{id}  masked copy for the side panel
 //   checks/{checkId}      one payment check: signals summary + call state. Never message text.
 //   knownBad/{kind:value} confirmed bad accounts, domains, numbers, with a seen count
-// Cloud Functions also keep checkCalls, checkSuspects, callCounters and incidentLinks. No rule below
+// Cloud Functions also keep checkCalls, checkSuspects, callCounters, personCounters, pinFailures and
+// incidentLinks. No rule below
 // names them, so clients can neither read nor write them.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function validSummary(s) {
+      return s is map
+        && s.keys().hasOnly(['flags', 'patterns', 'place', 'amount', 'payee'])
+        && s.flags is list && s.flags.size() <= 20
+        && s.patterns is list && s.patterns.size() <= 10
+        && s.place in ['meet', 'gmail', 'paste']
+        && (!('payee' in s) || (s.payee is string && s.payee.size() <= 120))
+        && (!('amount' in s) || (s.amount is map && s.amount.keys().hasOnly(['value', 'currency']) && s.amount.value is number && s.amount.currency is string && s.amount.currency.size() == 3));
+    }
 
     match /directory/{id} { allow read, write: if false; }        // Cloud Functions only (Admin SDK)
     match /directoryPublic/{id} { allow read: if signedIn(); allow write: if false; }
@@ -20,7 +30,10 @@ service cloud.firestore {
       // The panel writes the summary only. `call` is written by Cloud Functions, so a client cannot fake an answer.
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.keys().hasOnly(['ownerUid', 'createdAt', 'summary']);
+        && request.resource.data.keys().hasOnly(['ownerUid', 'createdAt', 'summary'])
+        // The server's clock, so a report can't be backdated; a small summary of known shape.
+        && request.resource.data.createdAt == request.time
+        && validSummary(request.resource.data.summary);
       allow read: if signedIn() && resource.data.ownerUid == request.auth.uid;
       allow update, delete: if false;                             // call state is written by Cloud Functions
     }

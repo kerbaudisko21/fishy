@@ -85,7 +85,9 @@ export interface CheckSummary {
 
 export async function createCheck(summary: CheckSummary): Promise<string> {
   const user = await ensureSignedIn();
-  const ref = await addDoc(collection(db(), 'checks'), { ownerUid: user.uid, createdAt: serverTimestamp(), summary });
+  // Firestore refuses undefined values, and the rules accept only known fields: leave empty ones out.
+  const clean = Object.fromEntries(Object.entries(summary).filter(([, v]) => v !== undefined));
+  const ref = await addDoc(collection(db(), 'checks'), { ownerUid: user.uid, createdAt: serverTimestamp(), summary: clean });
   return ref.id;
 }
 
