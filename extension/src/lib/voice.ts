@@ -21,7 +21,10 @@ export async function recordTabClip(tabId: number, seconds = 10, onTick?: (left:
   });
 
   // Capturing a tab mutes it for the user; play it back so the meeting stays audible.
+  // In the floating window (a frame on the page) Chrome starts audio suspended: resume it, or the
+  // person hears silence for the 10 seconds.
   const ctx = new AudioContext();
+  if (ctx.state === 'suspended') await ctx.resume().catch(() => undefined);
   const source = ctx.createMediaStreamSource(stream);
   const analyser = ctx.createAnalyser();
   analyser.fftSize = 1024;

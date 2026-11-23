@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { suspectsFrom } from '../lib/checks/known';
 import { firstName } from '../lib/names';
 import { IN_EXTENSION } from '../lib/config';
@@ -6,6 +6,7 @@ import { isPageMessage, type BannerState, type PanelMessage } from '../lib/messa
 import type { CallTarget, Evidence, SignalKind } from '../lib/types';
 import { Header, TrackContext, trackFor } from './components';
 import { DataToggle } from './DataToggle';
+import { useWindowDrop } from './scanner';
 import { placeFor, screenFor, type Screen } from './routes';
 import { CheckYourself } from './screens/CheckYourself';
 import { Directory } from './screens/Directory';
@@ -90,7 +91,13 @@ export function App() {
     else void sendBanner('hidden', '', '');
   }, [call.state, who, a.hasInput, a.verdict]);
 
+  // A file dragged anywhere over FISHY can be dropped to check it.
+  const { checkFile } = a;
+  const dropping = useWindowDrop(useCallback((file: File) => void checkFile(file), [checkFile]));
+  const [focusMedia, setFocusMedia] = useState<string | null>(null);
+
   // A new picture, document, voice or frame being checked: show its card straight away.
+  useEffect(() => setFocusMedia(null), [a.evidence.media?.length]);
   const mediaCount = a.evidence.media?.length ?? 0;
   const seenMedia = useRef(mediaCount);
   useEffect(() => {
@@ -148,6 +155,11 @@ export function App() {
   return (
     <>
       <DataToggle />
+      {dropping && (
+        <div className="drop-veil" aria-hidden="true">
+          <span>Drop to check it</span>
+        </div>
+      )}
       <Header where={where} demo={a.mode === 'demo'} tab={tab} onTab={setScreen} onSettings={() => setScreen('settings')} />
 
       {error && (
@@ -180,6 +192,12 @@ export function App() {
           onOpenFlag={flagScreen}
           onOpen={open}
           onPaste={() => setScreen('paste')}
+          onFile={(f) => void a.checkFile(f)}
+          media={ev.media}
+          onOpenMedia={(id) => {
+            setFocusMedia(id);
+            setScreen('media');
+          }}
           onDemo={loadDemo}
           onVoice={IN_EXTENSION ? () => void a.checkVoice() : undefined}
           onFrame={IN_EXTENSION ? () => void a.checkFrame() : undefined}
@@ -193,7 +211,7 @@ export function App() {
         <Voice data={ev.voice} busy={!!a.busy} onBack={back} onRecordAgain={a.mode === 'live' && IN_EXTENSION ? () => void a.checkVoice() : undefined} />
       )}
       {screen === 'known' && ev.known && <KnownScams data={ev.known} onBack={back} />}
-      {screen === 'media' && ev.media && <Media items={ev.media} busy={!!a.busy} onBack={back} onCheckMore={() => setScreen('paste')} />}
+      {screen === 'media' && ev.media && <Media items={ev.media} busy={!!a.busy} focusId={focusMedia} onBack={back} onFile={(f) => void a.checkFile(f)} />}
       {screen === 'paste' && (
         <CheckYourself
           busy={!!a.busy}

@@ -40,3 +40,14 @@ describe('the FISHY score', () => {
     expect(scoreMedia(item({ kind: 'frame', gemini: null })).reasons[0]).toContain('Gemini didn’t run');
   });
 });
+
+describe('why it is fishy, in one sentence', () => {
+  it('leads with the verdict and the two strongest reasons', async () => {
+    const { whySentence } = await import('./media-score');
+    expect(whySentence(scoreMedia(item({ gemini: g('likely_ai', 3) })))).toBe('Fishy because sign 1 (here), and sign 2 (here).');
+    expect(whySentence(scoreMedia(item({ gemini: g('no_clear_signs', 0) })))).toBe('Looks okay: no clear signs of AI or editing.');
+    expect(whySentence(scoreMedia(item({ facts: { aiLabel: 'Content Credentials say it was made by AI' } })))).toBe(
+      'Fishy because Content Credentials say it was made by AI.',
+    );
+  });
+});

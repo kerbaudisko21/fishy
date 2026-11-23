@@ -5,7 +5,8 @@ import { firstName } from '../../lib/names';
 import { line, Reveal, useTextSwap } from '../../lib/transitions';
 import { useFirstSeen } from '../motion';
 import { waitingFor } from '../../lib/call-wait';
-import type { CallStatus, CallTarget, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
+import type { CallStatus, CallTarget, MediaCheck, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
+import { ActionGrid, DropZone, RecentChecks } from '../scanner';
 import { FlagRow, Icon, Privacy, Section, SourceBadge, Tile } from '../components';
 import { Amount, money } from '../format';
 import type { Screen } from '../routes';
@@ -30,6 +31,11 @@ interface Props {
   onOpen: (s: Screen) => void;
   onPaste: () => void;
   onDemo: () => void;
+  /** A dropped or chosen file: picture, PDF or voice recording. */
+  onFile: (file: File) => void;
+  /** What was checked in this session, for "Your checks". */
+  media?: MediaCheck[];
+  onOpenMedia: (id: string) => void;
   /** Shown in a meeting until a voice check has run. */
   onVoice?: () => void;
   /** Capture one frame of the video call in this tab. */
@@ -69,7 +75,7 @@ export function Verdict(p: Props) {
 
   // The hero: one colour per state, one sentence.
   const hero: { tone: Tone; pill: string; title: string; line: string } | null = waiting
-    ? { tone: 'navy', pill: 'Ready', title: 'Is it real?', line: 'Check a picture, a document, a voice or the video call before you trust it, then confirm with the real person.' }
+    ? { tone: 'navy', pill: 'Ready', title: 'Is it real?', line: 'Drop what you were sent, or check the call you are in. FISHY scores the signs of AI and says why.' }
     : call.state === 'ringing'
       ? { tone: 'navy', pill: wait.pill, title: wait.title, line: wait.line }
       : call.state === 'no_answer' || call.state === 'escalated'
@@ -157,41 +163,12 @@ export function Verdict(p: Props) {
 
         {waiting && (
           <>
-            <Section title="Check something">
-              <div className="surface">
-                <button className="start-row action" onClick={p.onPaste}>
-                  <span className="start-icon">{Icon.image(18)}</span>
-                  <span className="grow">
-                    <span className="row-title">A picture or a document</span>
-                    <span className="row-detail">A photo, an ID, a receipt or an invoice someone sent you.</span>
-                  </span>
-                  <span className="flag-chevron">{Icon.chevron(16)}</span>
-                </button>
-                {p.onFrame && (
-                  <button className="start-row action" onClick={p.onFrame}>
-                    <span className="start-icon">{Icon.video(18)}</span>
-                    <span className="grow">
-                      <span className="row-title">The video call you are in</span>
-                      <span className="row-detail">Is the face on screen real? One frame is checked.</span>
-                    </span>
-                    <span className="flag-chevron">{Icon.chevron(16)}</span>
-                  </button>
-                )}
-                {p.onVoice && (
-                  <button className="start-row action" onClick={p.onVoice}>
-                    <span className="start-icon">{Icon.mic(18)}</span>
-                    <span className="grow">
-                      <span className="row-title">The voice on the call</span>
-                      <span className="row-detail">Is it a cloned voice? 10 seconds are checked.</span>
-                    </span>
-                    <span className="flag-chevron">{Icon.chevron(16)}</span>
-                  </button>
-                )}
-              </div>
-            </Section>
+            <DropZone onFile={p.onFile} disabled={!!p.busy} />
+            <ActionGrid onFrame={p.onFrame} onVoice={p.onVoice} onText={p.onPaste} busy={!!p.busy} />
 
-            <Section title="How it works">
-              <ol className="how surface">
+            <details className="fold how-fold">
+              <summary>How it works</summary>
+              <ol className="how">
                 <li>
                   <span className="how-num">1</span>
                   <span className="grow">
@@ -202,7 +179,7 @@ export function Verdict(p: Props) {
                 <li>
                   <span className="how-num">2</span>
                   <span className="grow">
-                    <span className="row-title">See the signs</span>
+                    <span className="row-title">See the score and why</span>
                     <span className="row-detail">AI labels and editing traces in the file, and what Gemini sees or hears: on this laptop when it can.</span>
                   </span>
                 </li>
@@ -210,13 +187,11 @@ export function Verdict(p: Props) {
                   <span className="how-num">3</span>
                   <span className="grow">
                     <span className="row-title">Call the real person</span>
-                    <span className="row-detail">A fake can pass a check, but it can’t answer the real phone. FISHY calls the number on record.</span>
+                    <span className="row-detail">A fake can pass a check, but it can’t answer the real phone.</span>
                   </span>
                 </li>
               </ol>
-            </Section>
-
-            <p className="hint">FISHY also reads Meet captions and opened Gmail messages for pressure, like a rush, a secret or a new bank account.</p>
+            </details>
 
             <button className="btn secondary" onClick={p.onDemo}>
               Try the demo case
@@ -230,6 +205,12 @@ export function Verdict(p: Props) {
               <p className={line(1, 'script-line')}>“I have to verify payment requests through our approval policy. I’ll call you back on the number we have on file.”</p>
               <span className={line(2, 'row-detail')}>Then leave the call. Don’t repeat the account details or send anything while you’re still on it.</span>
             </Reveal>
+          </Section>
+        )}
+
+        {p.media && p.media.length > 0 && !waiting && (
+          <Section title="Your checks" aside="Tap one for the score and why">
+            <RecentChecks items={p.media} onOpen={p.onOpenMedia} />
           </Section>
         )}
 

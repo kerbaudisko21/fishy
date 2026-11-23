@@ -9,6 +9,19 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '0.4.0',
+    date: '23 Nov 2026',
+    items: [
+      'New Scanner layout: one big drop zone, three big buttons (Video, Voice, Message), and a list of your checks with their scores',
+      'Every result says why in one sentence (“Fishy because…”), with a score ring that fills and counts up',
+      'An ink stamp on each result: FISHY, SUSPECT or LOOKS OK',
+      'A line sweeps over the picture while Gemini looks; Why and Details fold open and shut',
+      'Drop a file anywhere on FISHY to check it',
+      'Fixed: the call stays audible while the voice is recorded in the floating window',
+      'Gemini errors now say what to do (for example: switch on AI Logic in the Firebase console)',
+    ],
+  },
+  {
     version: '0.3.2',
     date: '23 Nov 2026',
     items: [

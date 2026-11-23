@@ -65,3 +65,26 @@ export const BAND_LABEL: Record<ScoreBand, string> = {
   low: 'No clear signs found',
   pending: 'Not scored yet',
 };
+
+/** The word on the stamp for each band. */
+export const STAMP: Record<Exclude<ScoreBand, 'pending'>, string> = { high: 'Fishy', some: 'Suspect', low: 'Looks OK' };
+
+/**
+ * The score's reasons as one plain sentence that says WHY: "Fishy because the earrings change shape
+ * (left ear), and the light on his face doesn't match the room." At most the two strongest reasons.
+ */
+export function whySentence(s: MediaScore): string {
+  if (s.score === null || !s.reasons.length) return '';
+  const clean = (r: string) => {
+    const text = r.replace(/^Gemini (saw|heard):?\s*/i, '').replace(/\.$/, '');
+    // Lower-case the first word to run on in the sentence, but not a name ("Content Credentials").
+    const [first, second = ''] = text.split(' ');
+    const isName = /^[A-Z]/.test(second) || /^[A-Z]{2,}/.test(first);
+    return isName ? text : text.charAt(0).toLowerCase() + text.slice(1);
+  };
+  const parts = s.reasons.slice(0, 2).map(clean);
+  const joined = parts.length > 1 ? `${parts[0]}, and ${parts[1]}` : parts[0];
+  if (s.band === 'high') return `Fishy because ${joined}.`;
+  if (s.band === 'some') return `Worth a closer look: ${joined}.`;
+  return `Looks okay: ${joined}.`;
+}

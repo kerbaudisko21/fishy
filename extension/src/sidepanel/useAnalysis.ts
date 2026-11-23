@@ -29,6 +29,24 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const NEEDS_GEMINI =
   'Checking the video or the voice needs Gemini, and Gemini isn’t connected in this build. Add the Firebase settings to extension/.env.local and reload FISHY. Pictures and PDFs still show their own marks without it.';
 
+/** Gemini's errors, in words a person can act on. */
+function geminiError(e: unknown): string {
+  const message = (e as Error)?.message ?? String(e);
+  if (/403|ACCESS_DENIED|Permission denied|SERVICE_DISABLED|has not been used/i.test(message)) {
+    return 'Gemini is switched off in this Firebase project. In the Firebase console open AI Logic → Get started → Gemini Developer API, wait a minute, then check again.';
+  }
+  if (/401|app.?check|unauthenticated/i.test(message)) {
+    return 'Firebase refused this build (App Check). Check that the debug token in extension/.env.local is added under App Check → Manage debug tokens.';
+  }
+  if (/429|quota|RESOURCE_EXHAUSTED|prepayment/i.test(message)) {
+    return 'Gemini is busy or out of free quota for now. Wait a minute, then check again.';
+  }
+  if (/failed to fetch|network|offline/i.test(message)) {
+    return 'Gemini couldn’t be reached. Check the internet connection, then check again.';
+  }
+  return `Gemini could not read it: ${message.slice(0, 160)}`;
+}
+
 /** Chrome's capture errors, in words a person can act on. */
 function captureError(what: 'video' | 'voice', e: unknown): string {
   const message = (e as Error)?.message ?? String(e);
@@ -238,7 +256,7 @@ export function useAnalysis() {
         patchMedia(id, result ? { gemini: result } : { gemini: null, note: NO_GEMINI });
       } catch (e) {
         console.warn('[FISHY] Gemini media check failed', e);
-        patchMedia(id, { gemini: null, note: `Gemini could not read it: ${(e as Error).message}` });
+        patchMedia(id, { gemini: null, note: geminiError(e) });
       }
     },
     [patchMedia],

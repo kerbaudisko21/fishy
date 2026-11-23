@@ -72,7 +72,8 @@ function toggle() {
 
   const frame = document.createElement('iframe');
   frame.title = 'FISHY';
-  frame.allow = 'clipboard-write';
+  // autoplay: the meeting's sound is played back while the voice is recorded.
+  frame.allow = 'clipboard-write; autoplay';
   frame.src = chrome.runtime.getURL('src/sidepanel/index.html');
 
   win.append(bar, frame);

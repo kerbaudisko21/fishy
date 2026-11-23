@@ -112,6 +112,8 @@ Radius 10 (small controls), 14 (buttons, tiles), 18 (surfaces), 26 (bottom of th
 - **Red flag row**: icon tile, title, one line of evidence, chevron to the evidence screen. Grouped by step, with one source badge per group.
 - **Why this is risky**: Gemini's two or three sentences in a plain surface, with where it ran.
 - **What the checks found**: one card per picture, document, voice or video frame: the preview (or the waveform), what the file says about itself, then what Gemini saw or heard with where it ran, and the reminder that these are signs, not proof.
+- **Scanner home**: “Is it real?”, one big drop zone, three big actions (Video, Voice, Message), How it works folded away. A file can be dropped anywhere on the window.
+- **Result card**: the preview with the **stamp** (FISHY in red, SUSPECT in amber, LOOKS OK in green, rotated -8°, stamped on once with a short overshoot), the **score ring** that fills and counts up, the verdict band, and one sentence that says why (“Fishy because…”). Why is open; Details folds. A coral line sweeps over the picture while Gemini looks.
 - **Take a closer look**: when there are signs but not enough to call it fishy, the hero goes navy (amber on the web) instead of saying "looks normal".
 - **Evidence screens**: a comparison first (red-tinted "on this invoice" over green-tinted "paid the last 6 times"), then the checks list, then a privacy line.
 - **End states**: "What to say now" (a line to get off the call), then "Start a new check" and "Copy the incident report link".
