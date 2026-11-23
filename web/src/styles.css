@@ -1,12 +1,16 @@
 /* Colours and fonts come from the extension's tokens (imported in main.tsx), so the page the
    approver opens looks like the panel that asked them. */
 * { box-sizing: border-box; }
+/* On a phone: no grey flash on tap (every control has its own :active), no font inflation in landscape. */
+html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+/* Controls respond at once (no double-tap-zoom wait) and a long press does not select their label. */
+button, a.btn { touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
 h1 { margin: 0; font-family: var(--font-head); font-size: 22px; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 ::selection { background: var(--note); color: var(--ink); }
 
-.page { max-width: 440px; min-height: 100dvh; margin: 0 auto; padding: max(32px, env(safe-area-inset-top)) 20px 28px; display: flex; flex-direction: column; gap: 20px; }
+.page { max-width: 440px; min-height: 100dvh; margin: 0 auto; padding: max(32px, calc(env(safe-area-inset-top, 0px) + 16px)) max(20px, env(safe-area-inset-right, 0px)) max(28px, calc(env(safe-area-inset-bottom, 0px) + 16px)) max(20px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 20px; }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand img { border-radius: 9px; }
 .brand span { display: flex; flex-direction: column; }
@@ -29,7 +33,9 @@ input { height: 52px; padding: 0 16px; border-radius: 14px; border: 1px solid va
 .btn.danger { background: var(--danger); color: #fff; font-size: 16px; }
 .btn.primary { background: var(--ink); color: #fff; }
 .btn.secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line); font-weight: 600; }
-.link { min-height: 44px; border: 0; background: none; color: var(--ink-2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.link { min-height: 44px; padding: 0 8px; border: 0; border-radius: 10px; background: none; color: var(--ink-2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color .12s ease; }
+.link:active { background: var(--note); }
+.btn.secondary:active { background: var(--surface-muted); }
 .error { margin: 0; color: var(--danger); font-size: 13px; }
 
 .result { border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5; }
@@ -61,7 +67,7 @@ html:has(.page.dark), body:has(.page.dark) { background: #0f1c28; }
 .lead { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
 .nano { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--cloud-bg); color: var(--cloud-text); font-size: 13px; line-height: 1.45; }
 .nano.on { background: var(--ink); color: #fff; }
-textarea { width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font: 15px/1.5 var(--font-body); color: var(--ink); resize: vertical; }
+textarea { width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font: 16px/1.5 var(--font-body); color: var(--ink); resize: vertical; }
 textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .row { display: flex; align-items: center; gap: 12px; }
 .grow { flex: 1; }

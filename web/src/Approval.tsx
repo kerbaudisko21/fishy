@@ -160,6 +160,7 @@ export function Approval() {
             type="password"
             inputMode="numeric"
             autoComplete="off"
+            enterKeyHint="done"
             autoFocus
             maxLength={4}
             value={pin}

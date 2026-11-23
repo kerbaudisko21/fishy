@@ -13,6 +13,16 @@ export function IncidentPage() {
   const [state, setState] = useState<'loading' | 'ready' | 'missing'>('loading');
   const [busy, setBusy] = useState(false);
 
+  // The page is dark: so is the status bar while it is open.
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const before = meta?.content;
+    meta?.setAttribute('content', '#0F1C28');
+    return () => {
+      if (meta && before) meta.content = before;
+    };
+  }, []);
+
   useEffect(() => {
     if (DEMO) {
       setInc(DEMO_INCIDENT);

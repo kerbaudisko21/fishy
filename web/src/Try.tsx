@@ -126,7 +126,7 @@ export function TryPage() {
 
       <div className="stack">
         <label htmlFor="message">The message</label>
-        <textarea id="message" value={text} onChange={(e) => setText(e.target.value)} placeholder="An email, a chat message or meeting captions…" rows={7} />
+        <textarea id="message" autoCapitalize="sentences" spellCheck={false} value={text} onChange={(e) => setText(e.target.value)} placeholder="An email, a chat message or meeting captions…" rows={7} />
         <div className="row">
           <button className="link" onClick={() => setText(SAMPLE)}>
             Use the sample
