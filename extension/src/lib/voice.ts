@@ -63,3 +63,31 @@ export async function recordTabClip(tabId: number, seconds = 10, onTick?: (left:
   const peak = Math.max(0.05, ...levels);
   return { blob: new Blob(chunks, { type: mime }), mime, seconds, levels: levels.slice(0, BARS).map((l) => l / peak) };
 }
+
+/**
+ * One frame of the tab the person is looking at (a Google Meet, Zoom or Teams call in the browser),
+ * as a PNG, only on their click. Uses the same tab capture as the voice clip; nothing is recorded.
+ */
+export async function captureTabFrame(tabId: number): Promise<Blob> {
+  const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: { mandatory: { chromeMediaSource: 'tab', chromeMediaSourceId: streamId, maxWidth: 1920, maxHeight: 1080 } } as unknown as MediaTrackConstraints,
+  });
+  try {
+    const video = document.createElement('video');
+    video.muted = true;
+    video.srcObject = stream;
+    await video.play();
+    // The first frames of a new capture can be black; give it a moment.
+    await new Promise((r) => setTimeout(r, 300));
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d')!.drawImage(video, 0, 0);
+    video.srcObject = null;
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('The frame could not be captured.'))), 'image/png'));
+  } finally {
+    stream.getTracks().forEach((t) => t.stop());
+  }
+}

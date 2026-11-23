@@ -18,7 +18,17 @@ export type SignalKind =
   | 'known_bad_account'
   | 'known_bad_domain'
   | 'voice_score'
-  | 'face_score';
+  | 'face_score'
+  /** The file labels itself as made by AI (Content Credentials or the IPTC source type). */
+  | 'ai_label'
+  /** An AI generator is named in the file's data. */
+  | 'ai_tool'
+  /** A photo editor is named in the file's data. */
+  | 'edited_with'
+  /** Gemini sees signs of AI or editing in a picture, a document page or a video frame. */
+  | 'picture_signs'
+  /** Gemini hears signs of a cloned or spliced voice. */
+  | 'voice_signs';
 
 export interface Signal {
   kind: SignalKind;
@@ -88,8 +98,35 @@ export interface KnownMatchView {
   events?: Array<{ date: string; what: string }>;
 }
 
+export type MediaKind = 'picture' | 'document' | 'voice' | 'frame';
+export type MediaAssessment = 'likely_ai' | 'likely_edited' | 'no_clear_signs' | 'unclear';
+
+/** One thing the person chose to check: a picture, a document, a voice clip or a frame of the call. */
+export interface MediaCheck {
+  id: string;
+  kind: MediaKind;
+  /** "receipt.jpg", "Frame of the video call", "10 s of the meeting". */
+  name: string;
+  /** When it was checked, e.g. "10:44". */
+  at: string;
+  /** An object URL of the picture, the document's first page or the frame. Stays on the laptop. */
+  preview?: string;
+  /** Loudness (0–1) for a voice clip's waveform. */
+  levels?: number[];
+  /** What the file says about itself. */
+  facts?: { aiLabel?: string; aiTool?: string; editedWith?: string };
+  /** The same facts as rows ("Labelled as made by AI", "No AI or editing marks in the file"). */
+  checks: CheckItem[];
+  /** What Gemini saw or heard. Undefined while it reads; null when it could not run (see `note`). */
+  gemini?: { assessment: MediaAssessment; signs: Array<{ sign: string; where: string }>; source: Source; model: 'gemini-nano' | 'gemini-cloud' } | null;
+  note?: string;
+  /** True for the demo story's sample result. */
+  demo?: boolean;
+}
+
 /** Each section is filled by its check; a screen only opens when its section exists. */
 export interface Evidence {
+  media?: MediaCheck[];
   tactics?: {
     counts: Array<{ tactic: Tactic; label: string; count: number; example: string }>;
     captions: CaptionLine[];

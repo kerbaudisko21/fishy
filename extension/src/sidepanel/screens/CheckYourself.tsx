@@ -6,32 +6,95 @@ interface Props {
   emailOpen: boolean;
   onBack: () => void;
   onText: (text: string) => Promise<void>;
-  onFile: (data: ArrayBuffer, name: string) => Promise<void>;
+  /** A picture, a PDF or a voice recording. */
+  onFile: (file: File) => Promise<void>;
   onAttached: () => Promise<void>;
+  /** Record 10 s of the call in this tab. */
+  onVoice: () => Promise<void>;
+  /** Capture one frame of the video call in this tab. */
+  onFrame: () => Promise<void>;
+  /** Where to go once a check has started. */
+  onDone: () => void;
 }
 
-/** The fallback when captions or Gmail cannot be read: paste a message, or check an invoice PDF yourself. */
-export function CheckYourself({ busy, emailOpen, onBack, onText, onFile, onAttached }: Props) {
+const ACCEPT = 'image/*,application/pdf,.pdf,audio/*,.m4a,.mp3,.wav,.ogg,.webm,.opus';
+
+/** Check something: a file someone sent, the call you are in, or a message. */
+export function CheckYourself({ busy, emailOpen, onBack, onText, onFile, onAttached, onVoice, onFrame, onDone }: Props) {
   const [text, setText] = useState('');
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
-  const takeFile = async (file?: File) => {
-    if (!file) return;
-    await onFile(await file.arrayBuffer(), file.name);
-    onBack();
+  const take = (run: () => Promise<void>) => {
+    onDone();
+    void run();
   };
 
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
     setOver(false);
-    void takeFile([...e.dataTransfer.files].find((f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name)));
+    const file = e.dataTransfer.files[0];
+    if (file) take(() => onFile(file));
   };
 
   return (
     <>
-      <DetailHead title="Paste or drop" kicker="Check it yourself" badges={[{ source: 'on_device', label: 'Read on this laptop' }]} onBack={onBack} />
+      <DetailHead title="Check something" badges={[{ source: 'on_device', label: 'On this laptop first' }]} onBack={onBack} />
       <main className="main">
+        <Section title="Something you were sent">
+          <label
+            className={`drop${over ? ' over' : ''}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setOver(true);
+            }}
+            onDragLeave={() => setOver(false)}
+            onDrop={onDrop}
+          >
+            <span className="drop-icon">{Icon.upload(20)}</span>
+            <strong>Drop a picture, a document or a voice recording</strong>
+            <span>A photo, an ID, a receipt, an invoice PDF or a voice note. Or click to choose.</span>
+            <input
+              ref={input}
+              type="file"
+              accept={ACCEPT}
+              className="visually-hidden"
+              disabled={busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) take(() => onFile(file));
+              }}
+            />
+          </label>
+          {emailOpen && (
+            <button className="btn secondary" disabled={busy} onClick={() => take(onAttached)}>
+              {Icon.file(16)}
+              Check the PDF attached to this email
+            </button>
+          )}
+        </Section>
+
+        <Section title="The call you are in" aside="Meet, Zoom or Teams in Chrome">
+          <div className="surface">
+            <button className="start-row action" disabled={busy} onClick={() => take(onFrame)}>
+              <span className="start-icon">{Icon.video(18)}</span>
+              <span className="grow">
+                <span className="row-title">Check the video</span>
+                <span className="row-detail">Captures one frame of the call in this tab.</span>
+              </span>
+              <span className="flag-chevron">{Icon.chevron(16)}</span>
+            </button>
+            <button className="start-row action" disabled={busy} onClick={() => take(onVoice)}>
+              <span className="start-icon">{Icon.mic(18)}</span>
+              <span className="grow">
+                <span className="row-title">Check the voice</span>
+                <span className="row-detail">Records 10 seconds of the call. You keep hearing it.</span>
+              </span>
+              <span className="flag-chevron">{Icon.chevron(16)}</span>
+            </button>
+          </div>
+        </Section>
+
         <Section title="A message">
           <div className="surface card-pad">
             <div className="field">
@@ -40,58 +103,13 @@ export function CheckYourself({ busy, emailOpen, onBack, onText, onFile, onAttac
               </label>
               <textarea id="paste" value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste an email, a chat or the meeting captions…" />
             </div>
-            <button
-              className="btn primary"
-              disabled={busy || !text.trim()}
-              onClick={async () => {
-                await onText(text);
-                onBack();
-              }}
-            >
-              Check this text
+            <button className="btn secondary" disabled={busy || !text.trim()} onClick={() => take(() => onText(text))}>
+              Check this message
             </button>
           </div>
         </Section>
 
-        <Section title="An invoice">
-          <div className="stack">
-            {emailOpen && (
-              <button
-                className="btn secondary"
-                disabled={busy}
-                onClick={async () => {
-                  await onAttached();
-                  onBack();
-                }}
-              >
-                {Icon.file(16)}
-                Check the PDF attached to this email
-              </button>
-            )}
-            <label
-              className={`drop${over ? ' over' : ''}`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setOver(true);
-              }}
-              onDragLeave={() => setOver(false)}
-              onDrop={onDrop}
-            >
-              <span className="drop-icon">{Icon.upload(20)}</span>
-              <strong>Drop a PDF here</strong>
-              <span>or click to choose a file</span>
-              <input
-                ref={input}
-                type="file"
-                accept="application/pdf,.pdf"
-                className="visually-hidden"
-                onChange={(e) => void takeFile(e.target.files?.[0])}
-              />
-            </label>
-          </div>
-        </Section>
-
-        <Privacy>Both are read on this laptop and not stored.</Privacy>
+        <Privacy>Files and messages are read on this laptop first. A picture goes to the cloud only without Gemini Nano; a voice clip always does. Nothing is stored.</Privacy>
       </main>
     </>
   );

@@ -25,7 +25,8 @@ export interface RulesConfig {
 
 export const DEFAULT_RULES: RulesConfig = {
   version: 1,
-  alwaysFishy: ['bank_account_changed', 'known_bad_account', 'known_bad_domain', 'unsafe_link'],
+  // A file that says it was made by AI, or names the AI tool, is fishy whatever else is true.
+  alwaysFishy: ['bank_account_changed', 'known_bad_account', 'known_bad_domain', 'unsafe_link', 'ai_label', 'ai_tool'],
   weights: {
     // Per distinct tactic: one ("need it today") stays clear, three or more (urgent + secret + skip approval) is fishy.
     pressure_tactics: 1,
@@ -35,6 +36,12 @@ export const DEFAULT_RULES: RulesConfig = {
     pdf_edited: 2,
     voice_score: 1,
     face_score: 1,
+    // Gemini's signs: "likely AI" or "likely edited" has strength 3 and is fishy on its own;
+    // "something odd" has strength 1 and needs another red flag.
+    picture_signs: 1,
+    voice_signs: 1,
+    // Editing software is normal for photos, so it only adds to other signs.
+    edited_with: 1,
   },
   threshold: 3,
   patterns: [
@@ -62,7 +69,12 @@ const ORDER: SignalKind[] = [
   'unsafe_link',
   'sender_auth_failed',
   'young_domain',
+  'ai_label',
+  'ai_tool',
   'pdf_edited',
+  'edited_with',
+  'picture_signs',
+  'voice_signs',
   'voice_score',
   'face_score',
 ];

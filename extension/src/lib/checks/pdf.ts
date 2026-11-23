@@ -48,3 +48,25 @@ export async function readPdf(data: ArrayBuffer, accountDigits?: (text: string) 
     },
   };
 }
+
+/**
+ * The first page as a PNG, drawn on the laptop, so Gemini can look at the document the way a person
+ * does (a pasted logo, one line in another font). Takes a copy of the bytes: pdf.js may detach them.
+ */
+export async function renderFirstPage(data: ArrayBuffer, maxSide = 1400): Promise<Blob> {
+  const pdfjs = await import('pdfjs-dist');
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(data.slice(0)) }).promise;
+  try {
+    const page = await doc.getPage(1);
+    const base = page.getViewport({ scale: 1 });
+    const viewport = page.getViewport({ scale: Math.min(3, maxSide / Math.max(base.width, base.height)) });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    await page.render({ canvas, canvasContext: canvas.getContext('2d')!, viewport }).promise;
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('The page could not be drawn.'))), 'image/png'));
+  } finally {
+    await doc.destroy();
+  }
+}

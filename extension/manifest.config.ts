@@ -11,7 +11,7 @@ const icons = {
 export default defineManifest({
   manifest_version: 3,
   name: 'FISHY',
-  description: 'Spots social-engineering scams in Meet and Gmail, checks the evidence, and calls the real person before money moves.',
+  description: 'Checks pictures, documents, voices and video calls for signs of AI or tampering, then calls the real person before money moves.',
   version: pkg.version,
   minimum_chrome_version: '139',
   icons,

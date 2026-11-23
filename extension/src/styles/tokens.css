@@ -1,7 +1,8 @@
 /* Design tokens. Navy and coral come from the logo; the page sits on a cool tide grey. */
 :root {
-  --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
-  --font-head: 'Space Grotesk Variable', 'Space Grotesk', system-ui, sans-serif;
+  /* One family, made for legibility under pressure; headings use its bold weights. */
+  --font-body: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
+  --font-head: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --bg: #eaeff1; /* tide */

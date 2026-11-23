@@ -1,6 +1,6 @@
 import type { SignalKind } from '../lib/types';
 
-export type Screen = 'verdict' | 'tactics' | 'email' | 'invoice' | 'voice' | 'known' | 'directory' | 'paste' | 'settings';
+export type Screen = 'verdict' | 'tactics' | 'email' | 'invoice' | 'voice' | 'media' | 'known' | 'directory' | 'paste' | 'settings';
 
 /** Which evidence screen a red flag opens. */
 export function screenFor(kind: SignalKind): Screen {
@@ -18,6 +18,12 @@ export function screenFor(kind: SignalKind): Screen {
     case 'voice_score':
     case 'face_score':
       return 'voice';
+    case 'ai_label':
+    case 'ai_tool':
+    case 'edited_with':
+    case 'picture_signs':
+    case 'voice_signs':
+      return 'media';
     default:
       return 'known';
   }

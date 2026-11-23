@@ -32,6 +32,8 @@ interface Props {
   onDemo: () => void;
   /** Shown in a meeting until a voice check has run. */
   onVoice?: () => void;
+  /** Capture one frame of the video call in this tab. */
+  onFrame?: () => void;
 }
 
 const first = (name?: string) => firstName(name);
@@ -67,7 +69,7 @@ export function Verdict(p: Props) {
 
   // The hero: one colour per state, one sentence.
   const hero: { tone: Tone; pill: string; title: string; line: string } | null = waiting
-    ? { tone: 'navy', pill: 'Watching', title: 'Ready when money is asked for.', line: 'FISHY reads Meet captions and Gmail on this laptop, and stops you before you pay a scammer.' }
+    ? { tone: 'navy', pill: 'Ready', title: 'Is it real?', line: 'Check a picture, a document, a voice or the video call before you trust it, then confirm with the real person.' }
     : call.state === 'ringing'
       ? { tone: 'navy', pill: wait.pill, title: wait.title, line: wait.line }
       : call.state === 'no_answer' || call.state === 'escalated'
@@ -155,30 +157,36 @@ export function Verdict(p: Props) {
 
         {waiting && (
           <>
-            <Section title="Start a check">
+            <Section title="Check something">
               <div className="surface">
-                <div className="start-row passive">
-                  <span className="start-icon">{Icon.video()}</span>
-                  <span className="grow">
-                    <span className="row-title">In Google Meet</span>
-                    <span className="row-detail">Turn on captions (CC). FISHY listens from there.</span>
-                  </span>
-                </div>
-                <div className="start-row passive">
-                  <span className="start-icon">{Icon.mail(18)}</span>
-                  <span className="grow">
-                    <span className="row-title">In Gmail</span>
-                    <span className="row-detail">Open the email that asks for a payment.</span>
-                  </span>
-                </div>
                 <button className="start-row action" onClick={p.onPaste}>
-                  <span className="start-icon">{Icon.clipboard(18)}</span>
+                  <span className="start-icon">{Icon.image(18)}</span>
                   <span className="grow">
-                    <span className="row-title">Paste or drop it here</span>
-                    <span className="row-detail">A message, or an invoice PDF.</span>
+                    <span className="row-title">A picture or a document</span>
+                    <span className="row-detail">A photo, an ID, a receipt or an invoice someone sent you.</span>
                   </span>
                   <span className="flag-chevron">{Icon.chevron(16)}</span>
                 </button>
+                {p.onFrame && (
+                  <button className="start-row action" onClick={p.onFrame}>
+                    <span className="start-icon">{Icon.video(18)}</span>
+                    <span className="grow">
+                      <span className="row-title">The video call you are in</span>
+                      <span className="row-detail">Is the face on screen real? One frame is checked.</span>
+                    </span>
+                    <span className="flag-chevron">{Icon.chevron(16)}</span>
+                  </button>
+                )}
+                {p.onVoice && (
+                  <button className="start-row action" onClick={p.onVoice}>
+                    <span className="start-icon">{Icon.mic(18)}</span>
+                    <span className="grow">
+                      <span className="row-title">The voice on the call</span>
+                      <span className="row-detail">Is it a cloned voice? 10 seconds are checked.</span>
+                    </span>
+                    <span className="flag-chevron">{Icon.chevron(16)}</span>
+                  </button>
+                )}
               </div>
             </Section>
 
@@ -187,33 +195,28 @@ export function Verdict(p: Props) {
                 <li>
                   <span className="how-num">1</span>
                   <span className="grow">
-                    <span className="row-title">Read</span>
-                    <span className="row-detail">Spots pressure: a rush, a secret, a boss skipping approval.</span>
+                    <span className="row-title">Check</span>
+                    <span className="row-detail">Drop what you were sent, or check the call you are in.</span>
                   </span>
                 </li>
                 <li>
                   <span className="how-num">2</span>
                   <span className="grow">
-                    <span className="row-title">Check</span>
-                    <span className="row-detail">The sender, the links and the invoice’s bank account.</span>
+                    <span className="row-title">See the signs</span>
+                    <span className="row-detail">AI labels and editing traces in the file, and what Gemini sees or hears: on this laptop when it can.</span>
                   </span>
                 </li>
                 <li>
                   <span className="how-num">3</span>
                   <span className="grow">
-                    <span className="row-title">Match</span>
-                    <span className="row-detail">Accounts and domains already used in scams.</span>
-                  </span>
-                </li>
-                <li>
-                  <span className="how-num">4</span>
-                  <span className="grow">
-                    <span className="row-title">Call</span>
-                    <span className="row-detail">Phones the real person on a number on record.</span>
+                    <span className="row-title">Call the real person</span>
+                    <span className="row-detail">A fake can pass a check, but it can’t answer the real phone. FISHY calls the number on record.</span>
                   </span>
                 </li>
               </ol>
             </Section>
+
+            <p className="hint">FISHY also reads Meet captions and opened Gmail messages for pressure, like a rush, a secret or a new bank account.</p>
 
             <button className="btn secondary" onClick={p.onDemo}>
               Try the demo case
@@ -326,13 +329,14 @@ export function Verdict(p: Props) {
         {p.hasInput && idle && (
           <Section title="Check more">
             <div className="tiles">
-              {p.onVoice && <Tile icon={Icon.wave(20)} title="Voice" detail="10 s clip" onClick={p.onVoice} disabled={!!p.busy} />}
-              <Tile icon={Icon.clipboard(20)} title="Paste or drop" detail="A message or invoice" onClick={p.onPaste} />
+              <Tile icon={Icon.image(20)} title="A file" detail="Picture, PDF, voice" onClick={p.onPaste} disabled={!!p.busy} />
+              {p.onFrame && <Tile icon={Icon.video(20)} title="The video" detail="One frame" onClick={p.onFrame} disabled={!!p.busy} />}
+              {p.onVoice && <Tile icon={Icon.mic(20)} title="The voice" detail="10 seconds" onClick={p.onVoice} disabled={!!p.busy} />}
             </div>
           </Section>
         )}
 
-        <Privacy>Message text stays on this laptop. Without Gemini Nano, only redacted text goes to the cloud.</Privacy>
+        <Privacy>Everything is checked on this laptop first. The cloud gets only what you chose to check, and only when Gemini Nano can’t do it (a voice clip always goes; message text is redacted first).</Privacy>
       </main>
 
       {/* In <body>, so the screen's slide-in transform doesn't move a fixed bar. */}

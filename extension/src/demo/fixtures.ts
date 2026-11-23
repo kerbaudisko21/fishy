@@ -27,8 +27,12 @@ export const DEMO_SIGNALS: Signal[] = [
   { kind: 'bank_account_changed', step: 'check', source: 'on_device', title: 'Bank account changed', detail: 'The invoice account differs from the last 6 payments to Sinar Logistik.' },
   { kind: 'lookalike_sender', step: 'check', source: 'on_device', title: 'Lookalike sender', detail: 'sinar-logistik.co, 9 days old. On record: sinarlogistik.co.id.' },
   { kind: 'known_bad_account', step: 'match', source: 'on_device', title: 'Known scam account', detail: 'Mandiri •••• 9032 is in 2 confirmed scams.', seenCount: 2 },
-  { kind: 'voice_score', step: 'check', source: 'cloud', title: 'Voice likely synthetic', detail: '87% on a 10-second clip you sent. A supporting signal, not proof.', score: 0.87 },
+  { kind: 'picture_signs', step: 'check', source: 'on_device', title: 'Signs of AI in the video', detail: 'The earrings change shape when he turns his head (left ear), plus 2 more. A sign, not proof.', strength: 3 },
+  { kind: 'voice_signs', step: 'check', source: 'cloud', title: 'Signs of a cloned voice', detail: 'No breathing between sentences (whole clip), plus 2 more. A sign, not proof.', strength: 3 },
 ];
+
+// Loudness for the demo voice clip's waveform.
+const DEMO_BARS = [30, 52, 40, 68, 84, 60, 44, 72, 90, 64, 38, 56, 80, 96, 70, 48, 34, 58, 76, 88, 62, 42, 66, 82, 94, 74, 50, 36, 54, 70, 86, 60, 40, 64, 78, 52, 32, 46, 30, 22].map((h) => h / 100);
 
 export const DEMO_EVIDENCE: Evidence = {
   tactics: {
@@ -100,7 +104,45 @@ export const DEMO_EVIDENCE: Evidence = {
     ],
     knownScams: 2,
   },
-  voice: { speaker: 'Budi Santoso', seconds: 10, sentAt: '10:44', score: 0.87, faceFrames: 5 },
+  media: [
+    {
+      id: 'demo-frame',
+      kind: 'frame',
+      name: 'Video call at 10:44',
+      at: '10:44',
+      checks: [],
+      gemini: {
+        assessment: 'likely_ai',
+        source: 'on_device',
+        model: 'gemini-nano',
+        signs: [
+          { sign: 'The earrings change shape when he turns his head', where: 'left ear' },
+          { sign: 'The light on his face comes from the left; the room light comes from the right', where: 'face and window' },
+          { sign: 'The edge of his hair blurs into the background', where: 'top of the head' },
+        ],
+      },
+      demo: true,
+    },
+    {
+      id: 'demo-voice',
+      kind: 'voice',
+      name: '10 s of Budi Santoso',
+      at: '10:44',
+      levels: DEMO_BARS,
+      checks: [],
+      gemini: {
+        assessment: 'likely_ai',
+        source: 'cloud',
+        model: 'gemini-cloud',
+        signs: [
+          { sign: 'No breathing between sentences', where: 'whole clip' },
+          { sign: 'A metallic edge on the "s" sounds', where: 'at about 4 s' },
+          { sign: 'The room sound stops completely between words', where: 'at about 7 s' },
+        ],
+      },
+      demo: true,
+    },
+  ],
   known: {
     matches: [
       {

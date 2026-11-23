@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { suspectsFrom } from '../lib/checks/known';
 import { firstName } from '../lib/names';
 import { IN_EXTENSION } from '../lib/config';
@@ -12,6 +12,7 @@ import { Directory } from './screens/Directory';
 import { EmailLinks } from './screens/EmailLinks';
 import { Invoice } from './screens/Invoice';
 import { KnownScams } from './screens/KnownScams';
+import { Media } from './screens/Media';
 import { Settings } from './screens/Settings';
 import { Tactics } from './screens/Tactics';
 import { Verdict } from './screens/Verdict';
@@ -31,7 +32,7 @@ async function sendBanner(state: BannerState, title: string, line: string) {
 
 /** A screen opens only when its evidence exists. */
 function hasEvidence(screen: Screen, ev: Evidence) {
-  const key = ({ tactics: 'tactics', email: 'email', invoice: 'invoice', voice: 'voice', known: 'known' } as const)[screen as 'tactics'];
+  const key = ({ tactics: 'tactics', email: 'email', invoice: 'invoice', voice: 'voice', media: 'media', known: 'known' } as const)[screen as 'tactics'];
   return !key || !!ev[key];
 }
 
@@ -89,6 +90,15 @@ export function App() {
     else void sendBanner('hidden', '', '');
   }, [call.state, who, a.hasInput, a.verdict]);
 
+  // A new picture, document, voice or frame being checked: show its card straight away.
+  const mediaCount = a.evidence.media?.length ?? 0;
+  const seenMedia = useRef(mediaCount);
+  useEffect(() => {
+    if (mediaCount > seenMedia.current && (screen === 'verdict' || screen === 'paste')) setScreen('media');
+    seenMedia.current = mediaCount;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaCount]);
+
   // A new screen starts at the top, and a screen reader hears its heading.
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -121,7 +131,7 @@ export function App() {
   const ev = a.evidence;
   const tab = screen === 'verdict' || screen === 'directory' ? screen : undefined;
   const detail = tab ? null : placeFor(screen);
-  const where = !a.hasInput ? null : screen === 'verdict' || screen === 'directory' || screen === 'paste' || screen === 'settings' ? a.place : detail;
+  const where = !a.hasInput ? null : screen === 'verdict' || screen === 'directory' || screen === 'paste' || screen === 'settings' || screen === 'media' ? a.place : detail;
   const error = a.error ?? callError;
   const loadDemo = () => {
     cancel();
@@ -171,7 +181,8 @@ export function App() {
           onOpen={open}
           onPaste={() => setScreen('paste')}
           onDemo={loadDemo}
-          onVoice={a.place === 'meet' && !a.hasVoice ? () => void a.checkVoice() : undefined}
+          onVoice={IN_EXTENSION ? () => void a.checkVoice() : undefined}
+          onFrame={IN_EXTENSION ? () => void a.checkFrame() : undefined}
         />
       )}
       {screen === 'directory' && <Directory people={a.directory.people} suppliers={a.directory.suppliers} />}
@@ -182,14 +193,18 @@ export function App() {
         <Voice data={ev.voice} busy={!!a.busy} onBack={back} onRecordAgain={a.mode === 'live' && IN_EXTENSION ? () => void a.checkVoice() : undefined} />
       )}
       {screen === 'known' && ev.known && <KnownScams data={ev.known} onBack={back} />}
+      {screen === 'media' && ev.media && <Media items={ev.media} busy={!!a.busy} onBack={back} onCheckMore={() => setScreen('paste')} />}
       {screen === 'paste' && (
         <CheckYourself
           busy={!!a.busy}
           emailOpen={a.emailOpen}
           onBack={back}
           onText={a.checkText}
-          onFile={a.checkInvoice}
+          onFile={a.checkFile}
           onAttached={a.checkAttachedInvoice}
+          onVoice={a.checkVoice}
+          onFrame={a.checkFrame}
+          onDone={back}
         />
       )}
       {screen === 'settings' && (

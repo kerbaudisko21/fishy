@@ -34,6 +34,8 @@ export const Icon = {
   link: (s = 18) => svg(s, <><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></>),
   face: (s = 18) => svg(s, <><circle cx="12" cy="12" r="9" /><path d="M9 10v.01M15 10v.01M9 15c1.7 1.3 4.3 1.3 6 0" /></>),
   video: (s = 18) => svg(s, <><rect x="3" y="6" width="13" height="12" rx="2" /><path d="M16 10l5-3v10l-5-3" /></>),
+  image: (s = 18) => svg(s, <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="M21 16l-5-5-9 9" /></>),
+  mic: (s = 18) => svg(s, <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>),
 };
 
 /** One icon per kind of red flag, so a list of flags can be scanned without reading. */
@@ -54,7 +56,13 @@ export function flagIcon(kind: SignalKind, size = 18) {
     case 'unsafe_link':
       return Icon.link(size);
     case 'voice_score':
+    case 'voice_signs':
       return Icon.wave(size);
+    case 'ai_label':
+    case 'ai_tool':
+    case 'edited_with':
+    case 'picture_signs':
+      return Icon.image(size);
     case 'face_score':
       return Icon.face(size);
     default:

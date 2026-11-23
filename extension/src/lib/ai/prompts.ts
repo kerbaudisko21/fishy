@@ -79,3 +79,66 @@ export function templateExplanation(verdict: Verdict): string {
   const more = n > 3 ? `, plus ${n - 3} more` : '';
   return `${n} red flag${n === 1 ? '' : 's'}: ${list}${more}. Hold the payment and call the person on the number on record before paying.`;
 }
+
+/* ---------- Pictures and voices: signs of AI or tampering ---------- */
+
+export const MEDIA_ASSESSMENTS = ['likely_ai', 'likely_edited', 'no_clear_signs', 'unclear'] as const;
+export type MediaAssessment = (typeof MEDIA_ASSESSMENTS)[number];
+
+export interface MediaSign {
+  sign: string;
+  where: string;
+}
+
+export interface MediaReading {
+  assessment: MediaAssessment;
+  signs: MediaSign[];
+}
+
+/** The JSON shape for a picture or voice check, on device and in the cloud. */
+export const mediaSchema = Schema.object({
+  properties: {
+    assessment: Schema.enumString({ enum: [...MEDIA_ASSESSMENTS] }),
+    signs: Schema.array({
+      items: Schema.object({
+        properties: {
+          sign: Schema.string(),
+          where: Schema.string(),
+        },
+      }),
+    }),
+  },
+});
+
+export const PICTURE_PROMPT = `You check a picture someone was sent before they act on it: a photo of a person, an ID, a receipt, an invoice, a screenshot of a bank transfer, or a frame from a video call.
+Look for visible signs that it was made by AI or changed afterwards:
+- people: warped hands or fingers, mismatched earrings or glasses, teeth or eyes that do not match, skin that is too smooth, hair melting into the background
+- light: shadows or reflections that disagree with each other
+- edits: blurry or sharp edges around one area, a patch with different noise or compression, copied textures
+- text and numbers: letters that melt or make no sense, one line in a different font, size or alignment, numbers that do not add up
+For each sign, say what it is and where in the picture. Report only what you can see. Do not guess.
+Choose an assessment: likely_ai, likely_edited, no_clear_signs, or unclear (too small or too blurry to tell).
+Never say it is certainly fake or certainly real.`;
+
+export const VOICE_PROMPT = `You listen to a short voice clip from a call before someone acts on what the voice asked for.
+Listen for signs of a cloned or synthetic voice:
+- a flat or oddly even rhythm, stress on the wrong words, no natural pauses
+- no breathing, or breaths that sound pasted in
+- metallic, buzzy or underwater sounds, clicks or sudden cuts between words
+- a background that is perfectly silent or changes between sentences
+- words pronounced in a way a native speaker would not
+For each sign, say what it is and when in the clip (for example "at about 4 s").
+Choose an assessment: likely_ai, likely_edited (spliced from several recordings), no_clear_signs, or unclear (too short, too quiet, or too noisy).
+Report only what you hear. Never say it is certainly fake or certainly real.`;
+
+/** Reads the model's JSON answer and keeps only well-formed signs (at most 6). */
+export function parseMedia(json: string): MediaReading {
+  const parsed = JSON.parse(json) as Partial<MediaReading>;
+  const assessment = MEDIA_ASSESSMENTS.includes(parsed.assessment as MediaAssessment) ? (parsed.assessment as MediaAssessment) : 'unclear';
+  const signs = (parsed.signs ?? [])
+    .filter((s): s is MediaSign => typeof s?.sign === 'string' && s.sign.trim() !== '')
+    .slice(0, 6)
+    .map((s) => ({ sign: s.sign.trim(), where: typeof s.where === 'string' ? s.where.trim() : '' }));
+  // "No clear signs" with signs listed is not a clean result.
+  return { assessment: assessment === 'no_clear_signs' && signs.length ? 'unclear' : assessment, signs };
+}
