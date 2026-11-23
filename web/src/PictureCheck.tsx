@@ -1,5 +1,6 @@
 import { useEffect, useState, type DragEvent } from 'react';
 import { scanPicture, type PictureFacts } from '../../extension/src/lib/checks/media';
+import { BAND_LABEL, scoreMedia } from '../../extension/src/lib/media-score';
 import { mediaSignals } from '../../extension/src/lib/media-signals';
 import { decide } from '../../extension/src/lib/rules/engine';
 import { line, Reveal } from '../../extension/src/lib/transitions';
@@ -63,6 +64,16 @@ export function PictureCheck() {
     void check(e.dataTransfer.files[0]);
   };
 
+  const asCheck = result && {
+    id: 'try',
+    kind: 'picture' as const,
+    name: result.name,
+    at: '',
+    checks: result.facts.checks,
+    facts: { aiLabel: result.facts.aiLabel, aiTool: result.facts.aiTool, editedWith: result.facts.editedWith },
+    gemini: result.gemini ? { assessment: result.gemini.assessment, signs: result.gemini.signs, source: result.gemini.source, model: result.gemini.reader } : result.gemini,
+  };
+  const score = asCheck ? scoreMedia(asCheck) : null;
   const verdict = result
     ? decide(
         mediaSignals([
@@ -114,7 +125,29 @@ export function PictureCheck() {
               </span>
             </div>
           )}
-          <div className={line(3, 'card')}>
+          {score && score.score !== null && (
+            <div className={line(3, `card score-card ${score.band}`)}>
+              <div className="score-line">
+                <span className="score-big">{score.score}</span>
+                <span className="muted">/100</span>
+                <strong>{BAND_LABEL[score.band]}</strong>
+              </div>
+              <div className="bar" role="img" aria-label={`FISHY score ${score.score} out of 100`}>
+                <span style={{ width: `${score.score}%` }} />
+              </div>
+              {score.reasons.length > 0 && (
+                <>
+                  <strong>Why</strong>
+                  <ul className="why-list">
+                    {score.reasons.map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+          <div className={line(4, 'card')}>
             <strong>In the file</strong>
             <ul className="flags">
               {result.facts.checks.map((c) => (
@@ -125,7 +158,7 @@ export function PictureCheck() {
               ))}
             </ul>
           </div>
-          <div className={line(4, 'card')}>
+          <div className={line(5, 'card')}>
             <div className="card-head">
               <strong>What Gemini saw</strong>
               {result.gemini && (

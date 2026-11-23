@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { BAND_LABEL, scoreMedia } from '../../lib/media-score';
 import type { MediaAssessment, MediaCheck } from '../../lib/types';
 import { DetailHead, Icon, Note, Privacy, Section, SourceBadge } from '../components';
 
@@ -36,6 +37,38 @@ function Preview({ item }: { item: MediaCheck }) {
   return item.preview ? <img className="media-preview" src={item.preview} alt={`The ${TITLE[item.kind].toLowerCase()} that was checked`} /> : null;
 }
 
+/** The FISHY score: how strongly the evidence points to AI or tampering, and why. */
+function ScorePart({ item }: { item: MediaCheck }) {
+  const s = scoreMedia(item);
+  if (s.score === null) {
+    return s.reasons.length ? <span className="row-detail">{s.reasons[0]}</span> : null;
+  }
+  return (
+    <div className={`score-block ${s.band}`}>
+      <div className="score">
+        <span className="score-num">{s.score}</span>
+        <span className="score-of">/100</span>
+        <span className="score-band">{BAND_LABEL[s.band]}</span>
+      </div>
+      <div className="meter" role="img" aria-label={`FISHY score ${s.score} out of 100`}>
+        <span className="meter-pos" style={{ transform: `translateX(${s.score}%)` }}>
+          <i />
+        </span>
+      </div>
+      {s.reasons.length > 0 && (
+        <div className="why">
+          <span className="row-title">Why</span>
+          <ul>
+            {s.reasons.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GeminiPart({ item }: { item: MediaCheck }) {
   const voice = item.kind === 'voice';
   const g = item.gemini;
@@ -59,16 +92,8 @@ function GeminiPart({ item }: { item: MediaCheck }) {
         <span className="row-title">{voice ? v.voice : v.picture}</span>
         <SourceBadge source={g.source} label={g.source === 'on_device' ? 'Gemini Nano, on device' : 'Gemini, cloud'} />
       </div>
-      {g.signs.length > 0 && (
-        <ul className="signs">
-          {g.signs.map((s, i) => (
-            <li key={i}>
-              <span className="row-title">{s.sign}</span>
-              {s.where && <span className="row-detail">{s.where}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* The signs themselves are listed under "Why", with the score. */}
+      {g.signs.length > 3 && <span className="row-detail">Plus {g.signs.length - 3} more {g.signs.length - 3 === 1 ? 'sign' : 'signs'}.</span>}
     </>
   );
 }
@@ -99,6 +124,7 @@ export function Media({ items, busy, onBack, onCheckMore }: Props) {
             <div className="surface card-pad media-card">
               <span className="row-detail media-name">{item.name}</span>
               <Preview item={item} />
+              <ScorePart item={item} />
               {item.checks.length > 0 && (
                 <ul className="rows media-facts" aria-label="In the file">
                   {item.checks.map((c) => (

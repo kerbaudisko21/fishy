@@ -16,5 +16,12 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
+    // Tests never use the real project in .env.local: no Firebase, no debug token, no network.
+    env: {
+      VITE_FIREBASE_API_KEY: '',
+      VITE_FIREBASE_PROJECT_ID: '',
+      VITE_FIREBASE_APP_ID: '',
+      VITE_APPCHECK_DEBUG_TOKEN: '',
+    },
   },
 });
