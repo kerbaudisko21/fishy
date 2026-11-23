@@ -86,14 +86,14 @@ export function Header({
       <div className="header-row">
         <span className="brand">
           <img src="/icons/icon-48.png" alt="" />
-          FISHY
+          <span className="brand-word">FISHY</span>
         </span>
         <span className="header-tools">
           {demo && <span className="demo-tag">Demo</span>}
           {where && (
             <span className="live">
               {where === 'meet' ? <span className="live-dot" /> : where === 'gmail' ? Icon.mail(12) : Icon.clipboard(12)}
-              {label}
+              <span className="live-label">{label}</span>
             </span>
           )}
           <button className="icon-btn" aria-label="Settings" onClick={onSettings}>

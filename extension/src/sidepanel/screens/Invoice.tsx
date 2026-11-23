@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { Evidence } from '../../lib/types';
 import { CheckList, DetailHead, Icon, LinkCard, Section } from '../components';
-import { money } from '../format';
+import { Amount } from '../format';
 
 type Data = NonNullable<Evidence['invoice']>;
 
@@ -15,15 +15,13 @@ export function Invoice({ data, onBack, onOpenKnown }: { data: Data; onBack: () 
     <>
       <DetailHead title={title} step="check" badges={[{ source: 'on_device', label: 'On device, PDF read locally' }]} onBack={onBack} />
       <main className="main">
-        <section className="surface" aria-label="Invoice" style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <span className="grow" style={{ gap: 3 }}>
-            <span className="row-title">{data.supplier}</span>
-            <span className="row-detail">
-              {data.number}
-              {sub ? `, ${sub}` : ''}
-            </span>
+        <section className="surface invoice-head" aria-label="Invoice">
+          <span className="row-title">{data.supplier}</span>
+          {data.amount && <Amount value={data.amount.value} currency={data.amount.currency} className="invoice-amount" />}
+          <span className="row-detail">
+            {data.number}
+            {sub ? `, ${sub}` : ''}
           </span>
-          {data.amount && <span style={{ fontFamily: 'var(--font-head)', fontSize: 20, fontWeight: 700 }}>{money(data.amount.value, data.amount.currency)}</span>}
         </section>
 
         <Section title="Where the money goes">
@@ -40,7 +38,7 @@ export function Invoice({ data, onBack, onOpenKnown }: { data: Data; onBack: () 
             </div>
             {usual ? (
               <div className="compare" style={{ padding: 16, gap: 8 }}>
-                <span className="eyebrow ok">Paid the last {usual.months.length} times</span>
+                <span className="eyebrow ok">{usual.months.length === 1 ? 'Paid once before' : `Paid the last ${usual.months.length} times`}</span>
                 <span className="mono big">
                   {usual.bank} {usual.masked}
                 </span>

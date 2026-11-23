@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { answerApproval, CONFIGURED, getApproval, type ApprovalRequest } from './api';
 import { DEMO_APPROVAL } from './demo';
-import { Brand, money } from './ui';
+import { firstName, moneyParts } from '../../extension/src/lib/names';
+import { Brand } from './ui';
 
 type Step = 'loading' | 'ask' | 'pin' | 'done' | 'invalid' | 'offline';
 type Answer = 'yes' | 'no';
@@ -87,6 +88,8 @@ export function Approval() {
     }
   };
 
+  const parts = req ? moneyParts(req.amount.value, req.amount.currency) : null;
+
   return (
     <main className="page">
       <Brand sub={req ? `Payment check for ${req.company}` : 'Payment check'} />
@@ -118,8 +121,11 @@ export function Approval() {
 
       {req && step !== 'invalid' && step !== 'loading' && (
         <section className="card" aria-label="The request">
-          <span className="muted">{req.approverName.split(' ')[0]}, someone asked for this in your name</span>
-          <span className="amount">{money(req.amount.value, req.amount.currency)}</span>
+          <span className="muted">{firstName(req.approverName, 'Hello')}, someone asked for this in your name</span>
+          <span className="amount money">
+            {parts?.currency && <span className="money-cur">{parts.currency}</span>}
+            <span className="money-num">{parts?.number}</span>
+          </span>
           <span>to {req.payee}</span>
           <span className="muted">{req.context}</span>
           {(step === 'ask' || step === 'pin') && !DEMO && (

@@ -6,6 +6,7 @@ import type { AuthVerdict } from './checks/email';
 import type { Amount } from './checks/said';
 import type { RulesConfig } from './rules/engine';
 import type { CaptionLine, CheckItem, Evidence, PaymentRequest, Signal, Supplier, Tactic } from './types';
+import { plural } from './names';
 
 /*
  * Turns raw check results ("findings") into the three things the panel shows:
@@ -66,7 +67,7 @@ export const YOUNG_DOMAIN_DAYS = 30;
 export const VOICE_FLAG_AT = 0.6;
 
 const listWords = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
-const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
+// Counts with separators and the right plural ("1 payment", "1,284 confirmed scams").
 
 export function toSignals(f: Findings): Signal[] {
   const out: Signal[] = [];
@@ -91,7 +92,7 @@ export function toSignals(f: Findings): Signal[] {
       step: 'check',
       source: 'on_device',
       title: 'Bank account changed',
-      detail: `The invoice account differs from the last ${inv.supplier.paidMonths.length} payments to ${inv.supplier.name.replace(/^PT\s+/, '')}.`,
+      detail: `The invoice account differs from the last ${plural(inv.supplier.paidMonths.length, 'payment')} to ${inv.supplier.name.replace(/^PT\s+/, '')}.`,
     });
   }
   if (inv?.traces.some((t) => !t.ok)) {

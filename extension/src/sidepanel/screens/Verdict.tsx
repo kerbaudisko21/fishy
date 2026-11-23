@@ -1,11 +1,12 @@
 ﻿import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { shareIncident } from '../../lib/data';
+import { firstName } from '../../lib/names';
 import { useFirstSeen } from '../motion';
 import { waitingFor } from '../../lib/call-wait';
 import type { CallStatus, CallTarget, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
 import { FlagRow, Icon, Privacy, Section, SourceBadge, StepTrack, Tile, trackFor } from '../components';
-import { money } from '../format';
+import { Amount, money } from '../format';
 import type { Screen } from '../routes';
 import { useNow } from '../useCall';
 import { useExplanation } from '../useExplanation';
@@ -32,7 +33,7 @@ interface Props {
   onVoice?: () => void;
 }
 
-const first = (name?: string) => name?.split(' ')[0] ?? 'them';
+const first = (name?: string) => firstName(name);
 const mmss = (ms: number) => {
   const s = Math.max(0, Math.round(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -240,7 +241,7 @@ export function Verdict(p: Props) {
                 <div>
                   <dt>Amount</dt>
                   <dd>
-                    <span className="amount">{money(request.amount.value, request.amount.currency)}</span>
+                    <Amount value={request.amount.value} currency={request.amount.currency} />
                     {request.dueText && <span className="request-sub">{request.dueText}</span>}
                   </dd>
                 </div>
@@ -338,7 +339,7 @@ export function Verdict(p: Props) {
             {Icon.phone()}
             Call {first(target?.name)} on record
           </button>
-          <span className="bar-hint">Number from Directory, never from the message.</span>
+          <span className="bar-hint">{target ? 'Number from Directory, never from the message.' : 'No one on record to call yet. Add approvers in the Firebase console.'}</span>
         </div>,
         document.body,
       )}

@@ -1,9 +1,11 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { suspectsFrom } from '../lib/checks/known';
+import { firstName } from '../lib/names';
 import { IN_EXTENSION } from '../lib/config';
 import { isPageMessage, type BannerState, type PanelMessage } from '../lib/messages';
 import type { CallTarget, Evidence, SignalKind } from '../lib/types';
 import { Header, TrackContext, trackFor } from './components';
+import { DataToggle } from './DataToggle';
 import { placeFor, screenFor, type Screen } from './routes';
 import { CheckYourself } from './screens/CheckYourself';
 import { Directory } from './screens/Directory';
@@ -33,7 +35,7 @@ function hasEvidence(screen: Screen, ev: Evidence) {
   return !key || !!ev[key];
 }
 
-const first = (name?: string) => name?.split(' ')[0] ?? '';
+const first = (name?: string) => firstName(name, '');
 
 /** Check is home, Directory sits beside it, everything else opens on top. */
 const DEPTH = (s: Screen) => (s === 'verdict' ? 0 : s === 'directory' ? 1 : 2);
@@ -135,6 +137,7 @@ export function App() {
 
   return (
     <>
+      <DataToggle />
       <Header where={where} demo={a.mode === 'demo'} tab={tab} onTab={setScreen} onSettings={() => setScreen('settings')} />
 
       {error && (

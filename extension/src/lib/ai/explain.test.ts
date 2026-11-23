@@ -32,8 +32,7 @@ describe('explainPrompt', () => {
 describe('templateExplanation', () => {
   it('names the top three flags and counts the rest', () => {
     const t = templateExplanation(fishy);
-    expect(t).toContain('bank account changed, pressure in the request and known scam account');
-    expect(t).toContain('(plus 1 more)');
+    expect(t).toContain('4 red flags: bank account changed, pressure in the request and known scam account, plus 1 more.');
     expect(t).toContain('number on record');
   });
 

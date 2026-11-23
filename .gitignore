@@ -24,3 +24,4 @@ ui-debug.log
 # Built for release
 extension/dist-demo/
 release/
+extension/dist-stress/

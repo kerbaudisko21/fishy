@@ -73,8 +73,9 @@ export function templateExplanation(verdict: Verdict): string {
   if (verdict.flags.length === 0) {
     return 'No red flags found. For any payment, still confirm with the person on the number on record.';
   }
+  const n = verdict.flags.length;
   const top = verdict.flags.slice(0, 3).map((f) => f.title.toLowerCase());
   const list = top.length > 1 ? `${top.slice(0, -1).join(', ')} and ${top[top.length - 1]}` : top[0];
-  const more = verdict.flags.length > 3 ? ` (plus ${verdict.flags.length - 3} more)` : '';
-  return `This request shows ${list}${more}. Hold the payment and call the person on the number on record before paying.`;
+  const more = n > 3 ? `, plus ${n - 3} more` : '';
+  return `${n} red flag${n === 1 ? '' : 's'}: ${list}${more}. Hold the payment and call the person on the number on record before paying.`;
 }

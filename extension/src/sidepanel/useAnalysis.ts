@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { DEMO_EVIDENCE, DEMO_REQUEST, DEMO_SIGNALS } from '../demo/fixtures';
+import { demoData } from '../demo/dataset';
 import { readTactics } from '../lib/ai/tactics';
 import { DEMO, IN_EXTENSION } from '../lib/config';
 import { domainOf, findLookalike, registrable } from '../lib/checks/domain';
@@ -248,7 +248,8 @@ export function useAnalysis() {
 
   const out = useMemo(() => {
     if (mode === 'demo') {
-      return { signals: DEMO_SIGNALS, evidence: DEMO_EVIDENCE, request: DEMO_REQUEST, verdict: decide(DEMO_SIGNALS, rules), place: 'meet' as const };
+      const demo = demoData();
+      return { signals: demo.signals, evidence: demo.evidence, request: demo.request, verdict: decide(demo.signals, rules), place: demo.request?.place ?? ('meet' as const) };
     }
     const signals = toSignals(full);
     const verdict = decide(signals, rules);

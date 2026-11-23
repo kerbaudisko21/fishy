@@ -1,7 +1,8 @@
 import { addDoc, collection, doc, getDocs, getFirestore, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
-import { DEMO_DIRECTORY, DEMO_KNOWN_BAD, DEMO_SUPPLIERS } from '../demo/fixtures';
+import { demoData } from '../demo/dataset';
+import { DEMO_KNOWN_BAD } from '../demo/fixtures';
 import type { StartResult } from './call-wait';
 import { DATABASE, DEMO, FIREBASE_READY, IN_EXTENSION, REGION } from './config';
 import { DEFAULT_SELECTORS, SELECTORS_KEY, type PageSelectors } from './messages';
@@ -25,7 +26,10 @@ export interface Directory {
 
 /** People and suppliers on record, masked (Firestore `directoryPublic`). */
 export async function loadDirectory(): Promise<Directory> {
-  if (!FIREBASE_READY) return { people: DEMO_DIRECTORY, suppliers: DEMO_SUPPLIERS };
+  if (!FIREBASE_READY) {
+    const { people, suppliers } = demoData();
+    return { people, suppliers };
+  }
   await ensureSignedIn();
   const snap = await getDocs(collection(db(), 'directoryPublic'));
   const people: DirectoryPerson[] = [];

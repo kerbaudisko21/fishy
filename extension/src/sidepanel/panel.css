@@ -13,7 +13,10 @@ h1[tabindex='-1']:focus { outline: none; }
 .header { background: var(--ink); color: #fff; padding: 14px 16px 0; position: relative; z-index: 2; }
 .header-row { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; }
 .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-head); font-weight: 700; font-size: 19px; letter-spacing: .08em; }
-.brand img { width: 30px; height: 30px; border-radius: 8px; }
+.brand img { width: 30px; height: 30px; border-radius: 8px; flex: none; }
+.header-tools { flex: none; }
+/* At 200% zoom the panel is about 200px wide: the logo and the icons stay, the words step aside. */
+@media (max-width: 300px) { .brand-word, .live-label, .demo-tag { display: none; } .live { padding: 0 9px; } }
 .header-tools { display: flex; align-items: center; gap: 8px; }
 .live { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 999px; background: var(--navy-2); font-size: 12.5px; font-weight: 600; color: #e4eaef; }
 .live-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--brand); box-shadow: 0 0 0 3px rgba(242, 107, 78, .25); }
@@ -50,7 +53,7 @@ h1[tabindex='-1']:focus { outline: none; }
   --node-done-bg: var(--ok); --node-done-fg: #fff; --node-flag-bg: var(--brand); --node-flag-fg: var(--ink); --track-line: #8cc5b7;
 }
 .hero-pill { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 999px; background: var(--pill-bg); color: var(--pill-fg); font-size: 12.5px; font-weight: 700; }
-.hero h1 { font-size: 30px; line-height: 1.08; letter-spacing: -.01em; }
+.hero h1 { font-size: clamp(22px, 8vw, 30px); line-height: 1.08; letter-spacing: -.01em; overflow-wrap: break-word; }
 .hero p { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--hero-sub); max-width: 34ch; }
 .hero .escalate { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--navy-2); font-size: 13px; color: #dbe3ea; max-width: none; }
 /* The same row as a link: the approval page, when no phone call was placed. */
@@ -112,7 +115,16 @@ h1[tabindex='-1']:focus { outline: none; }
 .request > div + div { border-top: 1px solid var(--line-soft); }
 .request dt { font-size: 12.5px; color: var(--muted); }
 .request dd { margin: 0; font-size: 14px; font-weight: 600; display: flex; flex-direction: column; gap: 2px; }
-.request .amount { font-family: var(--font-head); font-size: 24px; line-height: 1.1; font-weight: 700; }
+.request .amount { font-family: var(--font-head); font-size: clamp(16px, 11cqi, 24px); line-height: 1.1; font-weight: 700; }
+/* Amounts: never truncated. A currency code wraps above the number when the number needs the width. */
+.money { display: inline-flex; flex-wrap: wrap; align-items: baseline; column-gap: .3em; font-variant-numeric: tabular-nums; }
+.money-num { white-space: nowrap; }
+/* A narrow panel gives the request's values the full width */
+.request { container-type: inline-size; }
+@container (max-width: 300px) { .request > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.invoice-head { padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.invoice-amount { font-family: var(--font-head); font-size: 22px; line-height: 1.15; font-weight: 700; }
+.supplier-account { font-size: 13px; font-weight: 600; }
 .request-sub { font-size: 12.5px; font-weight: 500; color: var(--muted); }
 .request-sub.mono { color: var(--ink-2); }
 
@@ -123,7 +135,7 @@ h1[tabindex='-1']:focus { outline: none; }
 .flag:disabled { cursor: default; }
 .flag-icon { flex: none; width: 36px; height: 36px; border-radius: 11px; background: var(--danger-bg); color: var(--danger-text); display: flex; align-items: center; justify-content: center; }
 .flag-title { font-size: 14.5px; font-weight: 650; }
-.flag-detail { font-size: 13px; line-height: 1.45; color: var(--muted); }
+.flag-detail { font-size: 13px; line-height: 1.45; color: var(--muted); overflow-wrap: break-word; }
 .flag-chevron { flex: none; align-self: center; color: #8a979f; display: flex; }
 .meta { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
 .meta.wrap { flex-wrap: wrap; gap: 8px; }
@@ -215,7 +227,7 @@ h1[tabindex='-1']:focus { outline: none; }
 .check-row { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; }
 .check-row + .check-row { border-top: 1px solid var(--line-soft); }
 .row-title { font-size: 14px; font-weight: 650; }
-.row-detail { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.row-detail { font-size: 12.5px; line-height: 1.45; color: var(--muted); overflow-wrap: break-word; }
 .dot { flex: none; width: 26px; height: 26px; border-radius: 999px; display: flex; align-items: center; justify-content: center; }
 .dot.flagged { background: var(--danger-bg); color: var(--danger-text); }
 .dot.ok { background: var(--ok-bg); color: var(--ok); }
@@ -234,7 +246,7 @@ mark { background: var(--danger-bg); color: var(--ink); border-radius: 4px; padd
 .compare + .compare { border-top: 1px solid var(--line); }
 .compare.flagged { background: #fdeee9; }
 .compare.ok { background: #f1f8f5; }
-.compare .mono { font-size: 13px; }
+.compare .mono { font-size: 13px; overflow-wrap: break-word; }
 .compare .mono.big { font-size: 17px; font-weight: 600; }
 .compare-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .diff { background: var(--danger-bg); color: var(--danger-text); border-radius: 3px; padding: 0 2px; }
