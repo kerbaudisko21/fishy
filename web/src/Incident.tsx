@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CONFIGURED, getAuditLog, getIncident, markHandled, type Incident } from './api';
 import { DEMO_AUDIT, DEMO_INCIDENT } from './demo';
-import { Brand, when } from './ui';
+import { Brand, Version, when } from './ui';
 
 const params = new URLSearchParams(location.search);
 const id = params.get('id') ?? '';
@@ -118,6 +118,7 @@ export function IncidentPage() {
       )}
 
       {DEMO && <p className="foot">Demo data.</p>}
+      <Version />
     </main>
   );
 }

@@ -6,7 +6,7 @@ import type { Signal, Source, Tactic, Verdict } from '../../extension/src/lib/ty
 import { CONFIGURED } from './api';
 import { explain, nanoStatus, readTactics, type Explanation, type NanoStatus, type ReadResult } from './hybrid';
 import { line, Reveal } from '../../extension/src/lib/transitions';
-import { Brand } from './ui';
+import { Brand, Version } from './ui';
 
 /*
  * /try: the hosted way for judges to see Step 1 and the explanation run through Firebase AI Logic,
@@ -227,6 +227,7 @@ export function TryPage() {
       <p className="foot">
         FISHY does not store what you paste. Known scam details are matched against the demo company’s list. All names in the sample are made up.
       </p>
+      <Version />
     </main>
   );
 }

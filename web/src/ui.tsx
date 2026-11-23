@@ -1,8 +1,14 @@
+import { versionLine } from '../../extension/src/lib/version';
 export const money = (value: number, currency: string) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
 
 export const when = (t: number) =>
   new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+/** Which build of the pages is running: "v0.2.0 · 760809d · built 23 Nov, 14:05". */
+export function Version() {
+  return <p className="version">FISHY {versionLine()}</p>;
+}
 
 export function Brand({ sub }: { sub: string }) {
   return (

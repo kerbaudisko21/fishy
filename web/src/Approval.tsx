@@ -3,7 +3,7 @@ import { answerApproval, CONFIGURED, getApproval, type ApprovalRequest } from '.
 import { DEMO_APPROVAL } from './demo';
 import { firstName, moneyParts } from '../../extension/src/lib/names';
 import { line, Reveal, useErrorShake } from '../../extension/src/lib/transitions';
-import { Brand } from './ui';
+import { Brand, Version } from './ui';
 
 type Step = 'loading' | 'ask' | 'pin' | 'done' | 'invalid' | 'offline';
 type Answer = 'yes' | 'no';
@@ -219,6 +219,7 @@ export function Approval() {
       <p className="foot">
         {DEMO ? 'Demo data. ' : ''}The same check as the phone menu, for when a call can’t reach you. This link works once and expires in 10 minutes.
       </p>
+      <Version />
     </main>
   );
 }

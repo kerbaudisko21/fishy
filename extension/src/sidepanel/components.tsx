@@ -1,4 +1,5 @@
 import { createContext, useContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { versionLine } from '../lib/version';
 import type { CallState, CheckItem, Signal, SignalKind, Source, Step, Verdict } from '../lib/types';
 
 /* ---------- Icons (inline stroke SVG, decorative) ---------- */
@@ -84,7 +85,7 @@ export function Header({
   return (
     <header className="header">
       <div className="header-row">
-        <span className="brand">
+        <span className="brand" title={`FISHY ${versionLine()}`}>
           <img src="/icons/icon-48.png" alt="" />
           <span className="brand-word">FISHY</span>
         </span>

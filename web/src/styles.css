@@ -48,6 +48,8 @@ input { height: 52px; padding: 0 16px; border-radius: 14px; border: 1px solid va
 .expires { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--ink-2); }
 .expires strong { font-variant-numeric: tabular-nums; }
 
+.version { margin: 0; font-size: 11.5px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.page.dark .version { color: #a9b6c2; }
 .foot { margin: auto 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); text-align: center; }
 
 /* Incident report (dark, like the phone screens in the design) */

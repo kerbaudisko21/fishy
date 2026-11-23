@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { builtWhen, COMMIT, VERSION } from '../../lib/version';
 import { nanoStatus, prepareNano, type NanoStatus } from '../../lib/ai/tactics';
 import { FIREBASE_READY } from '../../lib/config';
 import { DetailHead, Icon, Section } from '../components';
@@ -102,6 +103,15 @@ export function Settings({ mode, rulesVersion, knownCount, onBack, onDemo, onCle
             </button>
           </div>
         </div>
+        </Section>
+
+        <Section title="About">
+          <div className="surface card-pad">
+            <span className="row-title">FISHY {`v${VERSION}`}</span>
+            <span className="row-detail">
+              Build <span className="mono">{COMMIT}</span>, {builtWhen()}
+            </span>
+          </div>
         </Section>
       </main>
     </>
