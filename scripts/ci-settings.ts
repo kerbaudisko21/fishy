@@ -33,7 +33,12 @@ const OPTIONAL = [
   'FIREBASE_MESSAGING_SENDER_ID',
   'RECAPTCHA_ENTERPRISE_KEY',
   'FCM_VAPID_KEY',
+  'AI_PROVIDER',
 ] as const;
+
+// Which Gemini API the hosted pages' cloud model uses. The same two names, read the same way,
+// as VITE_AI_PROVIDER in extension/src/lib/ai/provider.ts.
+const AI_PROVIDERS = ['developer', 'agent-platform'];
 
 // Both end up in file names and web addresses, so they must be plain IDs.
 const ID = /^[a-z0-9][a-z0-9-]{2,40}[a-z0-9]$/;
@@ -62,6 +67,11 @@ export function ciSettings(env: Record<string, string | undefined>): CiSettings 
     if (value(name) !== '' && !ID.test(value(name))) {
       problems.push(`${name} is not a valid ID: small letters, digits and hyphens only.`);
     }
+  }
+  // A wrong name must not fall back quietly: the built-in choice may be the API the project refuses.
+  const aiProvider = value('AI_PROVIDER').toLowerCase();
+  if (aiProvider !== '' && !AI_PROVIDERS.includes(aiProvider)) {
+    problems.push(`AI_PROVIDER must be "developer" or "agent-platform", not "${value('AI_PROVIDER')}".`);
   }
   if (problems.length > 0) {
     return { ok: false, problems };
@@ -95,6 +105,10 @@ export function ciSettings(env: Record<string, string | undefined>): CiSettings 
     ['VITE_RECAPTCHA_ENTERPRISE_KEY', value('RECAPTCHA_ENTERPRISE_KEY')],
     ['VITE_FCM_VAPID_KEY', value('FCM_VAPID_KEY')],
   ];
+  // Left out when not named, so the pages keep their built-in choice (the Gemini Developer API).
+  if (aiProvider !== '') {
+    webEnv.push(['VITE_AI_PROVIDER', aiProvider]);
+  }
 
   return {
     ok: true,
