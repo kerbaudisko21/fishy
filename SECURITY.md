@@ -1,15 +1,13 @@
 # Security
 
-FISHY handles things attackers control: the emails, PDFs, pictures, voices and calls it checks. This page says what protects it, what a review on 23 Nov 2026 found and fixed, and what is still open.
+FISHY handles things attackers control: the pictures, PDFs, voices, video calls, websites and QR codes it checks. This page says what protects it, what a review on 23 Nov 2026 found and fixed, and what is still open.
 
 To report a problem, open a private security advisory on this repository.
 
 ## How it is protected
 
-- **The number FISHY calls never comes from the message or the client.** Functions take a person's ID, read the number on record on the server and never send it back.
-- **Twilio webhooks are signed**, checked against an address built from `PUBLIC_BASE_URL`, not from the request.
-- **Links are tokens, stored hashed.** Approval and incident links carry 32 random bytes; only their SHA-256 is kept, compared in constant time. PINs are stored with scrypt and a salt per person.
-- **Firestore rules close everything private** (directory phones and PINs, call records, reported details, counters). A client can create only a small check summary of a known shape, stamped with the server's time.
+- **Firestore rules close everything private.** Clients may read only the suppliers on record, the known-bad list and reported-picture fingerprints. The only thing they can write is one fingerprint report each, of a fixed shape, stamped with the server's time.
+- **The two functions take an address and nothing else.** `checkLinks` and `domainAge` require App Check and sign-in, accept only the field they need, and cap its size.
 - **Files from strangers are read locked down.** pdf.js runs with `isEvalSupported: false` and no XFA forms; files over 20 MB are refused before they are read.
 - **Model output cannot change the verdict directly.** Gemini answers in a fixed JSON shape (enums and short strings), shown as text; fixed rules decide. Untrusted text is fenced and labelled as data, and the keyword reader always runs beside Gemini.
 - **Hosting sends security headers** (`nosniff`, `no-referrer`, no framing, HSTS).
@@ -67,7 +65,12 @@ Reviewed against the OWASP Top 10 (2021) and the OWASP Top 10 for LLM applicatio
 
 ## Changed in 0.9.0
 
-- **The payment and calling flow left the extension.** That removed the Meet and Gmail page scripts, and with them the extension's host permissions for meet.google.com and mail.google.com. The calling functions are still deployed but unused; turning them off is a separate, careful step.
+- **The payment and calling flow is gone:**
+  - the Meet and Gmail page scripts, and with them the host permissions for meet.google.com and mail.google.com;
+  - the calling, approval, PIN, incident, learning and alert functions;
+  - the approval and incident web pages, and the `checks` rules.
+
+  Only `checkLinks` and `domainAge` remain. The Twilio secrets and the old Firestore collections can be deleted by hand.
 - **Gemini's boxes are checked before they are drawn:** four numbers on 0–1000, in order, not a sliver. A broken box is dropped and the sign is kept.
 
 ## Still open (known)

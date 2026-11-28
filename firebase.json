@@ -21,13 +21,6 @@
     ],
     "rewrites": [
       {
-        "source": "/voice/**",
-        "function": {
-          "functionId": "voice",
-          "region": "asia-southeast2"
-        }
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }

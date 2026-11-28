@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { RequestError } from '../src/call/ports.ts';
+import { RequestError } from '../src/request-error.ts';
 import { ADVISORY } from '../src/webrisk/checkLink.ts';
 import type { ThreatLookup } from '../src/webrisk/checkLink.ts';
 import { checkLinks } from '../src/webrisk/checkLinks.ts';

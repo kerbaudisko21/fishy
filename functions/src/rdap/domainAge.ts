@@ -5,7 +5,7 @@
 // public successor to WHOIS; rdap.org forwards each lookup to the registry that
 // holds the domain.
 
-import { RequestError } from '../call/ports.ts';
+import { RequestError } from '../request-error.ts';
 
 export interface RdapEvent {
   eventAction?: string;

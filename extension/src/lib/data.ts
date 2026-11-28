@@ -1,15 +1,12 @@
-import { addDoc, collection, doc, getDocs, getFirestore, limit, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, doc, getDocs, getFirestore, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
 import { demoData } from '../demo/dataset';
 import { DEMO_KNOWN_BAD } from '../demo/fixtures';
-import type { StartResult } from './call-wait';
-import { DATABASE, DEMO, FIREBASE_READY, IN_EXTENSION, REGION } from './config';
-import { DEFAULT_SELECTORS, SELECTORS_KEY, type PageSelectors } from './messages';
+import { DATABASE, FIREBASE_READY, IN_EXTENSION, REGION } from './config';
 import { ensureSignedIn, firebaseApp } from './firebase';
 import { DEFAULT_RULES, mergeRules, type RulesConfig } from './rules/engine';
-import type { Suspects } from './checks/known';
-import type { CallState, CallStatus, DirectoryPerson, KnownBadEntry, SignalKind, Supplier } from './types';
+import type { DirectoryPerson, KnownBadEntry, Supplier } from './types';
 
 /*
  * Everything the panel reads from or writes to Firebase. Without a Firebase config, each
@@ -74,81 +71,6 @@ export async function loadRules(): Promise<RulesConfig> {
   }
 }
 
-/** What a check stores: signal kinds and masked details only, never message text. */
-export interface CheckSummary {
-  flags: SignalKind[];
-  patterns: string[];
-  place: 'meet' | 'gmail' | 'paste';
-  amount?: { value: number; currency: string };
-  payee?: string;
-}
-
-export async function createCheck(summary: CheckSummary): Promise<string> {
-  const user = await ensureSignedIn();
-  // Firestore refuses undefined values, and the rules accept only known fields: leave empty ones out.
-  const clean = Object.fromEntries(Object.entries(summary).filter(([, v]) => v !== undefined));
-  const ref = await addDoc(collection(db(), 'checks'), { ownerUid: user.uid, createdAt: serverTimestamp(), summary: clean });
-  return ref.id;
-}
-
-/** Step 4: asks Cloud Functions to call the target on the number on record (never a number from the message). */
-export async function startVerificationCall(checkId: string, targetId: string): Promise<StartResult> {
-  const { data } = await fn<{ checkId: string; personId: string }, Partial<StartResult>>('startVerificationCall')({ checkId, personId: targetId });
-  // The answer says whether a phone call was really placed, and gives the approval page when there is one.
-  return { call: data.call === 'placed' ? 'placed' : 'not_placed', reason: data.reason ?? null, approvalUrl: data.approvalUrl ?? null };
-}
-
-/**
- * Shared learning: the accounts, domains and numbers in the request, kept beside the check.
- * They join the known-scam list only if the real person says "not me" and enters their PIN.
- * Best effort: a failure here never stops the call.
- */
-export async function reportSuspects(checkId: string, suspects: Suspects): Promise<void> {
-  if (!suspects.accounts.length && !suspects.domains.length && !suspects.numbers.length) return;
-  try {
-    await fn<{ checkId: string; suspects: Suspects }, { kept: number }>('reportSuspects')({ checkId, suspects });
-  } catch (e) {
-    console.warn('[FISHY] reporting the request details failed', e);
-  }
-}
-
-/** A link to this check's incident report, for the finance manager. Null when it cannot be made. */
-export async function shareIncident(checkId: string): Promise<string | null> {
-  if (!FIREBASE_READY) return null;
-  try {
-    return (await fn<{ checkId: string }, { url: string }>('shareIncident')({ checkId })).data.url;
-  } catch (e) {
-    console.warn('[FISHY] sharing the incident report failed', e);
-    return null;
-  }
-}
-
-const CALL_STATES: CallState[] = ['idle', 'ringing', 'confirmed', 'not_me', 'no_answer', 'escalated'];
-
-/** Call progress, written by Cloud Functions from the phone menu. */
-export function watchCall(checkId: string, onChange: (s: Partial<CallStatus>) => void) {
-  return onSnapshot(doc(db(), 'checks', checkId), (snap) => {
-    const call = snap.data()?.call as { state?: string; escalateAt?: { toMillis(): number }; escalatedTo?: string } | undefined;
-    if (!call?.state || !CALL_STATES.includes(call.state as CallState)) return;
-    onChange({ state: call.state as CallState, escalateAt: call.escalateAt?.toMillis(), escalatedTo: call.escalatedTo });
-  });
-}
-
-/**
- * R8 · Voice-clone score for a clip the user chose to send. Returns 0–1, or null when the function
- * is not reachable. In demo mode without Firebase it returns the demo story's 0.87, labelled as demo.
- */
-export async function scoreVoice(base64: string, mime: string): Promise<{ score: number; demo: boolean } | null> {
-  if (!FIREBASE_READY) return DEMO ? { score: 0.87, demo: true } : null;
-  try {
-    const { score } = (await fn<{ audio: string; mime: string }, { score: number }>('scoreVoice')({ audio: base64, mime })).data;
-    return { score, demo: false };
-  } catch (e) {
-    console.warn('[FISHY] voice score failed', e);
-    return null;
-  }
-}
-
 /** R3 · Domain age in days (RDAP lookup in Cloud Functions; only the domain is sent). */
 export async function domainAge(domain: string): Promise<{ days: number; registered: string } | null> {
   if (!FIREBASE_READY) return null;
@@ -157,23 +79,6 @@ export async function domainAge(domain: string): Promise<{ days: number; registe
   } catch (e) {
     console.warn('[FISHY] domain age failed', e);
     return null;
-  }
-}
-
-/** Pushes Meet/Gmail selectors from Remote Config to the content scripts (deck risk: "Meet pages change"). */
-export async function syncSelectors() {
-  if (!FIREBASE_READY || !IN_EXTENSION) return;
-  try {
-    const rc = getRemoteConfig(firebaseApp());
-    await fetchAndActivate(rc);
-    const meet = getValue(rc, 'meet_caption_selectors').asString();
-    const gmail = getValue(rc, 'gmail_selectors').asString();
-    const value: Partial<PageSelectors> = {};
-    if (meet) value.meetCaptions = JSON.parse(meet);
-    if (gmail) value.gmail = { ...DEFAULT_SELECTORS.gmail, ...JSON.parse(gmail) };
-    await chrome.storage.local.set({ [SELECTORS_KEY]: value });
-  } catch (e) {
-    console.warn('[FISHY] selectors not updated', e);
   }
 }
 

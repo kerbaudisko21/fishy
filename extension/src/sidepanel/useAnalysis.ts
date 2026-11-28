@@ -25,7 +25,7 @@ import { candidatesFromText, matchKnown, type Candidate } from '../lib/checks/kn
 import { scanPicture } from '../lib/checks/media';
 import { readPdf, renderFirstPage } from '../lib/checks/pdf';
 import { mainAmount, type SaidLine } from '../lib/checks/said';
-import { checkLinks, domainAge, findReported, reportFake, loadDirectory, loadKnownBad, loadRules, syncSelectors, type Directory } from '../lib/data';
+import { checkLinks, domainAge, findReported, reportFake, loadDirectory, loadKnownBad, loadRules, type Directory } from '../lib/data';
 import { base64ToBuffer, type AttachmentReply, type PageMessage, type PanelMessage } from '../lib/messages';
 import { toEvidence, toRequest, toSignals, type Findings, type TranscriptLine } from '../lib/pipeline';
 import { decide, DEFAULT_RULES, type RulesConfig } from '../lib/rules/engine';
@@ -141,7 +141,6 @@ export function useAnalysis() {
     loadKnownBad().then(setKnown).catch((e) => console.warn('[FISHY] known list', e));
     loadRules().then(setRules);
     void loadStats();
-    void syncSelectors();
   }, []);
 
   const goLive = useCallback(() => setMode('live'), []);

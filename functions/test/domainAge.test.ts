@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { RequestError } from '../src/call/ports.ts';
+import { RequestError } from '../src/request-error.ts';
 import { domainAge } from '../src/rdap/domainAge.ts';
 import type { RdapEvent } from '../src/rdap/domainAge.ts';
 

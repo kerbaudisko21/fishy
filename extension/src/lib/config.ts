@@ -19,5 +19,3 @@ export const DATABASE = 'fishy';
 /** Cloud Functions region; must match functions/src/index.ts. */
 export const REGION = 'asia-southeast2';
 
-/** Minutes before an unanswered call escalates to the next approver (deck: 10 min). */
-export const ESCALATE_MINUTES = 10;

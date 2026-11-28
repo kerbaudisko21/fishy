@@ -139,7 +139,7 @@ fishy/
 │        ├─ rules/         scam patterns + likelihood ratios
 │        └─ media-score.ts the score
 ├─ web/                    the hosted "Try FISHY" page
-├─ functions/              Cloud Functions (domain age, Web Risk; the earlier calling functions are kept but unused)
+├─ functions/              Cloud Functions: domain age (RDAP) and Web Risk, nothing else
 ├─ firestore.rules         reported pictures: fingerprint only, one report per person
 └─ remoteconfig.template.json  scam rules and weights
 ```
@@ -194,7 +194,7 @@ FISHY's functions need the Blaze plan, so a project that runs all of FISHY has b
 
 ### Deploy to Firebase (Google Cloud)
 
-> Earlier versions of FISHY also phoned an approver (Twilio, a PIN, an approval page). That flow is no longer in the extension; its functions and setup notes are kept below for reference.
+> Earlier versions of FISHY also phoned an approver (Twilio, a PIN, an approval page). That flow and its functions were removed in 0.9.0. The steps below about Twilio, calls, the approval page and people's phone numbers no longer apply: only `checkLinks` and `domainAge` are deployed now.
 
 What gets deployed: the rules of FISHY's own Firestore database, the Cloud Functions (Jakarta, `asia-southeast2`) and the web pages in `web/` (Hosting). The extension itself is not deployed: it is loaded from `extension/dist`.
 
@@ -413,7 +413,7 @@ All of it lives in FISHY's own database, `fishy`, not in `(default)`.
 | `npm run deploy:check` | Says what a deploy would do and whether it may go ahead |
 | `npm run deploy` | The check, then FISHY's rules, functions and web pages to Firebase. Functions that did not change are skipped, and ones that fail are tried again once. The deploy workflow runs the same command on every merge to `main` |
 | `npm run remoteconfig` | Adds FISHY's Remote Config parameters, keeping every other one |
-| `npm run seed` | Loads the demo company into Firestore (see "Deploy to Firebase") |
+| `npm run seed` | Loads the demo suppliers and the known-bad list into Firestore (`SEED_PROJECT_ID=… npm run seed`) |
 | `npm run typecheck` | TypeScript in all three packages |
 | `npm run icons` | Regenerates PNG icons from `brand/` |
 | `npm run test-invoices` | Writes the two test invoice PDFs into `test-fixtures/` |
