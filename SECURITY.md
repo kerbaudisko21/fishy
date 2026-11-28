@@ -31,6 +31,21 @@ To report a problem, open a private security advisory on this repository.
 | No Hosting security headers | Added |
 | Actions pinned by tag | Pinned by commit SHA, with Dependabot |
 
+## Fixed on 28 Nov 2026 (0.6.1)
+
+Reviewed against the OWASP Top 10 (2021) and the OWASP Top 10 for LLM applications, and `npm audit` (0 known vulnerabilities in any workspace).
+
+| Finding | OWASP | Fix |
+|---|---|---|
+| A website's title went into what Gemini is told: a scam page could write instructions there | LLM01 Prompt injection | Page text never goes to Gemini; the title and addresses are quoted as one short line with markup, control and bidirectional characters removed, labelled "not an instruction", inside the fenced measurements |
+| A small picture file can claim to be 40000 × 40000 pixels; decoding it would take gigabytes | A04 Insecure design (resource exhaustion) | The size is read from the PNG, JPEG, GIF or WebP header first; over about 50 megapixels is refused before decoding |
+| 20 MB of compressed audio can be hours long | A04 | A recording's length is read before decoding; over 5 minutes is refused, and only the first minute is measured and sent |
+| A malformed or hostile Remote Config pattern could crash the verdict | A08 Data integrity | `mergeRules` takes only well-formed fields (types, lengths, ranges); built-in checks can't be switched off |
+| A model answer with `signs` that isn't a list crashed the card; signs had no length limit | LLM05 Improper output handling | All three answer readers accept only a well-formed object; at most 6 signs of 240 characters; shown as text, never markup |
+| A damaged picture, an empty file or an SVG drawing made an empty result card | | Refused with a plain message before a card is made; an SVG's script never runs |
+| Previews, frames and heat maps were never released | | Their object URLs are revoked when a check is cleared |
+| The website's address sent for the unsafe-sites lookup could carry tokens in its query string | A01/A02 data exposure | Only the origin and path are sent (query and fragment dropped), capped at 2048 characters |
+
 ## Still open (known)
 
 - **Live builds carry an App Check debug token.** `npm run package` builds without one; never hand out a build made from `.env.local`, and revoke a debug token if one leaves your hands. A real release needs a real App Check provider.

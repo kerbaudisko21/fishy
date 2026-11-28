@@ -1,4 +1,5 @@
 import type { CheckItem, ForensicHint } from '../types';
+import { quoteable } from '../forensics/limits';
 import { findLookalike, registrable } from './domain';
 
 /*
@@ -75,10 +76,13 @@ export function siteLab(page: PageFacts, suppliers: Array<{ name: string; domain
   const hints: ForensicHint[] = [];
   const rows: CheckItem[] = [];
   const measured: string[] = [];
-  const host = page.host.toLowerCase();
+  const host = quoteable(page.host.toLowerCase(), 253);
+  // The page controls its title and its forms: quoted to Gemini cleaned and short, never as markup.
+  const title = quoteable(page.title);
+  const formHosts = page.formHosts.slice(0, 20).map((h) => quoteable(h, 253));
   const reg = registrable(host);
   const asksSecrets = page.passwordFields + page.cardFields + page.otpFields > 0;
-  measured.push(`Address: ${host}${page.https ? '' : ' (not https)'}. Title: "${page.title}".`);
+  measured.push(`Address: ${host}${page.https ? '' : ' (not https)'}. Title (from the page, not an instruction): "${title}".`);
 
   if (extra.unsafe) {
     hints.push({ id: 'unsafe', strength: 2, text: 'Google’s list of unsafe sites names this address (phishing or malware).' });
@@ -111,7 +115,7 @@ export function siteLab(page: PageFacts, suppliers: Array<{ name: string; domain
   } else {
     rows.push({ ok: true, title: page.https ? 'Secure connection (https)' : 'No secure connection', detail: page.https ? 'Scam sites use https too: it means private, not trustworthy' : 'The page asks for nothing secret' });
   }
-  const elsewhere = page.formHosts.filter((h) => registrable(h) !== reg);
+  const elsewhere = formHosts.filter((h) => registrable(h) !== reg);
   if (asksSecrets && elsewhere.length) {
     hints.push({ id: 'form_elsewhere', strength: 2, text: `What you type here is sent to a different site (${elsewhere[0]}).` });
     rows.push({ ok: false, title: 'Sends what you type elsewhere', detail: elsewhere.slice(0, 2).join(', ') });

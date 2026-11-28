@@ -5,6 +5,7 @@ import { readPage, siteLab, type PageFacts } from '../lib/checks/site';
 import { decodeMono16k, VOICE_RATE, wavFrom } from '../lib/ai/files';
 import { analysePicture } from '../lib/forensics/picture';
 import { videoLab, voiceLab } from '../lib/forensics/labs';
+import { MAX_VOICE_SECONDS, pictureTooBig, recordingSeconds, VOICE_ANALYSIS_SECONDS } from '../lib/forensics/limits';
 import { readTactics } from '../lib/ai/tactics';
 import { IN_EXTENSION } from '../lib/config';
 import { domainOf, findLookalike, registrable } from '../lib/checks/domain';
@@ -286,6 +287,16 @@ export function useAnalysis() {
       setError(null);
       const id = newId();
       const bytes = new Uint8Array(await blob.arrayBuffer());
+      // Refused before anything decodes it: a small file can claim to be enormous.
+      const tooBig = pictureTooBig(bytes);
+      if (tooBig) return setError(tooBig);
+      // A damaged file, or a format that isn't a photo (an SVG drawing), is said plainly, with no empty card.
+      if (!bytes.length) return setError(`${name} is empty.`);
+      try {
+        (await createImageBitmap(blob)).close();
+      } catch {
+        return setError(`${name} couldn’t be opened as a picture. FISHY checks photos and screenshots (JPEG, PNG, WebP, GIF); the file may be damaged or not really a picture.`);
+      }
       const facts = scanPicture(bytes);
       putMedia({
         id,
@@ -320,11 +331,19 @@ export function useAnalysis() {
       goLive();
       setError(null);
       const id = newId();
+      // A recording's length is read before it is decoded: hours of audio would take gigabytes.
+      if (!live) {
+        const seconds = await recordingSeconds(blob);
+        if (seconds !== null && seconds > MAX_VOICE_SECONDS) {
+          return setError(`That recording is ${Math.round(seconds / 60)} minutes long. FISHY checks voice clips up to 5 minutes; cut the part with the voice you doubt.`);
+        }
+      }
       putMedia({ id, kind: 'voice', name, at: clock(), levels, checks: [] });
       setBusy('Measuring the voice on this laptop…');
       let samples: Float32Array;
       try {
-        samples = await decodeMono16k(new Blob([blob], { type: mime }));
+        // Only the first minute is measured and sent: enough for every check, and a fixed cost.
+        samples = (await decodeMono16k(new Blob([blob], { type: mime }))).subarray(0, VOICE_ANALYSIS_SECONDS * VOICE_RATE);
       } catch (e) {
         patchMedia(id, { gemini: null, note: `This recording couldn’t be opened: ${(e as Error).message}` });
         setBusy(null);
@@ -367,6 +386,7 @@ export function useAnalysis() {
     async (file: File) => {
       // Checked before reading: a huge file would freeze the panel and is too big for Gemini anyway.
       if (file.size > MAX_FILE_BYTES) return setError(`That file is ${Math.round(file.size / 1048576)} MB. FISHY checks files up to 20 MB.`);
+      if (!file.size) return setError(`${file.name} is empty.`);
       if (file.type.startsWith('image/')) return checkPicture(file, file.name);
       if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return checkDocument(await file.arrayBuffer(), file.name);
       if (file.type.startsWith('audio/') || /\.(m4a|mp3|wav|ogg|webm|opus)$/i.test(file.name)) return checkVoiceClip(file, file.type || 'audio/webm', file.name);
@@ -480,7 +500,7 @@ export function useAnalysis() {
       const address = (() => {
         try {
           const u = new URL(page.url);
-          return `${u.origin}${u.pathname}`;
+          return `${u.origin}${u.pathname}`.slice(0, 2048);
         } catch {
           return `https://${page.host}/`;
         }
@@ -513,7 +533,11 @@ export function useAnalysis() {
 
   const clear = useCallback(() => {
     transcript.current = [];
-    setFindings(EMPTY);
+    // The previews, frames and heat maps were object URLs: give their memory back.
+    setFindings((f) => {
+      for (const m of f.media ?? []) for (const url of [m.preview, m.forensics?.heatmap, ...(m.frames ?? [])]) if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+      return EMPTY;
+    });
     setCandidates([]);
     setError(null);
     setMode('live');

@@ -62,8 +62,9 @@ export function tacticInput(message: string): string {
 
 /** Reads the model's JSON answer and keeps only well-formed hits. */
 export function parseTactics(json: string): TacticHit[] {
-  const parsed = JSON.parse(json) as { tactics?: TacticHit[] };
-  return (parsed.tactics ?? []).filter((h) => TACTICS.includes(h.tactic) && h.quote?.trim());
+  const raw: unknown = JSON.parse(json);
+  const list = raw && typeof raw === 'object' && Array.isArray((raw as { tactics?: unknown }).tactics) ? (raw as { tactics: unknown[] }).tactics : [];
+  return list.filter((h): h is TacticHit => !!h && typeof h === 'object' && TACTICS.includes((h as TacticHit).tactic) && typeof (h as TacticHit).quote === 'string' && (h as TacticHit).quote.trim() !== '');
 }
 
 export interface ExplainContext {
@@ -183,12 +184,14 @@ const NOT_A_SIGN = /^\s*(no|none|nothing|not any|there (are|is) no|i (see|found|
 
 /** Reads the model's JSON answer and keeps only well-formed signs (at most 6). */
 export function parseMedia(json: string): MediaReading {
-  const parsed = JSON.parse(json) as Partial<MediaReading>;
+  // A model's answer is outside input: take only well-formed fields, whatever shape it came in.
+  const raw: unknown = JSON.parse(json);
+  const parsed = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as Partial<MediaReading>;
   const assessment = MEDIA_ASSESSMENTS.includes(parsed.assessment as MediaAssessment) ? (parsed.assessment as MediaAssessment) : 'unclear';
-  const signs = (parsed.signs ?? [])
+  const signs = (Array.isArray(parsed.signs) ? parsed.signs : [])
     .filter((s): s is MediaSign => typeof s?.sign === 'string' && s.sign.trim() !== '' && !NOT_A_SIGN.test(s.sign))
     .slice(0, 6)
-    .map((s) => ({ sign: s.sign.trim(), where: typeof s.where === 'string' ? s.where.trim() : '' }));
+    .map((s) => ({ sign: s.sign.trim().slice(0, 240), where: typeof s.where === 'string' ? s.where.trim().slice(0, 120) : '' }));
   // "No clear signs" with real signs listed is not a clean result.
   const confidence = MEDIA_CONFIDENCE.includes(parsed.confidence as MediaConfidence) ? (parsed.confidence as MediaConfidence) : 'medium';
   return { assessment: assessment === 'no_clear_signs' && signs.length ? 'unclear' : assessment, signs, confidence };
@@ -251,7 +254,8 @@ Never say it is certainly a scam or certainly safe.`;
  * likely_scam → likely_ai (the strongest), suspicious → likely_edited.
  */
 export function parseSite(json: string): MediaReading & { claimsToBe?: string } {
-  const parsed = JSON.parse(json) as { assessment?: string; claims_to_be?: string };
+  const raw: unknown = JSON.parse(json);
+  const parsed = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as { assessment?: string; claims_to_be?: string };
   const map: Record<string, MediaAssessment> = { likely_scam: 'likely_ai', suspicious: 'likely_edited', no_clear_signs: 'no_clear_signs', unclear: 'unclear' };
   const reading = parseMedia(JSON.stringify({ ...parsed, assessment: map[parsed.assessment ?? ''] ?? 'unclear' }));
   const claims = typeof parsed.claims_to_be === 'string' ? parsed.claims_to_be.trim().slice(0, 80) : '';

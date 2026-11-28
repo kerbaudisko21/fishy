@@ -9,6 +9,16 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '0.6.1',
+    date: '28 Nov 2026',
+    items: [
+      'Security review (OWASP Top 10 and the LLM Top 10): a website’s title is quoted to Gemini cleaned and labelled, never as instructions; oversized pictures (decompression bombs) and hours-long recordings are refused before they are decoded; Remote Config and model answers are checked field by field',
+      'A damaged picture, an empty file or an SVG drawing now says so plainly instead of showing an empty result',
+      'Long file names and addresses take two lines at most (the full name on hover)',
+      '22 new edge-case tests: random and truncated files, silence, broken samples, black video, hostile page titles, broken model answers and broken Remote Config',
+    ],
+  },
+  {
     version: '0.6.0',
     date: '28 Nov 2026',
     items: [

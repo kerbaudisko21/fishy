@@ -103,6 +103,7 @@ export async function captureTabFrames(tabId: number, count = 5, gapMs = 700, on
     await new Promise((r) => setTimeout(r, 300));
     const w = video.videoWidth;
     const h = video.videoHeight;
+    if (!w || !h) throw new Error('The tab shows no picture yet. Wait until the call’s video is on screen, then check again.');
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;

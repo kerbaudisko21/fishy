@@ -99,7 +99,7 @@ function Card({ item, focused, onChallenge }: { item: MediaCheck; focused: boole
       <header className="media-head">
         <span className="media-kind">{kindIcon(item.kind)}</span>
         <span className="grow">
-          <span className="row-title media-name">{item.name}</span>
+          <span className="row-title media-name" title={item.name}>{item.name}</span>
           <span className="row-detail">{item.demo ? 'Demo result' : `${TITLE[item.kind]} · checked ${item.at}`}</span>
         </span>
       </header>

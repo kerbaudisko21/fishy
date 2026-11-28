@@ -225,13 +225,23 @@ export function decide(signals: Signal[], rules: RulesConfig = DEFAULT_RULES): V
  * without the media signals must not switch them off).
  */
 export function mergeRules(remote: Partial<RulesConfig>, base: RulesConfig = DEFAULT_RULES): RulesConfig {
-  const remoteNames = new Set((remote.patterns ?? []).map((p) => p.name));
+  // A config is data from outside the extension: anything malformed is left out, never trusted.
+  const r = (remote && typeof remote === 'object' ? remote : {}) as Record<string, unknown>;
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.length < 80) : []);
+  const patterns = (Array.isArray(r.patterns) ? r.patterns : [])
+    .filter((p): p is ScamPattern => !!p && typeof p.name === 'string' && p.name.length < 120 && strings(p.requires).length > 0)
+    .map((p) => ({ name: p.name, requires: strings(p.requires) as SignalKind[], signs: strings(p.signs).slice(0, 6), ...(typeof p.action === 'string' ? { action: p.action.slice(0, 200) } : {}) }));
+  const weights = Object.fromEntries(
+    Object.entries(r.weights && typeof r.weights === 'object' ? (r.weights as Record<string, unknown>) : {}).filter(([, v]) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 10),
+  ) as Partial<Record<SignalKind, number>>;
+  const remoteNames = new Set(patterns.map((p) => p.name));
+  const number = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : fallback);
   return {
-    version: remote.version ?? base.version,
-    alwaysFishy: [...new Set([...base.alwaysFishy, ...(remote.alwaysFishy ?? [])])],
-    weights: { ...base.weights, ...(remote.weights ?? {}) },
-    threshold: remote.threshold ?? base.threshold,
-    patterns: [...(remote.patterns ?? []), ...base.patterns.filter((p) => !remoteNames.has(p.name))],
+    version: number(r.version, base.version),
+    alwaysFishy: [...new Set([...base.alwaysFishy, ...(strings(r.alwaysFishy) as SignalKind[])])],
+    weights: { ...base.weights, ...weights },
+    threshold: number(r.threshold, base.threshold),
+    patterns: [...patterns, ...base.patterns.filter((p) => !remoteNames.has(p.name))],
   };
 }
 
