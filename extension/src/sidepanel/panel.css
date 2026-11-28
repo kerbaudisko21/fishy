@@ -693,3 +693,11 @@ html { scrollbar-color: #b9c6cc transparent; scrollbar-width: thin; caret-color:
 .guide-check { color: var(--muted); }
 .guide-act { font-weight: 700; color: var(--ink); }
 .guide-check svg, .guide-act svg { flex: none; margin-top: 2px; }
+
+/* Where Gemini points: numbered boxes on the picture, the same numbers on the reasons */
+.media-frame:has(.pin-box) .media-preview { max-height: none; }
+.pin-box { position: absolute; border: 2px solid var(--brand); border-radius: 6px; box-shadow: 0 0 0 1px rgba(16, 32, 46, .55); pointer-events: none; animation: fade 200ms ease both; }
+.pin-box .pin-num { position: absolute; top: -10px; left: -10px; }
+.pin-num { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--brand); color: var(--ink); font: 800 11.5px var(--font-body); font-variant-numeric: tabular-nums; box-shadow: 0 1px 2px rgba(16, 32, 46, .3); }
+.pin-num.inline { flex: none; margin-top: 1px; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .pin-box { animation: none; } }

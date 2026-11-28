@@ -53,7 +53,7 @@ export function CheckYourself({ busy, emailOpen, onBack, onText, onFile, onAttac
           >
             <span className="drop-icon">{Icon.upload(20)}</span>
             <strong>Drop a picture, a document or a voice recording</strong>
-            <span>A photo, an ID, a receipt, an invoice PDF or a voice note. Or click to choose.</span>
+            <span>A photo, an ID, a receipt, a PDF or a voice note. Or click to choose.</span>
             <input
               ref={input}
               type="file"

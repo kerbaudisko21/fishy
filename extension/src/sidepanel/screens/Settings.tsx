@@ -130,7 +130,7 @@ const NANO_TEXT: Record<NanoStatus, { title: string; detail: string }> = {
   },
 };
 
-export function Settings({ rulesVersion, knownCount, onBack, onClear }: Props) {
+export function Settings({ rulesVersion, onBack, onClear }: Props) {
   const [nano, setNano] = useState<NanoStatus | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -190,8 +190,6 @@ export function Settings({ rulesVersion, knownCount, onBack, onClear }: Props) {
             <dd>{FIREBASE_READY ? 'Gemini (hybrid)' : 'Keywords (offline)'}</dd>
             <dt>Scam rules</dt>
             <dd>v{rulesVersion}</dd>
-            <dt>Known bad details</dt>
-            <dd>{knownCount}</dd>
           </dl>
         </div>
         </Section>

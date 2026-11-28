@@ -1,42 +1,66 @@
 <p align="center"><img src="brand/logo-lockup.svg" alt="FISHY" width="300"></p>
 
-# FISHY: don’t take the bait, make the call
+# FISHY: is it real?
 
-**Is it real?** A Chrome extension that checks a picture, a document, a voice or the video call you are in for signs of AI or tampering, and then phones the real person on a number on record before money moves.
+A Chrome extension that checks what you were sent, and what's open in your tab, for signs of AI or tampering. That covers a picture, a PDF, a voice note, the face and voice on a video call, a website and a QR code. It gives a score, says **why**, and tells you what to do next.
 
-Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) (Web / Chrome) with **Firebase AI Logic hybrid inference**: Gemini Nano looks at pictures and reads messages on the laptop, and Gemini in the cloud takes over when Nano is not available.
+Built for [#BuildHybridAI 2026](https://firebasehybridaihackathon.devpost.com/) (Web / Chrome) with **Firebase AI Logic hybrid inference**. Gemini Nano takes the first look on the laptop: fast, private and free. Gemini in the cloud gives a second opinion only when Nano can't tell or isn't sure, and the voice check always uses it.
 
 > Built 21–30 Nov 2026 for the submission due 1 Dec 2026, 05:00 WIB (30 Nov, 2:00 PM PT).
 
 ## Why it matters
 
-A deepfaked boss on a video call, a cloned voice note, an AI-made receipt or an edited invoice needs no malware, only one person who believes it. In 2024 one employee moved $25.6M after a video call where every other face was fake (Arup, Hong Kong). FISHY lets anyone check before they trust: the file's own marks (Content Credentials, AI labels, the tool that made it), what Gemini sees in the picture or hears in the voice, and then a call to the real person on a number on record, never one from the message. No detector can promise a fake will be caught, so FISHY shows signs, not verdicts, and the call decides. However real the fake looks, it can't answer the real phone.
+A deepfaked face on a video call, a cloned voice note, an AI-made receipt, an edited document, a fake website or a QR sticker over a real one needs no malware. It only needs one person who believes it. In 2024 one employee moved $25.6M after a video call where every other face was fake (Arup, Hong Kong).
+
+FISHY lets anyone check before they trust. It looks at:
+- the file's own marks;
+- the pixels, the voice and the motion, measured on the laptop;
+- what Gemini sees or hears.
+
+It then turns them into a score with each reason's weight. No detector catches every fake, so FISHY shows **signs, not proof**, and always ends with the step a fake can't pass: check with the real person another way, on a number you already have.
 
 ## Try it
 
 | What | How | Needs |
 |---|---|---|
-| **Try FISHY in a browser** | Open <https://fishy-check.web.app> (the bare address and `/try` are the same page) and drop a picture (a photo, an ID, a receipt, a transfer screenshot), or press **Use the sample** for a message. It shows the file's own marks, what Gemini saw, and where each step ran (Gemini Nano on your device, or the cloud) | Nothing to install. App Check runs through reCAPTCHA Enterprise, with no debug token |
-| **The approver's page** | Open <https://fishy-check.web.app/?demo>: what the real person sees when a phone call can't reach them (yes or no, then a PIN) | Nothing |
-| **The extension, demo mode** | Download `fishy-extension-demo.zip` from the release, unzip it, then `chrome://extensions` → Developer mode → **Load unpacked**. It runs on a fictional company; the keyword reader stands in for Gemini and says so | Chrome 139+ |
-| **The extension, live** | Build it with your own Firebase project (see [Run it](#run-it)) | A Firebase project with AI Logic and an App Check debug token |
+| **Try FISHY in a browser** | Open <https://fishy-check.web.app> and drop a picture (a photo, an ID, a receipt, a transfer screenshot). It shows the file's own marks, what Gemini saw, and where each step ran | Nothing to install. App Check runs through reCAPTCHA Enterprise |
+| **The extension** | Download the zip from the release, unzip it, then `chrome://extensions` → Developer mode → **Load unpacked**. Or build it with your own Firebase project (see [Run it](#run-it)) | Chrome 139+ |
 
-The hosted address and the release are filled in at submission. `npm run package` builds the demo zip; it refuses to package a build that carries a Firebase key.
+`npm run package` builds the shareable zip, and refuses to package a build that carries a Firebase key.
+
+## What it checks
+
+| Check | How you start it | What it looks at |
+|---|---|---|
+| **Something you were sent** (picture, PDF, voice note) | Drop it, choose it, or right-click a picture on any page | Content Credentials and AI labels; the tool that made it; PDF edit traces; the camera's own preview; JPEG tables and re-saves; copy-move (cloned areas); the grid pattern AI generators leave; QR codes and QRIS payment codes; for voice, pitch, silences, breaths and background; then Gemini |
+| **The face on a video call** | "The face", `Alt+Shift+V`, or right-click the video | 9 frames over about 4 s: motion and freezes, then Gemini compares the frames. **Hand check:** 12 frames while the caller passes a hand across their face. **Lip-sync:** does anything move with the voice? **Watch mode:** a check every 20 s, with an alarm only when the evidence adds up |
+| **The voice on a call** | "The voice" or `Alt+Shift+A` | 10 s of the call (it stays audible), measured on the laptop, then Gemini listens |
+| **The website you're on** | "The website", `Alt+Shift+W`, right-click the page, or a link (address only, never opened) | Look-alike addresses, look-alike letters, abused endings, free hosting asking for passwords, forms and scripts sending elsewhere, the domain's age and Google Web Risk, then Gemini looks at a screenshot |
+| **A message** | "Paste a message instead", or right-click selected text | Pressure tactics (urgency, secrecy, authority), with Gemini Nano on the raw text, or the cloud on a redacted copy |
+
+Every result says **what kind of scam it looks like** (from Remote Config), with what to do. The **Scams** tab is a picture guide to the six scam types FISHY spots.
 
 ## How FISHY uses Firebase AI Logic
 
-The hybrid pattern is chosen by what the model is given:
-
 | Task | What the model gets | Mode | Why |
 |---|---|---|---|
-| **Read** the request for pressure tactics ([tactics.ts](extension/src/lib/ai/tactics.ts)) | The message itself | FISHY checks `LanguageModel.availability()` first: `ONLY_ON_DEVICE` with the raw text when Gemini Nano is ready, otherwise `ONLY_IN_CLOUD` with a **redacted** copy (accounts, numbers, emails and links removed, [redact.ts](extension/src/lib/redact.ts)) | Private message text may only reach Gemini Nano on the laptop. The SDK's automatic fallback would send the raw text to the cloud, so FISHY chooses itself |
-| **Look** at a picture or a document's first page for signs of AI or editing ([media.ts](extension/src/lib/ai/media.ts)) | The picture, plus what the laptop measured in it | **Escalation:** `PREFER_ON_DEVICE` first (Gemini Nano on the laptop). Only when Nano can't tell, says it isn't sure, finds a single sign, or finds nothing where the laptop's own checks found something ([escalate.ts](extension/src/lib/ai/escalate.ts)), the same request goes to `ONLY_IN_CLOUD` for a second opinion. Both readings are shown | A clear first look never leaves the laptop; the cloud is spent only where it changes the answer |
-| **Compare** frames of the video call for a deepfake face ([media.ts](extension/src/lib/ai/media.ts), [voice.ts](extension/src/lib/voice.ts)) | A numbered sheet of 5 frames over 3 s (8 frames during the hand check), plus the motion measured between them | The same escalation | One image keeps it within what Nano takes, and lets the model compare frames in one look |
-| **Check the website** in this tab for a scam or a copy ([media.ts](extension/src/lib/ai/media.ts), [site.ts](extension/src/lib/checks/site.ts)) | A screenshot of what the person sees, plus what the laptop measured about the address and the page (never the page's text) | The same escalation. The cloud lookups get the address only: its age (RDAP) and Google Web Risk | The page may show private account details: Nano reads it on the laptop first |
-| **Listen** to a voice clip for signs of a cloned or spliced voice ([media.ts](extension/src/lib/ai/media.ts)) | 10 seconds of the call, or a recording the person chose, as 16 kHz WAV, plus the voice measurements | `ONLY_IN_CLOUD`, after the on-device measurements ([voice-math.ts](extension/src/lib/forensics/voice-math.ts)) | Firebase AI Logic cannot send audio to Gemini Nano yet; the laptop's measurements are the on-device half |
-| **Explain** the red flags in plain words ([explain.ts](extension/src/lib/ai/explain.ts)) | The red flags only (titles and one line of masked evidence), never the message | `PREFER_ON_DEVICE`: Firebase AI Logic runs Nano when it can and falls back to the cloud by itself | Nothing private is in the input, so the SDK may decide |
+| **Look** at a picture or a PDF's first page ([media.ts](extension/src/lib/ai/media.ts)) | The picture, plus what the laptop measured in it | **Escalation:** `PREFER_ON_DEVICE` first, with Gemini Nano on the laptop. The same request goes to `ONLY_IN_CLOUD` for a second opinion only when Nano can't tell, isn't sure, finds a single sign, or finds nothing where the laptop's checks found something ([escalate.ts](extension/src/lib/ai/escalate.ts)). Both readings are shown | A clear first look never leaves the laptop |
+| **Compare** frames of the video call ([media.ts](extension/src/lib/ai/media.ts), [voice.ts](extension/src/lib/voice.ts)) | One numbered sheet of 9 frames (12 for the hand check), plus the motion between them | The same escalation; watch mode takes one quick look per round | One image stays within what Nano takes, and lets the model compare frames at once |
+| **Check the website** in this tab ([site.ts](extension/src/lib/checks/site.ts)) | A screenshot plus the measurements about the address and the page, never the page's text | The same escalation. The cloud lookups get the address only: its age (RDAP) and Google Web Risk | The page may show private details |
+| **Listen** to a voice clip | 16 kHz WAV plus the voice measurements | `ONLY_IN_CLOUD`, after the on-device measurements ([voice-math.ts](extension/src/lib/forensics/voice-math.ts)) | Firebase AI Logic can't send audio to Gemini Nano yet; the measurements are the on-device half |
+| **Read** a message for pressure ([tactics.ts](extension/src/lib/ai/tactics.ts)) | The message | `ONLY_ON_DEVICE` with the raw text when Nano is ready, otherwise `ONLY_IN_CLOUD` with a **redacted** copy ([redact.ts](extension/src/lib/redact.ts)) | Private text may only reach Gemini Nano on the laptop |
 
-Both answer in JSON or short text, and `inferenceSource` tells the panel which badge to show: **On device** or **Cloud** on every step. The verdict itself never comes from the model: a fixed rules engine decides it from the signals, so the same signals always give the same verdict. Firebase App Check protects every call (a debug token in the extension, reCAPTCHA Enterprise on the hosted pages), and the same prompts run in the extension and on `/try` ([prompts.ts](extension/src/lib/ai/prompts.ts)).
+**How the answers are used:**
+- Every answer is JSON, and `inferenceSource` drives the badge ("Gemini Nano, on this laptop" or "Gemini, cloud"). Each card also shows the path the check took: laptop checks → Gemini Nano → Gemini cloud.
+- Gemini Nano is told to answer in English, as Chrome asks.
+- The score never comes from the model: fixed rules weigh the evidence (below).
+- Firebase App Check protects every call: a debug token in the extension, reCAPTCHA Enterprise on the hosted page.
+- **Other Firebase products:**
+  - **Remote Config** for the scam rules and their weights;
+  - **Firestore** for reported pictures (fingerprints only) and suppliers on record;
+  - **Authentication** (anonymous);
+  - **Cloud Functions** for the domain-age and Web Risk lookups;
+  - **Hosting** for the page.
 
 **Before any model: the laptop's own measurements** ([extension/src/lib/forensics](extension/src/lib/forensics)). They are told to Gemini with the file, so its reading is grounded in numbers, and they count in the score on their own:
 
@@ -74,11 +98,9 @@ Settings → How the AI ran shows the share answered on the laptop, the average 
 - **A link** gets the website check's address tests and the cloud lookups (address only).
 - **A QRIS / EMVCo payment code** shows who it pays and how much, and its CRC-16 checksum is verified. A code edited to pay someone else fails the checksum.
 
-**Right-click → "Check this picture with FISHY"** on any picture: a web page, Gmail, WhatsApp Web. The picture is fetched inside the page with its original bytes, or cut out of a screenshot.
-
 **Reported before** ([data.ts](extension/src/lib/data.ts)). A picture's 64-bit perceptual hash, never the picture, can be reported as a scam. Each check looks up near matches by the hash's four 16-bit bands (array-contains-any), then by Hamming distance. Firestore rules allow one report per person per picture and accept the hash and nothing else.
 
-**What kind of scam:** the signals are matched to scam patterns from Remote Config (Deepfake executive on a video call, Executive voice clone, Real-time face swap, Fake camera feed, Doctored invoice, Forged document, AI-made picture or receipt, Doctored picture or payment screenshot…), each with what to do. A deployed config adds to the built-in rules, never removes them.
+**What kind of scam:** the signals are matched to scam patterns from Remote Config (Deepfake on a video call, Cloned voice, Real-time face swap, Fake camera feed, Phishing or fake website, QR code scam, Forged document, AI-made picture or receipt, Doctored picture or payment screenshot…), each with what to do. A deployed config adds to the built-in rules, never removes them.
 
 Other Firebase products: **Authentication** (anonymous) for the checks a person owns, **Firestore** for the directory, known scams and call state, **Remote Config** for scam rules and the Meet and Gmail page selectors, **Cloud Functions** for the call, the approval page, the link check, domain age and the incident report, and **Hosting** for the pages.
 
@@ -86,63 +108,43 @@ Other Firebase products: **Authentication** (anonymous) for the checks a person 
 
 | Part | State |
 |---|---|
-| Check something: pictures, PDFs, voice recordings, the video and the voice of the call in this tab | Built: the file's own marks on the laptop (Content Credentials, IPTC AI label, AI tools, photo editors, PDF edit traces), Gemini's signs for pictures, document pages and video frames (hybrid) and voices (cloud), and the rules that turn them into red flags. Not yet tried with real Gemini |
-| Side panel: Verdict, evidence screens, Directory, Check something, Settings | Built; runs on demo data or live input |
-| Step 1 Read: Firebase AI Logic hybrid (Nano on device, cloud on redacted text) | Built; needs a Firebase config to call Gemini (offline it falls back to a labelled keyword reader). The cloud request was answered live through Firebase AI Logic with App Check; not yet tried from the side panel or with Nano |
-| Step 2 Check: look-alike sender, invoice PDF (account vs record, edit traces) | Built, on device, with tests |
-| Step 2 Check: sender authentication (DMARC/SPF/DKIM, webmail reply-to) | Built, read from the opened email's own headers on the laptop |
-| Step 2 Check: Web Risk links, domain age | Frontend built; `checkLinks` function built with tests and deployed, not yet tried live; `domainAge` built with tests (RDAP through rdap.org, tried live from a laptop), not yet deployed |
-| Who asked and for how much, from captions (speaker + amount) | Built; the speaker is matched to Directory, so FISHY calls the real person by default |
-| Meet and Gmail selectors from Remote Config | Built (`meet_caption_selectors`, `gmail_selectors`) |
-| Step 3 Match: known bad accounts, domains, numbers | Built, on device, cached from Firestore |
-| Step 4 Call: create check, start call, follow state, escalation countdown | Frontend built; `startVerificationCall` and the Twilio webhooks (`voice`) built with tests and deployed, not yet tried on a real phone; with no call placed the panel says so and links the approval page; no answer within 10 minutes (or a call that ends unanswered) starts a new check and calls the next approver on record |
-| Shared learning: a "not me" confirmed with the PIN adds to the known-scam list | `reportSuspects` function built with tests; the panel sends the request's accounts, domains and numbers with every call |
-| "Why it's fishy": Gemini explains the red flags | `explainVerdict` built with tests: Firebase AI Logic in PREFER_ON_DEVICE mode, on the signals only (never the message); shown on the Verdict screen as "Why this is risky", labelled with where it ran. Without Firebase, a fixed sentence built from the flags stands in and says so. Not yet tried with Nano or the cloud model |
-| Web approval page | Built; `getApproval` and `answerApproval` built with tests and deployed; tried live only as far as a made-up link (the page passes App Check and refuses it), a real approval not yet; the panel shows the link |
-| Incident report and audit log | Built with tests: after a call ends, the panel copies a report link (7 days; only its hash is stored) for the finance manager; `shareIncident`, `getIncident`, `markIncidentHandled`, `getAuditLog`. Not yet deployed |
-| Team push alerts | Not built (`registerAlertToken` is a stub); the incident page does not offer them |
-| Try FISHY (`/try`) and a demo extension build | Built: the hosted page runs the tactic reader and the explanation through Firebase AI Logic with reCAPTCHA App Check, no debug token; `npm run package` zips the extension in demo mode. Not yet deployed |
-| Voice check (P1) | Records 10 s of the Meet tab on click (`tabCapture`); `scoreVoice` function not built (demo score without Firebase) |
-| Face check (P1) | Not built; removed from the panel |
-
-Function contracts (inputs and outputs) are written above each function in [functions/src/index.ts](functions/src/index.ts). The rules behind them live in `functions/src/call`, `approve`, `learn` and `webrisk`, and are tested without a database or a phone (`npm test`).
+| Pictures, PDFs and voice notes | Built and tested; the cloud reading was seen working live through Firebase AI Logic |
+| The face on a video call (frames, hand check, lip-sync, watch mode) | Built and tested; the frame check reached Gemini in the cloud live. Hand check, lip-sync and watch mode not yet tried on a real call |
+| The website, links and QR codes | Built and tested; the domain-age and Web Risk functions are deployed |
+| Gemini Nano on the laptop | Confirmed available, with image input, on the development laptop |
+| Shortcuts, right-click checks, automatic warnings | Built; not yet tried in a real browser session |
+| Reported pictures | Built; rules deployed (prototype, see [SECURITY.md](SECURITY.md)) |
 
 ## How it works
 
-| Step | What happens | Where it runs |
-|---|---|---|
-| 1 · Read | Tags urgency, secrecy, authority and skipped approvals in Meet captions and opened emails | Gemini Nano, on device |
-| 2 · Check | Sender and lookalike domains, links (Web Risk), invoice bank details vs history, PDF edits; voice/face score on click | On device; cloud for Web Risk and scores |
-| 3 · Match | Known bad accounts, domains and numbers; scam patterns from Remote Config | On device |
-| 4 · Call | Twilio calls the person on record: press 1 or 2, then a PIN; escalates after 10 minutes | Cloud Functions + Twilio |
-
-The verdict comes from a fixed rules engine ([engine.ts](extension/src/lib/rules/engine.ts)), so the same signals always give the same verdict. The model only produces signals.
+1. **Measure on the laptop:** the file's own marks, the pixels, the motion, the voice, the address.
+2. **Ask Gemini:** Nano first, and the cloud only when Nano isn't enough. It is told what the laptop measured.
+3. **Weigh it:** every sign multiplies the odds by its likelihood ratio, so the same evidence always gives the same score ([media-score.ts](extension/src/lib/media-score.ts)).
+4. **Say what to do:** the scam type and its advice, and always: check with the real person another way.
 
 ## Repository
 
 ```
 fishy/
 ├─ extension/              Chrome extension (Manifest V3, Vite, React, TypeScript)
-│  ├─ manifest.config.ts   permissions, side panel, content scripts
+│  ├─ manifest.config.ts   permissions, shortcuts, right-click items
 │  └─ src/
-│     ├─ sidepanel/        the side panel UI (Verdict, evidence screens, Directory)
-│     ├─ content/          Meet and Gmail readers + the in-page banner (Shadow DOM)
-│     ├─ background/       service worker (opens the panel)
-│     ├─ lib/
-│     │  ├─ firebase.ts    Firebase app, App Check, anonymous Auth
-│     │  ├─ ai/tactics.ts  Step 1 with Firebase AI Logic hybrid inference
-│     │  ├─ rules/         deterministic verdict + tests
-│     │  └─ redact.ts      redaction before anything goes to the cloud
-│     ├─ demo/fixtures.ts  synthetic demo company (no real data)
-│     └─ styles/           design tokens
-├─ web/                    web approval page (Firebase Hosting) for when a call can’t reach the approver
-├─ functions/              Cloud Functions: call, phone menu webhooks, approval, Web Risk
-├─ brand/                  logo (SVG); `npm run icons` renders the PNG icons
-├─ firestore.rules         directory phones and PINs are never readable by clients
-└─ remoteconfig.template.json  scam rules and Meet caption selectors
+│     ├─ sidepanel/        the panel UI (Check, Scams, results, Settings)
+│     ├─ content/          the floating window (Shadow DOM)
+│     ├─ background/       service worker: shortcuts, right-click, automatic warnings
+│     └─ lib/
+│        ├─ ai/            Firebase AI Logic: media, prompts, escalation, stats
+│        ├─ forensics/     on-device checks: pictures, JPEG, copy-move, QR, voice, video, lip-sync, SPRT
+│        ├─ checks/        file marks, PDF traces, website
+│        ├─ rules/         scam patterns + likelihood ratios
+│        └─ media-score.ts the score
+├─ web/                    the hosted "Try FISHY" page
+├─ functions/              Cloud Functions (domain age, Web Risk; the earlier calling functions are kept but unused)
+├─ firestore.rules         reported pictures: fingerprint only, one report per person
+└─ remoteconfig.template.json  scam rules and weights
 ```
 
-Design system: [DESIGN.md](DESIGN.md) (colours, type, components, motion, and how they came from the FISHY deck).
+Design system: [DESIGN.md](DESIGN.md).
 
 ## Run it
 
@@ -155,18 +157,18 @@ cp extension/.env.example extension/.env.local   # fill in Firebase config
 npm run dev              # builds the extension into extension/dist with hot reload
 ```
 
-Load it: `chrome://extensions` → Developer mode → **Load unpacked** → `extension/dist`. Click the FISHY icon to open the side panel. `VITE_DEMO_MODE=true` starts on the synthetic demo company; any live input (captions, an opened email, pasted text, an invoice) switches to a live check. Settings → "Load the demo case" brings it back.
+Load it: `chrome://extensions` → Developer mode → **Load unpacked** → `extension/dist`. Click the FISHY icon, or press `Alt+Shift+F`, to open FISHY as a floating window on the page.
 
-Design preview without installing: `npm run build -w extension`, then `npx vite preview extension` and open `/src/sidepanel/index.html` at 400 px wide. The web pages run on demo data without a config: `npm run dev -w web`, then `/?demo` and `/incident?demo`.
+Design preview without installing: `npm run build -w extension`, then `npx vite preview extension` and open `/src/sidepanel/index.html` at 400 px wide. The web page runs without a config: `npm run dev -w web`.
 
 ### Test invoices
 
-`npm run test-invoices` writes two synthetic invoices from the demo supplier into `test-fixtures/`. Attach one to an email or drop it into **Check it yourself**.
+`npm run test-invoices` writes two synthetic invoices into `test-fixtures/`. Drop one onto FISHY.
 
 | File | What FISHY should show |
 |---|---|
-| `invoice-sinar-fishy.pdf` | Bank account changed (Bank Teluk •••• 9032, record says Bank Karang •••• 4471), edited 3 days after it was made in an online editor, bank line in another font, known scam account |
-| `invoice-sinar-clean.pdf` | Account matches the record, no later edits |
+| `invoice-sinar-fishy.pdf` | Edited 3 days after it was made, in an online editor; one line in another font |
+| `invoice-sinar-clean.pdf` | No later edits |
 
 ### Gemini Nano on the laptop
 
@@ -176,7 +178,7 @@ Design preview without installing: `npm run build -w extension`, then `npx vite 
 
 ### Firebase
 
-- Enable **Firebase AI Logic**, **App Check**, **Authentication** (Anonymous), **Firestore**, **Remote Config**, **Cloud Functions** (Blaze plan).
+- Enable **Firebase AI Logic** (Gemini Developer API), **App Check**, **Authentication** (Get started → Anonymous), the **Cloud Firestore API** with a database named `fishy`, and **Remote Config**. Cloud Functions (for the domain-age and Web Risk lookups) need the Blaze plan; without them the website check skips those two lookups.
 - App Check: the extension cannot load reCAPTCHA, so it uses a **debug token** (accepted by #BuildHybridAI). Register it under App Check → Apps → Manage debug tokens and put it in `extension/.env.local`. Never commit it.
 
 #### Which Gemini API the cloud model uses
@@ -191,6 +193,8 @@ Firebase AI Logic can reach Gemini through two APIs. FISHY works with either: bo
 FISHY's functions need the Blaze plan, so a project that runs all of FISHY has billing: use `agent-platform` there, or buy prepaid credit and keep `developer`. Any other value stops the reader with a message that names the setting. The hosted pages take the same setting: `VITE_AI_PROVIDER` in `web/.env.local` for a deploy from a laptop, and the repository variable `AI_PROVIDER` for a deploy from GitHub. A name that is not one of the two stops that deploy before anything is written. Sources: [Firebase AI Logic pricing](https://firebase.google.com/docs/ai-logic/pricing), [its FAQ on free trial credit](https://firebase.google.com/docs/ai-logic/faq-and-troubleshooting), [Gemini API billing](https://ai.google.dev/gemini-api/docs/billing).
 
 ### Deploy to Firebase (Google Cloud)
+
+> Earlier versions of FISHY also phoned an approver (Twilio, a PIN, an approval page). That flow is no longer in the extension; its functions and setup notes are kept below for reference.
 
 What gets deployed: the rules of FISHY's own Firestore database, the Cloud Functions (Jakarta, `asia-southeast2`) and the web pages in `web/` (Hosting). The extension itself is not deployed: it is loaded from `extension/dist`.
 
@@ -416,11 +420,12 @@ All of it lives in FISHY's own database, `fishy`, not in `(default)`.
 
 ## Privacy
 
-- Message text is read by Gemini Nano on the laptop and is never stored.
-- Without Nano, only redacted text goes to the cloud model; the badge says so.
-- Voice clips and video frames leave the laptop only when the user clicks.
-- FISHY never calls a number taken from a message.
-- The team sees a summary, never the message.
+- Everything is measured on the laptop first. A picture, a video frame or a website screenshot goes to the cloud only when Gemini Nano isn't available or isn't sure; a voice clip always does.
+- Message text reaches the cloud only redacted (accounts, numbers, emails and links removed).
+- For a website or a link, only its address is looked up (no query string, never the page).
+- A reported picture is stored as a 64-bit fingerprint, never the picture.
+- Captures happen only on a click, a shortcut or a right-click. Automatic website warnings are off until you switch them on, and send nothing.
+- Nothing you check is stored; the AI statistics in Settings are counts only, on the laptop.
 
 ## Use it without opening FISHY
 
@@ -482,21 +487,22 @@ FISHY on Android would be a separate app, not the extension. It would use Kotlin
 
 ## Built during #BuildHybridAI
 
-FISHY is a new project: the first commit is from 21 Nov 2026, after the submission period opened, and everything in this repository was written between 21 and 30 Nov 2026. The commit history shows each step:
+FISHY is a new project: the first commit is from 21 Nov 2026, after the submission period opened, and everything here was written between 21 and 30 Nov 2026. The commit history shows each step:
 
-- The side panel, its five evidence screens, Directory and the on-device checks (look-alike sender, sender authentication, invoice bank details and edit traces, known scams)
-- Step 1 with Firebase AI Logic hybrid inference, and the explanation of the red flags
-- The phone check with Twilio, the PIN, escalation to the next approver and the web approval page
-- Shared learning, link checks with Web Risk, domain age through RDAP, and the incident report and audit log
-- The hosted Try FISHY page and the demo build of the extension
-- The deploy setup that keeps FISHY separate in a shared Google Cloud project
+- **The checks:** the file's own marks, PDF traces, the picture checks (camera preview, JPEG tables and re-saves, copy-move, the generator grid pattern), voice measurements, multi-frame video with the hand check, lip-sync and watch mode (a sequential test), and the website, link and QR checks
+- **Firebase AI Logic hybrid inference:** Nano first, then a cloud second opinion, tuned by how often they agree
+- **Likelihood-ratio scoring**, with weights from published research
+- **The interface:** the floating window, the scam guide, shortcuts and right-click checks, and opt-in automatic website warnings
+- **Infrastructure:** the hosted Try FISHY page, the deploy setup, security reviews and the edge-case tests
+
+The first version (21–23 Nov) also phoned an approver to confirm payments. That flow was removed from the extension on 29 Nov to focus on checking media and websites.
 
 ## What we did not write
 
-- Open-source libraries, under their own licenses: React, Vite, `@crxjs/vite-plugin`, the Firebase JS SDK and Admin SDK, `firebase-functions`, pdf.js (`pdfjs-dist`), the Twilio Node library, `@google-cloud/web-risk`, `@resvg/resvg-js`, Vitest, and the Inter, Space Grotesk and JetBrains Mono fonts (Fontsource)
-- Services: Gemini through Firebase AI Logic, Google Web Risk, rdap.org for domain registration dates, and Twilio Voice
-- The code was written with an AI coding assistant (Claude Code), with Firebase Agent Skills installed
-- All people, companies, bank accounts and phone numbers in the demo data are made up
+- **Open-source libraries,** under their own licenses: React, Vite, `@crxjs/vite-plugin`, the Firebase JS SDK and Admin SDK, `firebase-functions`, pdf.js (`pdfjs-dist`), jsQR (`jsqr`), `@google-cloud/web-risk`, `@resvg/resvg-js`, Vitest, and the Atkinson Hyperlegible Next and JetBrains Mono fonts (Fontsource)
+- **Services:** Gemini through Firebase AI Logic, Google Web Risk, and rdap.org for domain registration dates
+- **The code** was written with an AI coding assistant (Claude Code), with Firebase Agent Skills installed
+- **Demo data:** all people, companies, accounts and numbers in it are made up
 
 ## License
 

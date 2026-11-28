@@ -23,6 +23,8 @@ export interface Factor {
   text: string;
   /** Its likelihood ratio, or undefined for a detail that is part of the factor above it. */
   lr?: number;
+  /** The number of the box on the picture that shows it (1-based), when Gemini pointed at it. */
+  pin?: number;
 }
 
 export interface MediaScore {
@@ -100,6 +102,11 @@ export function geminiLR(assessment: string, signs: number, challenge: boolean):
   return 0.7; // no clear signs (LR− ≈ 0.6, kept conservative: newer generators are harder)
 }
 
+/** The pin number of sign `i`: boxes are numbered in order, counting only signs that have one. */
+export function pinOf(signs: Array<{ box?: unknown }>, i: number): number {
+  return signs.slice(0, i + 1).filter((s) => s.box).length;
+}
+
 export function scoreMedia(item: MediaCheck): MediaScore {
   const facts = item.facts ?? {};
   const factors: Factor[] = [];
@@ -123,9 +130,9 @@ export function scoreMedia(item: MediaCheck): MediaScore {
           : g.assessment === 'unclear'
             ? `Gemini couldn’t tell from this ${item.kind === 'voice' ? 'clip' : item.kind === 'site' ? 'page' : 'picture'} (too small, quiet or blurry), and found nothing to point at.`
             : `Gemini ${where} no clear signs of AI or editing.`);
-    factors.push({ text: lead, lr });
+    factors.push({ text: lead, lr, ...(g.signs[0]?.box ? { pin: pinOf(g.signs, 0) } : {}) });
     // The other signs are part of the same reading: shown, not counted again.
-    details.push(...top.slice(1).map((text) => ({ text })));
+    details.push(...top.slice(1).map((text, i) => ({ text, ...(g.signs[i + 1]?.box ? { pin: pinOf(g.signs, i + 1) } : {}) })));
   }
 
   for (const h of item.forensics?.hints ?? []) factors.push({ text: h.text, lr: HINT_LR[h.id] ?? (h.strength === 2 ? 3 : 1.5) });

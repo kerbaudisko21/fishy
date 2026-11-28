@@ -65,6 +65,11 @@ Reviewed against the OWASP Top 10 (2021) and the OWASP Top 10 for LLM applicatio
 | "Warn me about risky websites" needs access to all sites | `optional_host_permissions`: never asked at install, only when the person switches it on in Settings, and given back to Chrome when they switch it off. Each page is read on the laptop with the website check's page reader; nothing is sent anywhere automatically. A banner appears only for a clearly risky site, and "Not now" silences it for that site for the session |
 | Supplier list for the automatic warnings | Names and domains only, in `chrome.storage.local` |
 
+## Changed in 0.9.0
+
+- **The payment and calling flow left the extension.** That removed the Meet and Gmail page scripts, and with them the extension's host permissions for meet.google.com and mail.google.com. The calling functions are still deployed but unused; turning them off is a separate, careful step.
+- **Gemini's boxes are checked before they are drawn:** four numbers on 0–1000, in order, not a sliver. A broken box is dropped and the sign is kept.
+
 ## Still open (known)
 
 - **Reported pictures can be abused.** Anyone signed in (anonymously) can report a picture, so an attacker could make many accounts and flag a real picture, or flood the collection. The card says "reported before by N people", and the call to the real person still decides. A company release should require a confirmed scam (a "not me" with the PIN) before a report counts, and rate-limit reports per person.

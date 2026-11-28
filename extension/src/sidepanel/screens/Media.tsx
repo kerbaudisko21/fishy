@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { BAND_LABEL, lrLabel, scoreMedia, whySentence } from '../../lib/media-score';
+import { BAND_LABEL, lrLabel, pinOf, scoreMedia, whySentence } from '../../lib/media-score';
 import type { MediaAssessment, MediaCheck } from '../../lib/types';
 import { DetailHead, Icon, Note, Privacy, SourceBadge } from '../components';
 import { useFirstSeen } from '../motion';
@@ -41,7 +41,13 @@ function kindIcon(kind: MediaCheck['kind'], size = 16) {
 function Preview({ item, stamp }: { item: MediaCheck; stamp: ReactNode }) {
   const scanning = item.gemini === undefined;
   const [heat, setHeat] = useState(false);
-  const [picked, setPicked] = useState(0);
+  // A video check opens on the frame Gemini pointed at first.
+  const firstPinned = item.gemini?.signs.find((sg) => sg.box && sg.frame !== undefined)?.frame;
+  const [picked, setPicked] = useState(firstPinned ?? 0);
+  const pins = (item.gemini?.signs ?? [])
+    .map((sg, i, all) => (sg.box ? { n: pinOf(all, i), box: sg.box, frame: sg.frame, label: sg.sign } : null))
+    .filter((x): x is { n: number; box: { x0: number; y0: number; x1: number; y1: number }; frame: number | undefined; label: string } => !!x)
+    .filter((x) => (item.frames ? x.frame === picked : true));
   if (item.kind === 'voice') {
     return (
       <>
@@ -72,6 +78,11 @@ function Preview({ item, stamp }: { item: MediaCheck; stamp: ReactNode }) {
           <span className="voice-placeholder">{kindIcon(item.kind, 28)}</span>
         )}
         {heatmap && heat && <img className="media-heat" src={heatmap} alt="" aria-hidden="true" />}
+        {pins.map((pin) => (
+          <span key={`pin${pin.n}`} className="pin-box" title={pin.label} style={{ left: `${pin.box.x0 * 100}%`, top: `${pin.box.y0 * 100}%`, width: `${(pin.box.x1 - pin.box.x0) * 100}%`, height: `${(pin.box.y1 - pin.box.y0) * 100}%` }}>
+            <span className="pin-num">{pin.n}</span>
+          </span>
+        ))}
         {item.forensics?.boxes?.map((b, i) => (
           <span key={i} className="media-box" aria-hidden="true" style={{ left: `${b.x0 * 100}%`, top: `${b.y0 * 100}%`, width: `${(b.x1 - b.x0) * 100}%`, height: `${(b.y1 - b.y0) * 100}%` }} />
         ))}
@@ -162,6 +173,7 @@ function Card({ item, focused, onChallenge, onLipSync, onReport }: { item: Media
           <ul className="why-list">
             {s.factors.map((f, i) => (
               <li key={i} className={f.lr === undefined ? 'detail' : undefined}>
+                {f.pin !== undefined && <span className="pin-num inline" aria-label={`Box ${f.pin} on the picture`}>{f.pin}</span>}
                 <span>{f.text}</span>
                 {f.lr !== undefined && <span className={`odds ${f.lr >= 1 ? 'up' : 'down'}`} title="How much this sign changed the odds">{lrLabel(f.lr)}</span>}
               </li>
@@ -282,34 +294,19 @@ export function Media({ items, busy, focusId, onBack, onFile, patterns = [], pat
         ))}
 
         <Note icon={Icon.phone(15)}>
-          Signs, not proof: a good fake can pass every check (US Treasury’s FinCEN: no single red flag proves fraud). <strong>Before money moves, hang up and call the real person on the number in your records, and ask your agreed code word or something only they would know</strong> (FBI and CISA advice).
+          Signs, not proof. <strong>Before money moves, call them back on the number you have.</strong>
         </Note>
 
         <details className="fold how-fold">
-          <summary>Already paid, or sent details?</summary>
+          <summary>Already paid?</summary>
           <ul className="why-list route">
             <li>
               <span>
-                <strong>Call your bank first, right now:</strong> the sooner, the better the chance the money can be stopped.
+                <strong>Call your bank now.</strong> The sooner, the better the chance to stop it.
               </span>
             </li>
             <li>
-              <span>
-                <strong>Indonesia:</strong> report at iasc.ojk.go.id (Indonesia Anti-Scam Centre) or OJK 157; QRIS problems: Bank Indonesia 131.
-              </span>
-            </li>
-            <li>
-              <span>
-                <strong>Singapore:</strong> ScamShield helpline 1799. <strong>Hong Kong:</strong> Anti-Deception Centre 18222.
-              </span>
-            </li>
-            <li>
-              <span>
-                <strong>United States:</strong> ic3.gov. <strong>Australia:</strong> cyber.gov.au (ReportCyber) and Scamwatch.
-              </span>
-            </li>
-            <li>
-              <span>Keep the file, its fingerprint (in Details) and the incident report link.</span>
+              <span>Then report: iasc.ojk.go.id or OJK 157. QRIS: Bank Indonesia 131. Elsewhere: your national scam line.</span>
             </li>
           </ul>
         </details>

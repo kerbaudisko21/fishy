@@ -11,7 +11,7 @@ const icons = {
 export default defineManifest({
   manifest_version: 3,
   name: 'FISHY',
-  description: 'Checks pictures, documents, voices and video calls for signs of AI or tampering, then calls the real person before money moves.',
+  description: 'Is it real? Checks pictures, documents, voices, video calls, websites and QR codes for signs of AI or tampering, and says why.',
   version: pkg.version,
   minimum_chrome_version: '139',
   icons,
@@ -24,7 +24,6 @@ export default defineManifest({
   // scripting: the toolbar icon puts the floating window on the page it was clicked on.
   // contextMenus: right-click a picture, video, link, selected text or page to check it.
   permissions: ['sidePanel', 'storage', 'tabCapture', 'activeTab', 'scripting', 'contextMenus'],
-  host_permissions: ['https://meet.google.com/*', 'https://mail.google.com/*'],
   // Only when the person switches on "Warn me about risky websites" in Settings (asked at that moment,
   // never at install): every page is checked on the laptop, nothing is sent.
   optional_host_permissions: ['<all_urls>'],
@@ -37,8 +36,4 @@ export default defineManifest({
   },
   // The floating window loads the panel page in a frame on the page.
   web_accessible_resources: [{ resources: ['src/sidepanel/index.html'], matches: ['<all_urls>'], use_dynamic_url: true }],
-  content_scripts: [
-    { matches: ['https://meet.google.com/*'], js: ['src/content/meet.ts'], run_at: 'document_idle' },
-    { matches: ['https://mail.google.com/*'], js: ['src/content/gmail.ts'], run_at: 'document_idle' },
-  ],
 });

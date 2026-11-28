@@ -74,7 +74,7 @@ export const DEMO_EVIDENCE: Evidence = {
         ],
       },
     ],
-    pattern: 'Executive asks for a secret, urgent transfer',
+    pattern: 'Pressure scam: urgent and secret',
     rulesVersion: 14,
     source: 'on_device',
   },

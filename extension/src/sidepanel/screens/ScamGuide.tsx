@@ -79,12 +79,12 @@ export interface Scam {
 export const SCAMS: Scam[] = [
   {
     id: 'call',
-    name: 'Deepfake boss on a video call',
-    how: 'A familiar face on a call asks for an urgent, secret payment. The face is generated live from public videos.',
+    name: 'Deepfake on a video call',
+    how: 'A familiar face on a call asks for something urgent and secret. The face is generated live from public videos.',
     signs: ['Edges of the face blur or flicker', 'Earrings, glasses or teeth change shape', 'The face breaks up when a hand passes in front'],
     check: 'The face, then the hand check',
     act: 'Leave the call. Call back on the number on record.',
-    patterns: ['Deepfake executive on a video call', 'Deepfake video call', 'Real-time face swap', 'Fake camera feed'],
+    patterns: ['Deepfake on a video call, with pressure', 'Deepfake video call', 'Real-time face swap', 'Fake camera feed'],
   },
   {
     id: 'voice',
@@ -93,12 +93,12 @@ export const SCAMS: Scam[] = [
     signs: ['Flat, even rhythm', 'No breathing', 'Background that jumps between sentences'],
     check: 'The voice, or drop the voice note',
     act: 'Ask your agreed code word. Call back on the number on record.',
-    patterns: ['Executive voice clone', 'Cloned voice'],
+    patterns: ['Cloned voice, with pressure', 'Cloned voice'],
   },
   {
     id: 'site',
     name: 'Fake website',
-    how: 'A copy of a bank’s or supplier’s page, on an address that is one letter off.',
+    how: 'A copy of a real company’s page, on an address that is one letter off.',
     signs: ['Address close to, but not, the real one', 'Brand-new address', 'Asks for a password, card or code'],
     check: 'The website, or right-click a link',
     act: 'Don’t type anything. Type the real address yourself.',
@@ -115,12 +115,12 @@ export const SCAMS: Scam[] = [
   },
   {
     id: 'invoice',
-    name: 'Doctored invoice',
-    how: 'A real invoice with the bank account changed, sent from a look-alike address.',
-    signs: ['New account for a supplier you already pay', 'Edited after it was made', 'Sender one letter off'],
+    name: 'Doctored document',
+    how: 'A real invoice, letter or ID with one detail changed, or a fake made to look official.',
+    signs: ['Edited after it was made', 'One part looks pasted in', 'Made with an AI or editing tool'],
     check: 'Drop the PDF',
-    act: 'Pay only to the account on record, after a call.',
-    patterns: ['Doctored invoice', 'Vendor bank change', 'Lookalike supplier invoice', 'Forged document'],
+    act: 'Ask the sender for the original, and confirm another way.',
+    patterns: ['Doctored invoice', 'Forged document'],
   },
   {
     id: 'receipt',
@@ -128,7 +128,7 @@ export const SCAMS: Scam[] = [
     how: 'A transfer screenshot or receipt, edited or made by AI, “proving” you were paid.',
     signs: ['Made by an AI image tool', 'One number looks pasted in', 'Reported by others before'],
     check: 'Drop the picture, or right-click it',
-    act: 'Check your own bank account, never the picture.',
+    act: 'Check your own account, never the picture.',
     patterns: ['AI-made picture or receipt', 'Doctored picture or payment screenshot', 'A known scam picture'],
   },
 ];
