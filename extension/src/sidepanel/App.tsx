@@ -141,11 +141,6 @@ export function App() {
   const detail = tab ? null : placeFor(screen);
   const where = !a.hasInput ? null : screen === 'verdict' || screen === 'directory' || screen === 'paste' || screen === 'settings' || screen === 'media' ? a.place : detail;
   const error = a.error ?? callError;
-  const loadDemo = () => {
-    cancel();
-    a.loadDemo();
-    back();
-  };
   const newCheck = () => {
     cancel();
     a.clear();
@@ -201,9 +196,9 @@ export function App() {
             setScreen('media');
           }}
           patternInfo={info}
-          onDemo={loadDemo}
           onVoice={IN_EXTENSION ? () => void a.checkVoice() : undefined}
           onFrame={IN_EXTENSION ? () => void a.checkFrame() : undefined}
+          onSite={IN_EXTENSION ? () => void a.checkSite() : undefined}
         />
       )}
       {screen === 'directory' && <Directory people={a.directory.people} suppliers={a.directory.suppliers} />}
@@ -245,7 +240,6 @@ export function App() {
           rulesVersion={a.rules.version}
           knownCount={a.knownCount}
           onBack={back}
-          onDemo={loadDemo}
           onClear={newCheck}
         />
       )}

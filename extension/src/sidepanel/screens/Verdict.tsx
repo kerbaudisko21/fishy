@@ -30,7 +30,6 @@ interface Props {
   onOpenFlag: (kind: VerdictT['flags'][number]['kind']) => Screen | null;
   onOpen: (s: Screen) => void;
   onPaste: () => void;
-  onDemo: () => void;
   /** A dropped or chosen file: picture, PDF or voice recording. */
   onFile: (file: File) => void;
   /** What was checked in this session, for "Your checks". */
@@ -42,6 +41,8 @@ interface Props {
   onVoice?: () => void;
   /** Capture one frame of the video call in this tab. */
   onFrame?: () => void;
+  /** Check the website in this tab. */
+  onSite?: () => void;
 }
 
 const first = (name?: string) => firstName(name);
@@ -77,7 +78,7 @@ export function Verdict(p: Props) {
 
   // The hero: one colour per state, one sentence.
   const hero: { tone: Tone; pill: string; title: string; line: string } | null = waiting
-    ? { tone: 'navy', pill: 'Ready', title: 'Is it real?', line: 'Check it before you pay. Pick one below: FISHY tells you how fishy it is, why, and who to call.' }
+    ? { tone: 'navy', pill: 'Ready', title: 'Is it real?', line: 'Check it before you pay or type anything in. FISHY tells you how fishy it is, why, and who to call.' }
     : call.state === 'ringing'
       ? { tone: 'navy', pill: wait.pill, title: wait.title, line: wait.line }
       : call.state === 'no_answer' || call.state === 'escalated'
@@ -174,9 +175,9 @@ export function Verdict(p: Props) {
               </li>
               <li>
                 <span className="start-label">
-                  <span className="start-num">2</span> The video call you are in
+                  <span className="start-num">2</span> What’s open in this tab
                 </span>
-                <ActionGrid onFrame={p.onFrame} onVoice={p.onVoice} busy={!!p.busy} />
+                <ActionGrid onFrame={p.onFrame} onVoice={p.onVoice} onSite={p.onSite} busy={!!p.busy} />
               </li>
               <li className="start-then">
                 <span className="start-label">
@@ -189,10 +190,6 @@ export function Verdict(p: Props) {
             <div className="start-links">
               <button className="link" onClick={p.onPaste}>
                 Paste a message instead
-              </button>
-              <span aria-hidden="true">·</span>
-              <button className="link" onClick={p.onDemo}>
-                Try the demo case
               </button>
             </div>
           </>
@@ -314,6 +311,7 @@ export function Verdict(p: Props) {
               <Tile icon={Icon.image(20)} title="A file" detail="Picture, PDF, voice" onClick={p.onPaste} disabled={!!p.busy} />
               {p.onFrame && <Tile icon={Icon.video(20)} title="The face" detail="Watches 3 s" onClick={p.onFrame} disabled={!!p.busy} />}
               {p.onVoice && <Tile icon={Icon.mic(20)} title="The voice" detail="10 seconds" onClick={p.onVoice} disabled={!!p.busy} />}
+              {p.onSite && <Tile icon={Icon.link(20)} title="The website" detail="This tab" onClick={p.onSite} disabled={!!p.busy} />}
             </div>
           </Section>
         )}

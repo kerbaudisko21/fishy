@@ -98,20 +98,25 @@ export function DropZone({ onFile, disabled, compact, children }: { onFile: (f: 
   );
 }
 
-/** The two checks of a call: the face and the voice. Message text is a small link elsewhere. */
-export function ActionGrid({ onFrame, onVoice, busy }: { onFrame?: () => void; onVoice?: () => void; busy?: boolean }) {
-  const why = onFrame ? undefined : 'Open FISHY from the call’s tab';
+/** What's open in this tab: the face and the voice on a call, or the website itself. */
+export function ActionGrid({ onFrame, onVoice, onSite, busy }: { onFrame?: () => void; onVoice?: () => void; onSite?: () => void; busy?: boolean }) {
+  const why = onFrame ? undefined : 'Open FISHY from the tab you want to check';
   return (
     <div className="actions">
       <button className="action" onClick={onFrame} disabled={busy || !onFrame} title={why}>
         <span className="action-icon">{Icon.video(22)}</span>
         <span className="action-title">The face</span>
-        <span className="action-detail">Is the person on this call real? Watches 3 s.</span>
+        <span className="action-detail">Real or deepfake? Watches 3 s.</span>
       </button>
       <button className="action" onClick={onVoice} disabled={busy || !onVoice} title={why}>
         <span className="action-icon">{Icon.mic(22)}</span>
         <span className="action-title">The voice</span>
-        <span className="action-detail">Is it cloned? Listens 10 s.</span>
+        <span className="action-detail">Cloned? Listens 10 s.</span>
+      </button>
+      <button className="action" onClick={onSite} disabled={busy || !onSite} title={why}>
+        <span className="action-icon">{Icon.link(22)}</span>
+        <span className="action-title">The website</span>
+        <span className="action-detail">Scam or real? Reads this page.</span>
       </button>
     </div>
   );
@@ -220,7 +225,7 @@ export function ScamType({ names, info }: { names: string[]; info: (name: string
   );
 }
 
-const KIND_ICON = (kind: MediaCheck['kind']) => (kind === 'voice' ? Icon.mic(16) : kind === 'frame' ? Icon.video(16) : kind === 'document' ? Icon.file(16) : Icon.image(16));
+const KIND_ICON = (kind: MediaCheck['kind']) => (kind === 'voice' ? Icon.mic(16) : kind === 'frame' ? Icon.video(16) : kind === 'site' ? Icon.link(16) : kind === 'document' ? Icon.file(16) : Icon.image(16));
 
 /** What was checked in this session, newest first, with its score. */
 export function RecentChecks({ items, onOpen }: { items: MediaCheck[]; onOpen: (id: string) => void }) {

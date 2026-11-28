@@ -19,17 +19,19 @@ interface Props {
   onChallenge?: () => void;
 }
 
-const TITLE: Record<MediaCheck['kind'], string> = { picture: 'Picture', document: 'Document', voice: 'Voice', frame: 'Video call' };
+const TITLE: Record<MediaCheck['kind'], string> = { picture: 'Picture', document: 'Document', voice: 'Voice', frame: 'Video call', site: 'Website' };
 
-const LOOKS: Record<MediaAssessment, { picture: string; voice: string }> = {
-  likely_ai: { picture: 'Looks made by AI', voice: 'Sounds like a cloned voice' },
-  likely_edited: { picture: 'Looks edited', voice: 'Sounds spliced together' },
-  no_clear_signs: { picture: 'No clear signs', voice: 'No clear signs' },
-  unclear: { picture: 'Hard to tell', voice: 'Hard to tell' },
+const LOOKS: Record<MediaAssessment, { picture: string; voice: string; site: string }> = {
+  likely_ai: { picture: 'Looks made by AI', voice: 'Sounds like a cloned voice', site: 'Looks like a scam website' },
+  likely_edited: { picture: 'Looks edited', voice: 'Sounds spliced together', site: 'Looks suspicious' },
+  no_clear_signs: { picture: 'No clear signs', voice: 'No clear signs', site: 'No clear signs' },
+  unclear: { picture: 'Hard to tell', voice: 'Hard to tell', site: 'Hard to tell' },
 };
 
+const looks = (kind: MediaCheck['kind'], a: MediaAssessment) => (kind === 'voice' ? LOOKS[a].voice : kind === 'site' ? LOOKS[a].site : LOOKS[a].picture);
+
 function kindIcon(kind: MediaCheck['kind'], size = 16) {
-  return kind === 'voice' ? Icon.mic(size) : kind === 'frame' ? Icon.video(size) : kind === 'document' ? Icon.file(size) : Icon.image(size);
+  return kind === 'voice' ? Icon.mic(size) : kind === 'frame' ? Icon.video(size) : kind === 'site' ? Icon.link(size) : kind === 'document' ? Icon.file(size) : Icon.image(size);
 }
 
 function Preview({ item, stamp }: { item: MediaCheck; stamp: ReactNode }) {
@@ -187,11 +189,14 @@ function Card({ item, focused, onChallenge }: { item: MediaCheck; focused: boole
             <span className="row-title">{voice ? 'What Gemini heard' : 'What Gemini saw'}</span>
             {g ? (
               <>
-                <span className="row-detail">{voice ? LOOKS[g.assessment].voice : LOOKS[g.assessment].picture}</span>
+                <span className="row-detail">
+                  {looks(item.kind, g.assessment)}
+                  {g.claimsToBe ? `; it presents itself as ${g.claimsToBe}` : ''}
+                </span>
                 <SourceBadge source={g.source} label={g.source === 'on_device' ? 'Gemini Nano, on device' : 'Gemini, cloud'} />
                 {item.firstLook && (
                   <span className="row-detail">
-                    First look by Gemini Nano on this laptop: {voice ? LOOKS[item.firstLook.assessment].voice : LOOKS[item.firstLook.assessment].picture}
+                    First look by Gemini Nano on this laptop: {looks(item.kind, item.firstLook.assessment)}
                     {item.escalation ? `. Asked the cloud because ${item.escalation}.` : '.'}
                   </span>
                 )}
@@ -224,7 +229,7 @@ export function Media({ items, busy, focusId, onBack, onFile, patterns = [], pat
 
         <DropZone onFile={onFile} disabled={busy} compact />
 
-        <Privacy>The file’s marks, pixels, motion and voice are measured on this laptop. A picture or video goes to the cloud only when Gemini Nano isn’t available or isn’t sure; a voice clip always does. Nothing is stored.</Privacy>
+        <Privacy>The file’s marks, pixels, motion, voice and a website’s page are measured on this laptop. A picture, video frame or website screenshot goes to the cloud only when Gemini Nano isn’t available or isn’t sure; a voice clip always does. For a website, only its address is looked up. Nothing is stored.</Privacy>
       </main>
     </>
   );

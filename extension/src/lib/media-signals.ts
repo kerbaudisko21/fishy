@@ -27,6 +27,20 @@ export function mediaSignals(items: MediaCheck[]): Signal[] {
     if ((pixel.some((h) => h.strength === 2) || pixel.length >= 2) && first('tamper_trace')) {
       out.push({ kind: 'tamper_trace', step: 'check', source: 'on_device', title: 'Signs of tampering in the pixels', detail: `${pixel[0].text} A sign, not proof.`, strength: pixel.length >= 2 ? 2 : 1 });
     }
+    if (m.kind === 'site') {
+      const look = hints.find((h) => h.id === 'lookalike');
+      if (look && first('lookalike_site')) out.push({ kind: 'lookalike_site', step: 'check', source: 'on_device', title: 'Copies a supplier’s address', detail: look.text });
+      if (hints.some((h) => h.id === 'unsafe') && first('unsafe_link')) {
+        out.push({ kind: 'unsafe_link', step: 'match', source: 'cloud', title: 'On the unsafe-sites list', detail: 'Google Web Risk lists this address.' });
+      }
+      if (hints.some((h) => h.id === 'young') && first('young_domain')) {
+        out.push({ kind: 'young_domain', step: 'check', source: 'cloud', title: 'A new website', detail: hints.find((h) => h.id === 'young')!.text });
+      }
+      const risky = hints.filter((h) => !['lookalike', 'unsafe', 'young'].includes(h.id));
+      if ((risky.some((h) => h.strength === 2) || risky.length >= 2) && first('site_risk')) {
+        out.push({ kind: 'site_risk', step: 'check', source: 'on_device', title: 'Risky website', detail: `${risky[0].text} A sign, not proof.`, strength: risky.length >= 2 ? 2 : 1 });
+      }
+    }
     const voiceHints = m.kind === 'voice' ? hints : [];
     if (voiceHints.length && first('voice_artifacts')) {
       out.push({ kind: 'voice_artifacts', step: 'check', source: 'on_device', title: 'Odd measurements in the voice', detail: `${voiceHints[0].text} A sign, not proof.`, strength: voiceHints.some((h) => h.strength === 2) ? 2 : 1 });
@@ -41,11 +55,12 @@ export function mediaSignals(items: MediaCheck[]): Signal[] {
       out.push({ kind: 'liveness_failed', step: 'check', source: g.source, title: 'The face broke up behind a hand', detail: `${lead}. Real faces don’t do this; real-time face swaps often do.`, strength: 3 });
       continue;
     }
-    const kind = voice ? 'voice_signs' : m.kind === 'frame' ? 'video_signs' : m.kind === 'document' ? 'document_signs' : 'picture_signs';
+    const kind = voice ? 'voice_signs' : m.kind === 'frame' ? 'video_signs' : m.kind === 'document' ? 'document_signs' : m.kind === 'site' ? 'site_signs' : 'picture_signs';
     if (!first(kind)) continue;
     const what = voice ? 'voice' : m.kind === 'frame' ? 'video' : m.kind === 'document' ? 'document' : 'picture';
-    const title =
-      g.assessment === 'likely_ai'
+    const title = m.kind === 'site'
+      ? g.assessment === 'likely_ai' ? `Looks like a scam website${g.claimsToBe ? ` posing as ${g.claimsToBe}` : ''}` : g.assessment === 'likely_edited' ? 'A suspicious website' : 'Something odd on the website'
+      : g.assessment === 'likely_ai'
         ? voice ? 'Signs of a cloned voice' : m.kind === 'frame' ? 'Signs of a deepfake face' : `Signs of AI in the ${what}`
         : g.assessment === 'likely_edited'
           ? voice ? 'Signs the voice was spliced' : `Signs the ${what} was edited`

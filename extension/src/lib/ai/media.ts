@@ -3,7 +3,7 @@ import { FIREBASE_READY } from '../config';
 import { firebaseApp } from '../firebase';
 import type { Source } from '../types';
 import { secondOpinionReason } from './escalate';
-import { CHALLENGE_NOTE, mediaSchema, NANO_IMAGE, parseMedia, PICTURE_PROMPT, VIDEO_PROMPT, VOICE_PROMPT, withMeasurements, type MediaReading } from './prompts';
+import { CHALLENGE_NOTE, mediaSchema, NANO_IMAGE, parseSite, SITE_PROMPT, siteSchema, parseMedia, PICTURE_PROMPT, VIDEO_PROMPT, VOICE_PROMPT, withMeasurements, type MediaReading } from './prompts';
 import { pictureForGemini, toBase64 } from './files';
 import { cloudBackend } from './provider';
 
@@ -22,6 +22,8 @@ export { pictureForGemini, toBase64 } from './files';
  */
 
 export interface MediaResult extends MediaReading {
+  /** Website checks: who the page claims to be. */
+  claimsToBe?: string;
   source: Source;
   model: 'gemini-nano' | 'gemini-cloud';
 }
@@ -44,7 +46,12 @@ export interface ReadOptions {
   challenge?: boolean;
 }
 
-let models: { hybrid: GenerativeModel; cloud: GenerativeModel } | undefined;
+interface Pair {
+  hybrid: GenerativeModel;
+  cloud: GenerativeModel;
+}
+
+let models: { hybrid: GenerativeModel; cloud: GenerativeModel; site: Pair } | undefined;
 
 function getModels() {
   if (models) return models;
@@ -58,24 +65,34 @@ function getModels() {
       inCloudParams: { model: cloudModel, generationConfig: json },
     }),
     cloud: getGenerativeModel(ai, { mode: InferenceMode.ONLY_IN_CLOUD, inCloudParams: { model: cloudModel, generationConfig: json } }),
+    site: {
+      hybrid: getGenerativeModel(ai, {
+        mode: InferenceMode.PREFER_ON_DEVICE,
+        onDeviceParams: { createOptions: NANO_IMAGE, promptOptions: { responseConstraint: siteSchema } },
+        inCloudParams: { model: cloudModel, generationConfig: { responseMimeType: 'application/json', responseSchema: siteSchema } },
+      }),
+      cloud: getGenerativeModel(ai, { mode: InferenceMode.ONLY_IN_CLOUD, inCloudParams: { model: cloudModel, generationConfig: { responseMimeType: 'application/json', responseSchema: siteSchema } } }),
+    },
   };
   return models;
 }
 
-function answer(result: { response: { text(): string; inferenceSource?: InferenceSource } }): MediaResult {
+type Parse = (json: string) => MediaReading & { claimsToBe?: string };
+
+function answer(result: { response: { text(): string; inferenceSource?: InferenceSource } }, parse: Parse = parseMedia): MediaResult {
   const onDevice = result.response.inferenceSource === InferenceSource.ON_DEVICE;
-  return { ...parseMedia(result.response.text()), source: onDevice ? 'on_device' : 'cloud', model: onDevice ? 'gemini-nano' : 'gemini-cloud' };
+  return { ...parse(result.response.text()), source: onDevice ? 'on_device' : 'cloud', model: onDevice ? 'gemini-nano' : 'gemini-cloud' };
 }
 
 /** First look (on device when it can), then a cloud second opinion only when the first isn't enough. */
-async function lookTwice(prompt: string, picture: Blob, opts: ReadOptions): Promise<HybridResult> {
-  const { hybrid, cloud } = getModels();
+async function lookTwice(prompt: string, picture: Blob, opts: ReadOptions, pair: Pair = getModels(), parse: Parse = parseMedia): Promise<HybridResult> {
+  const { hybrid, cloud } = pair;
   const parts = [withMeasurements(prompt, opts.measured), { type: 'inlineData' as const, inlineData: { mimeType: picture.type, data: await toBase64(picture) } }];
-  const first = answer(await hybrid.generateContent(parts));
+  const first = answer(await hybrid.generateContent(parts), parse);
   const reason = secondOpinionReason(first, !!opts.localHint);
   if (!reason) return { final: first };
   try {
-    const second = answer(await cloud.generateContent(parts));
+    const second = answer(await cloud.generateContent(parts), parse);
     return { final: second, firstLook: first, escalation: reason };
   } catch (e) {
     console.warn('[FISHY] cloud second opinion failed', e);
@@ -93,6 +110,15 @@ export async function readPicture(blob: Blob, opts: ReadOptions = {}): Promise<H
 export async function readFrames(sheet: Blob, opts: ReadOptions = {}): Promise<HybridResult | null> {
   if (!FIREBASE_READY) return null;
   return lookTwice(opts.challenge ? `${VIDEO_PROMPT}\n${CHALLENGE_NOTE}` : VIDEO_PROMPT, await pictureForGemini(sheet), opts);
+}
+
+/**
+ * A website: a screenshot of what the person sees, with what the laptop measured about the address
+ * and the page. Page text is never sent; the measurements carry no page text.
+ */
+export async function readSite(screenshot: Blob, opts: ReadOptions = {}): Promise<HybridResult | null> {
+  if (!FIREBASE_READY) return null;
+  return lookTwice(SITE_PROMPT, await pictureForGemini(screenshot), opts, getModels().site, parseSite);
 }
 
 /** A voice clip as 16 kHz WAV, which every Gemini API accepts. */

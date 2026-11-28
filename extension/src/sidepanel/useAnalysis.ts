@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { demoData } from '../demo/dataset';
-import { readFrames, readPicture, readVoice, type HybridResult } from '../lib/ai/media';
+import { readFrames, readPicture, readSite, readVoice, type HybridResult } from '../lib/ai/media';
+import { readPage, siteLab, type PageFacts } from '../lib/checks/site';
 import { decodeMono16k, VOICE_RATE, wavFrom } from '../lib/ai/files';
 import { analysePicture } from '../lib/forensics/picture';
 import { videoLab, voiceLab } from '../lib/forensics/labs';
 import { readTactics } from '../lib/ai/tactics';
-import { DEMO, IN_EXTENSION } from '../lib/config';
+import { IN_EXTENSION } from '../lib/config';
 import { domainOf, findLookalike, registrable } from '../lib/checks/domain';
 import { judgeAuth } from '../lib/checks/email';
 import { compareAccount, editTraces, findAccounts, invoiceNumber, invoiceTotal, mask } from '../lib/checks/invoice';
@@ -50,12 +51,13 @@ function geminiError(e: unknown): string {
 }
 
 /** Chrome's capture errors, in words a person can act on. */
-function captureError(what: 'video' | 'voice', e: unknown): string {
+function captureError(what: 'video' | 'voice' | 'website', e: unknown): string {
   const message = (e as Error)?.message ?? String(e);
   if (/not been invoked|activeTab|invoked for the current page/i.test(message)) {
-    return `Chrome lets FISHY capture a tab only after you click the FISHY icon on that tab. Go to the call’s tab, click the FISHY icon in the toolbar, then check the ${what} again.`;
+    return `Chrome lets FISHY read a tab only after you click the FISHY icon on that tab. Go to the ${what === 'website' ? 'website’s' : 'call’s'} tab, click the FISHY icon in the toolbar, then check the ${what} again.`;
   }
-  if (/chrome:\/\/|cannot be captured|Chrome pages/i.test(message)) {
+  if (/chrome:\/\/|cannot be captured|Chrome pages|chrome-extension|Cannot access|cannot be scripted/i.test(message)) {
+    if (what === 'website') return 'FISHY can’t read Chrome’s own pages or the Web Store. Open the website you want to check in a normal tab.';
     return `This tab can’t be captured. Open the video call in a Chrome tab and check the ${what} there.`;
   }
   if (/active stream|already being captured|another capture/i.test(message)) {
@@ -82,7 +84,8 @@ const newId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? c
  * In demo mode it starts on the synthetic Kalindra Group case; any new input switches to live.
  */
 export function useAnalysis() {
-  const [mode, setMode] = useState<'demo' | 'live'>(DEMO ? 'demo' : 'live');
+  // FISHY always starts empty: the person checks something of their own.
+  const [mode, setMode] = useState<'demo' | 'live'>('live');
   const [directory, setDirectory] = useState<Directory>({ people: [], suppliers: [] });
   const [known, setKnown] = useState<{ list: KnownBadEntry[]; updatedAt: number }>({ list: [], updatedAt: 0 });
   const [rules, setRules] = useState<RulesConfig>(DEFAULT_RULES);
@@ -440,6 +443,62 @@ export function useAnalysis() {
     [askGemini, goLive, putMedia],
   );
 
+  /**
+   * The website in this tab: the laptop reads the address and the page (forms, what it asks for),
+   * the cloud is asked only for the domain's age and Google's unsafe-site list (the address, never
+   * the page), then Gemini looks at a screenshot, on the laptop first.
+   */
+  const checkSite = useCallback(async () => {
+    if (!IN_EXTENSION) return setError('Open this in the extension to check a website.');
+    const tab = await activeTab();
+    if (tab?.id === undefined) return setError('Open the website’s tab first.');
+    setError(null);
+    try {
+      setBusy('Reading the website on this laptop…');
+      const [first] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: readPage });
+      const page = first?.result as PageFacts | undefined;
+      if (!page?.host) throw new Error('Cannot access this page.');
+      const floating = window.parent !== window;
+      if (floating) {
+        window.parent.postMessage({ fishy: 'hide' }, '*');
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      let shot: string;
+      try {
+        shot = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 85 });
+      } finally {
+        if (floating) window.parent.postMessage({ fishy: 'show' }, '*');
+      }
+      const picture = await (await fetch(shot)).blob();
+      goLive();
+      const id = newId();
+      let lab = siteLab(page, directory.suppliers);
+      putMedia({ id, kind: 'site', name: page.host, at: clock(), preview: URL.createObjectURL(picture), checks: [], forensics: { hints: lab.hints, rows: lab.rows } });
+
+      // Only the address goes out: its age, and whether Google lists it (no query string, no page).
+      setBusy('Looking up the address…');
+      const address = (() => {
+        try {
+          const u = new URL(page.url);
+          return `${u.origin}${u.pathname}`;
+        } catch {
+          return `https://${page.host}/`;
+        }
+      })();
+      const within = <T,>(p: Promise<T>) => Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), 6000))]);
+      const [age, links] = await Promise.all([within(domainAge(registrable(page.host))), within(checkLinks([address]))]);
+      lab = siteLab(page, directory.suppliers, { ageDays: age ? age.days : undefined, unsafe: links ? links.unsafe.length > 0 : undefined });
+      patchMedia(id, { forensics: { hints: lab.hints, rows: lab.rows } });
+
+      setBusy('Gemini is looking at the website…');
+      await askGemini(id, () => readSite(picture, { measured: lab.measured, localHint: !!lab.hints.length }));
+    } catch (e) {
+      setError(captureError('website', e));
+    } finally {
+      setBusy(null);
+    }
+  }, [askGemini, directory.suppliers, goLive, patchMedia, putMedia]);
+
   /** Paste-text fallback (deck risk: Meet pages change). */
   const checkText = useCallback(
     (text: string) => {
@@ -500,6 +559,7 @@ export function useAnalysis() {
     checkAttachedInvoice,
     checkVoice,
     checkFrame,
+    checkSite,
     checkFile,
     clear,
     loadDemo,

@@ -2,6 +2,12 @@
 
 Each version's build also shows in the extension under **Settings → About** (version, commit, build time and what's new). The same list lives in `extension/src/lib/changes.ts`.
 
+## 0.6.0 · 28 Nov 2026
+- Fourth check: the website in this tab. The laptop reads the address and the page (look-alike letters, a copy of a supplier's address, a bare number, secrets asked without https or sent to another site, risky endings); the cloud is asked only the address's age and whether Google lists it as unsafe; Gemini looks at a screenshot, on the laptop first
+- New scam types: Fake website copying a supplier, Phishing or fake website
+- FISHY always starts empty: the demo case no longer opens by itself, and the demo buttons are gone
+- Fixed: "Don't pay until them confirms" now reads "until the real person confirms" when no one is on record yet
+
 ## 0.5.0 · 28 Nov 2026
 - Home says what to do at a glance: 1 something you were sent, 2 the call you are in (the face, the voice), 3 then call the real person
 - Hybrid by design: Gemini Nano takes the first look on the laptop; FISHY asks the cloud model for a second opinion only when Nano can't tell, isn't sure, finds one sign, or disagrees with the laptop's own checks. The card shows the path it took

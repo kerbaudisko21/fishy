@@ -50,10 +50,12 @@ export function scoreMedia(item: MediaCheck): MediaScore {
   // The laptop's own measurements: a strong hint alone is worth a closer look, two make it fishy.
   const hints = item.forensics?.hints ?? [];
   if (hints.length) {
+    // Listed by Google as unsafe: as strong as a file that says it was made by AI.
+    if (hints.some((h) => h.id === 'unsafe')) raise(95, 'Google’s list of unsafe sites names this address.');
     const frozen = hints.some((h) => h.id === 'frozen');
     const strong = hints.filter((h) => h.strength === 2).length;
     const local = frozen ? 60 : Math.min(70, (strong ? 45 : 30) + 10 * (hints.length - 1));
-    for (const h of hints) found.push({ value: local - (h.strength === 2 ? 0 : 5), reason: h.text });
+    for (const h of hints) if (h.id !== 'unsafe') found.push({ value: local - (h.strength === 2 ? 0 : 5), reason: h.text });
     // They agree with Gemini: more weight; they stand alone: their own score.
     score = g && (g.assessment === 'likely_ai' || g.assessment === 'likely_edited') ? Math.min(98, score + 3 * hints.length) : Math.max(score, local);
   }

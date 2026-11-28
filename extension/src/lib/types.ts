@@ -40,7 +40,13 @@ export type SignalKind =
   /** The laptop's voice measurements found something odd (flat pitch, joined recordings…). */
   | 'voice_artifacts'
   /** The face broke up when the caller passed a hand in front of it (the liveness check). */
-  | 'liveness_failed';
+  | 'liveness_failed'
+  /** Gemini sees signs that the website in this tab is a scam or a copy. */
+  | 'site_signs'
+  /** The website's address imitates a supplier on record. */
+  | 'lookalike_site'
+  /** The laptop found something risky about the website (look-alike letters, no https with a password…). */
+  | 'site_risk';
 
 export interface Signal {
   kind: SignalKind;
@@ -110,7 +116,7 @@ export interface KnownMatchView {
   events?: Array<{ date: string; what: string }>;
 }
 
-export type MediaKind = 'picture' | 'document' | 'voice' | 'frame';
+export type MediaKind = 'picture' | 'document' | 'voice' | 'frame' | 'site';
 export type MediaAssessment = 'likely_ai' | 'likely_edited' | 'no_clear_signs' | 'unclear';
 
 /** One thing the person chose to check: a picture, a document, a voice clip or a frame of the call. */
@@ -118,6 +124,8 @@ export interface GeminiReading {
   assessment: MediaAssessment;
   signs: Array<{ sign: string; where: string }>;
   confidence?: 'low' | 'medium' | 'high';
+  /** Website checks: who the page claims to be. */
+  claimsToBe?: string;
   source: Source;
   model: 'gemini-nano' | 'gemini-cloud';
 }

@@ -9,6 +9,16 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '0.6.0',
+    date: '28 Nov 2026',
+    items: [
+      'Fourth check: the website in this tab. The laptop reads the address and the page (look-alike letters, a copy of a supplier’s address, a bare number, secrets asked without https or sent to another site, risky endings); the cloud is asked only the address’s age and whether Google lists it as unsafe; Gemini looks at a screenshot, on the laptop first',
+      'New scam types: Fake website copying a supplier, Phishing or fake website',
+      'FISHY always starts empty: the demo case no longer opens by itself, and the demo buttons are gone',
+      'Fixed: “Don’t pay until them confirms” now reads “until the real person confirms” when no one is on record yet',
+    ],
+  },
+  {
     version: '0.5.0',
     date: '28 Nov 2026',
     items: [

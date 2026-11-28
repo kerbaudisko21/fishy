@@ -26,7 +26,7 @@ export interface RulesConfig {
 }
 
 export const DEFAULT_RULES: RulesConfig = {
-  version: 15,
+  version: 16,
   // A file that says it was made by AI, or names the AI tool, is fishy whatever else is true.
   // So is a face that breaks up when a hand passes in front of it.
   alwaysFishy: ['bank_account_changed', 'known_bad_account', 'known_bad_domain', 'unsafe_link', 'ai_label', 'ai_tool', 'liveness_failed'],
@@ -49,6 +49,9 @@ export const DEFAULT_RULES: RulesConfig = {
     tamper_trace: 2,
     video_frozen: 2,
     voice_artifacts: 1,
+    site_signs: 1,
+    lookalike_site: 3,
+    site_risk: 2,
     // Editing software is normal for photos, so it only adds to other signs.
     edited_with: 1,
   },
@@ -101,6 +104,24 @@ export const DEFAULT_RULES: RulesConfig = {
       requires: ['voice_signs'],
       signs: ['The voice shows signs of being generated or cut together'],
       action: 'Ask something only the real person would know, then call them back on the number on record.',
+    },
+    {
+      name: 'Fake website copying a supplier',
+      requires: ['lookalike_site'],
+      signs: ['The address is a near-copy of a supplier’s on record'],
+      action: 'Close it. Type the supplier’s address yourself, or call them on the number on record.',
+    },
+    {
+      name: 'Phishing or fake website',
+      requires: ['site_signs'],
+      signs: ['The page shows signs of a scam or of copying a real company'],
+      action: 'Don’t log in, pay or type anything here. Go to the company’s site by typing its address yourself.',
+    },
+    {
+      name: 'Phishing or fake website',
+      requires: ['site_risk'],
+      signs: ['The address or the page has tricks scam sites use'],
+      action: 'Don’t log in, pay or type anything here. Go to the company’s site by typing its address yourself.',
     },
     {
       name: 'Doctored invoice',
@@ -163,12 +184,15 @@ const ORDER: SignalKind[] = [
   'document_signs',
   'tamper_trace',
   'voice_artifacts',
+  'lookalike_site',
+  'site_signs',
+  'site_risk',
   'voice_score',
   'face_score',
 ];
 
 /** The signals that come from checking a picture, document, voice or video. */
-const MEDIA_KINDS = new Set<SignalKind>(['ai_label', 'ai_tool', 'edited_with', 'picture_signs', 'voice_signs', 'video_signs', 'document_signs', 'tamper_trace', 'video_frozen', 'voice_artifacts', 'liveness_failed', 'pdf_edited']);
+const MEDIA_KINDS = new Set<SignalKind>(['ai_label', 'ai_tool', 'edited_with', 'picture_signs', 'voice_signs', 'video_signs', 'document_signs', 'tamper_trace', 'video_frozen', 'voice_artifacts', 'liveness_failed', 'pdf_edited', 'site_signs', 'lookalike_site', 'site_risk']);
 /** Between two equally specific scams, the one the media points to comes first (0) — FISHY's focus. */
 const mediaFirst = (p: ScamPattern) => (p.requires.some((k) => MEDIA_KINDS.has(k)) ? 0 : 1);
 

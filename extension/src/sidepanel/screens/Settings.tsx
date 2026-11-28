@@ -10,7 +10,6 @@ interface Props {
   rulesVersion: number;
   knownCount: number;
   onBack: () => void;
-  onDemo: () => void;
   onClear: () => void;
 }
 
@@ -24,7 +23,7 @@ const NANO_TEXT: Record<NanoStatus, { title: string; detail: string }> = {
   },
 };
 
-export function Settings({ mode, rulesVersion, knownCount, onBack, onDemo, onClear }: Props) {
+export function Settings({ rulesVersion, knownCount, onBack, onClear }: Props) {
   const [nano, setNano] = useState<NanoStatus | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,19 +89,12 @@ export function Settings({ mode, rulesVersion, knownCount, onBack, onDemo, onCle
         </div>
         </Section>
 
-        <Section title="Demo">
+        <Section title="This check">
         <div className="surface card-pad">
-          <span className="row-detail">
-            {mode === 'demo' ? 'Showing the synthetic Kalindra Group case.' : 'Showing live checks from this browser.'}
-          </span>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn secondary small" onClick={onDemo}>
-              Load the demo case
-            </button>
-            <button className="btn secondary small" onClick={onClear}>
-              Clear this check
-            </button>
-          </div>
+          <span className="row-detail">Clears what was checked in this window and starts over.</span>
+          <button className="btn secondary small" onClick={onClear}>
+            Clear this check
+          </button>
         </div>
         </Section>
 
