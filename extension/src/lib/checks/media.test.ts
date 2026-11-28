@@ -52,6 +52,6 @@ describe('hard evidence in a picture (scanPicture)', () => {
     const f = scanPicture(bytes('\xff\xd8 plain jpeg bytes'));
     expect(f.checks).toHaveLength(1);
     expect(f.checks[0].title).toBe('No AI or editing marks in the file');
-    expect(f.checks[0].detail).toContain('proves nothing');
+    expect(f.checks[0].detail).toContain('isn’t evidence either way');
   });
 });

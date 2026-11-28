@@ -46,7 +46,20 @@ Reviewed against the OWASP Top 10 (2021) and the OWASP Top 10 for LLM applicatio
 | Previews, frames and heat maps were never released | | Their object URLs are revoked when a check is cleared |
 | The website's address sent for the unsafe-sites lookup could carry tokens in its query string | A01/A02 data exposure | Only the origin and path are sent (query and fragment dropped), capped at 2048 characters |
 
+## New in 0.7.0, and how it is guarded
+
+| Surface | Guard |
+|---|---|
+| Right-click → "Check this picture with FISHY" fetches a picture inside the page | Only on the person's click (`contextMenus` + `activeTab`); the bytes go through the same checks as a dropped file (20 MB, picture-bomb header check, must decode); the job waits in `storage.session` (extension pages only) for at most 60 s |
+| Watch mode and lip-sync ask the floating window where it is, through the page | Only numbers are accepted, and nothing larger than the floating window can be (440 × 900): a page can't use it to black out the call |
+| Watch mode keeps a capture of the call open | Only after a click; a live dot and Stop are always on screen; it stops when the panel closes or the tab stops sharing; frames stay in memory |
+| Reported pictures (`reportedFakes`) | Only a 64-bit perceptual hash is stored, never the picture. Rules allow one report per person per picture (the ID is `hash_uid`), and only the hash, its four bands (checked to be the hash itself), a kind, the uid and the server time. No update or delete. A list query must set a limit of 50 or less |
+| Self-tuning escalation keeps counts | Counts only, in `chrome.storage.local`: no file, sign or text |
+| QR library `jsqr` 1.4.0 | Apache-2.0; `npm audit` clean; decoding errors are caught |
+
 ## Still open (known)
+
+- **Reported pictures can be abused.** Anyone signed in (anonymously) can report a picture, so an attacker could make many accounts and flag a real picture, or flood the collection. The card says "reported before by N people", and the call to the real person still decides. A company release should require a confirmed scam (a "not me" with the PIN) before a report counts, and rate-limit reports per person.
 
 - **Live builds carry an App Check debug token.** `npm run package` builds without one; never hand out a build made from `.env.local`, and revoke a debug token if one leaves your hands. A real release needs a real App Check provider.
 - **Anonymous sign-in.** Anyone with the public web key can sign in anonymously and read the masked directory and the known-scam list. A company release should use Google sign-in limited to the company's domain, and App Check on Firestore and Auth.

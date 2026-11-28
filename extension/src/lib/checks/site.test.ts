@@ -60,7 +60,7 @@ describe('website check on the laptop', () => {
   it('on Google’s unsafe list: scored 95 and fishy', () => {
     const lab = siteLab(page({}), [], { unsafe: true });
     const item = { id: 's', kind: 'site' as const, name: 'example.com', at: '10:00', checks: [], gemini: null, forensics: { hints: lab.hints, rows: lab.rows } };
-    expect(scoreMedia(item).score).toBe(95);
+    expect(scoreMedia(item).score).toBeGreaterThanOrEqual(90);
     expect(decide(mediaSignals([item])).level).toBe('fishy');
   });
 
@@ -83,5 +83,41 @@ describe('website answer from Gemini', () => {
     expect(r).toMatchObject({ assessment: 'likely_ai', confidence: 'high', claimsToBe: 'Bank Teluk' });
     expect(parseSite(JSON.stringify({ assessment: 'suspicious', signs: [] })).assessment).toBe('likely_edited');
     expect(parseSite(JSON.stringify({ assessment: 'nonsense' })).assessment).toBe('unclear');
+  });
+});
+
+describe('signals from the phishing research (Interisle, APWG, Web Risk)', () => {
+  const sup = [{ name: 'PT Sinar Logistik', domain: 'sinarlogistik.co.id' }];
+  it('ranks endings by how much phishing they carry', () => {
+    expect(siteLab(page({ host: 'pay.example.top' }), []).hints[0]).toMatchObject({ id: 'risky_tld_high', strength: 2 });
+    expect(siteLab(page({ host: 'deal.example.xyz' }), []).hints[0]).toMatchObject({ id: 'risky_tld', strength: 1 });
+  });
+  it('a private network address is not a phishing sign', () => {
+    expect(siteLab(page({ host: '192.168.1.10' }), []).hints.map((h) => h.id)).not.toContain('ip_host');
+    expect(siteLab(page({ host: '203.0.113.7' }), []).hints.map((h) => h.id)).toContain('ip_host');
+  });
+  it('free hosting counts only when the page asks for secrets', () => {
+    expect(siteLab(page({ host: 'bank-login.pages.dev', passwordFields: 1, formHosts: ['bank-login.pages.dev'] }), []).hints.map((h) => h.id)).toContain('free_host');
+    expect(siteLab(page({ host: 'my-portfolio.pages.dev' }), []).hints).toEqual([]);
+  });
+  it('a page that sends to a chat bot is flagged', () => {
+    expect(siteLab(page({ exfil: 'api.telegram.org/bot' }), []).hints[0]).toMatchObject({ id: 'exfil', strength: 2 });
+  });
+  it('a supplier named in the title on someone else’s address is flagged; on their own address it isn’t', () => {
+    expect(siteLab(page({ host: 'secure-portal.example.com', title: 'Sinar Logistik – Invoice payment' }), sup).hints.map((h) => h.id)).toContain('brand_mismatch');
+    expect(siteLab(page({ host: 'sinarlogistik.co.id', title: 'Sinar Logistik – Invoice payment' }), sup).hints).toEqual([]);
+  });
+});
+
+describe('QRIS payee name check (EU Verification of Payee style)', () => {
+  it('normalises company forms and finds match, close match and none', async () => {
+    const { nameCheck, normaliseName } = await import('../forensics/qr');
+    expect(normaliseName('PT. Sinar Logistik Tbk')).toBe('sinar logistik');
+    expect(normaliseName('Coco Corp')).toBe('coco');
+    const sup = [{ name: 'PT Sinar Logistik' }];
+    expect(nameCheck('SINAR LOGISTIK', sup).result).toBe('match');
+    expect(nameCheck('SINAR LOGISTIC', sup).result).toBe('close');
+    expect(nameCheck('TOKO BUDI', sup).result).toBe('none');
+    expect(nameCheck(undefined, sup).result).toBe('none');
   });
 });

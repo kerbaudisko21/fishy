@@ -46,7 +46,13 @@ export type SignalKind =
   /** The website's address imitates a supplier on record. */
   | 'lookalike_site'
   /** The laptop found something risky about the website (look-alike letters, no https with a password…). */
-  | 'site_risk';
+  | 'site_risk'
+  /** A QR code leads to a risky address, or a payment QR code was edited (its checksum is wrong). */
+  | 'qr_risky'
+  /** The mouth doesn't follow the voice on the video call. */
+  | 'lipsync_off'
+  /** This exact picture was reported as a scam before (perceptual hash). */
+  | 'reported_before';
 
 export interface Signal {
   kind: SignalKind;
@@ -144,6 +150,8 @@ export interface MediaForensics {
   rows: CheckItem[];
   /** A see-through overlay of where the picture changed most when re-saved. */
   heatmap?: string;
+  /** Areas to outline on the picture (fractions 0–1), e.g. the two halves of a copy-move match. */
+  boxes?: Array<{ x0: number; y0: number; x1: number; y1: number }>;
   /** Voice: pitch every 32 ms (0 = not voiced), for the chart. */
   pitch?: number[];
   /** Video: change between frames, 0–255. */
@@ -177,6 +185,14 @@ export interface MediaCheck {
   frames?: string[];
   /** A video check made while the caller passed a hand across their face. */
   challenge?: boolean;
+  /** Perceptual hash (16 hex), to report the picture as a scam or find earlier reports. */
+  phash?: string;
+  /** SHA-256 of the file as received, for the incident report (CISA: hash the original first). */
+  sha256?: string;
+  /** Where a right-clicked picture came from, for a reverse image search. */
+  sourceUrl?: string;
+  /** This person reported it as a scam. */
+  reported?: boolean;
   note?: string;
   /** True for the demo story's sample result. */
   demo?: boolean;

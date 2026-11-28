@@ -22,6 +22,8 @@ export interface PageFacts {
   otpFields: number;
   /** Where the page's forms send what is typed into them. */
   formHosts: string[];
+  /** A chat bot or webhook address in the page's scripts, if any. */
+  exfil?: string;
 }
 
 /**
@@ -50,11 +52,21 @@ export function readPage(): PageFacts {
     cardFields: inputs.filter((i) => /cc-number|cc-csc|cc-exp/.test(i.autocomplete) || /card.?num|cvv|cvc|nomor.?kartu/i.test(said(i))).length,
     otpFields: inputs.filter((i) => i.autocomplete === 'one-time-code' || /\botp\b|one.?time|kode.?verif|\bpin\b/i.test(said(i))).length,
     formHosts: [...new Set(formHosts)],
+    exfil: (() => {
+      const code = [...document.scripts].map((sc) => `${sc.src} ${sc.textContent?.slice(0, 20000) ?? ''}`).join(' ');
+      const m = /api\.telegram\.org\/bot|discord(?:app)?\.com\/api\/webhooks|hooks\.slack\.com\/services|webhook\.site/i.exec(code);
+      return m ? m[0].replace(/\\/g, '').slice(0, 60) : undefined;
+    })(),
   };
 }
 
 /** Top-level domains that are cheap, rarely used by companies, and common in phishing reports. */
-const RISKY_TLDS = new Set(['xyz', 'top', 'icu', 'click', 'cfd', 'sbs', 'buzz', 'monster', 'rest', 'lol', 'quest', 'zip', 'mov', 'cyou', 'bond']);
+/** Endings far more common in phishing than in registrations (Interisle 2025, Spamhaus). */
+const WORST_TLDS = new Set(['top', 'bond', 'xin', 'help', 'win', 'cfd', 'sbs', 'icu', 'cyou']);
+const RISKY_TLDS = new Set(['xyz', 'click', 'buzz', 'monster', 'rest', 'lol', 'quest', 'zip', 'mov', 'shop', 'online', 'site', 'live']);
+/** Free hosting where anyone can publish a page under the host's name (Interisle 2025: 10 providers carry 89% of subdomain phishing). */
+const FREE_HOSTS = ['pages.dev', 'workers.dev', 'r2.dev', 'webflow.io', 'web.app', 'firebaseapp.com', 'vercel.app', 'netlify.app', 'github.io', 'blogspot.com', 'weebly.com', 'wixsite.com', 'glitch.me', 'repl.co', 'ngrok-free.app', 'framer.website', 'godaddysites.com', 'square.site', 'sites.google.com'];
+const isPrivateIp = (h: string) => /^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h) || h === '[::1]';
 
 export interface SiteLab {
   hints: ForensicHint[];
@@ -105,7 +117,7 @@ export function siteLab(page: PageFacts, suppliers: Array<{ name: string; domain
     hints.push({ id: 'punycode', strength: 2, text: 'The address uses letters from another alphabet that look like normal ones, a trick to copy a real address.' });
     rows.push({ ok: false, title: 'Look-alike letters in the address', detail: host });
   }
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':')) {
+  if ((/^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':')) && !isPrivateIp(host)) {
     hints.push({ id: 'ip_host', strength: 2, text: 'The address is a bare number instead of a name; real companies don’t send people to those.' });
     rows.push({ ok: false, title: 'A number instead of a name', detail: host });
   }
@@ -121,9 +133,27 @@ export function siteLab(page: PageFacts, suppliers: Array<{ name: string; domain
     rows.push({ ok: false, title: 'Sends what you type elsewhere', detail: elsewhere.slice(0, 2).join(', ') });
   }
   const tld = host.split('.').pop() ?? '';
-  if (RISKY_TLDS.has(tld)) {
-    hints.push({ id: 'risky_tld', strength: 1, text: `The address ends in .${tld}, an ending companies rarely use and scam sites often do.` });
+  if (WORST_TLDS.has(tld)) {
+    hints.push({ id: 'risky_tld_high', strength: 2, text: `The address ends in .${tld}, one of the endings most used by scam sites, far beyond its share of websites.` });
+    rows.push({ ok: false, title: `Ends in .${tld}`, detail: 'Among the most abused endings in phishing reports' });
+  } else if (RISKY_TLDS.has(tld)) {
+    hints.push({ id: 'risky_tld', strength: 1, text: `The address ends in .${tld}, a cheap ending scam sites use often.` });
     rows.push({ ok: false, title: `Ends in .${tld}`, detail: 'Cheap and common in phishing reports' });
+  }
+  const freeHost = FREE_HOSTS.find((f) => host === f || host.endsWith(`.${f}`));
+  if (freeHost && asksSecrets) {
+    hints.push({ id: 'free_host', strength: 1, text: `The page lives on free hosting (${freeHost}) where anyone can publish, and asks for a password, card or code.` });
+    rows.push({ ok: false, title: 'Free hosting asking for secrets', detail: `${freeHost}: real companies host their logins on their own address` });
+  }
+  if (page.exfil) {
+    hints.push({ id: 'exfil', strength: 2, text: `The page has code that sends to ${page.exfil}, how phishing kits pass on what people type.` });
+    rows.push({ ok: false, title: 'Sends to a chat bot or webhook', detail: page.exfil });
+  }
+  // A supplier on record named in the title, on an address that isn't theirs (and isn't a near-copy, counted above).
+  const named = suppliers.find((s) => s.name.length >= 4 && title.toLowerCase().includes(s.name.toLowerCase().replace(/^pt\.?\s+/, '')) && registrable(s.domain) !== reg);
+  if (named && !look) {
+    hints.push({ id: 'brand_mismatch', strength: 2, text: `The page calls itself ${named.name}, but its address isn’t ${named.domain}, the one on record.` });
+    rows.push({ ok: false, title: 'Name and address don’t match', detail: `${named.name} is on record at ${named.domain}` });
   }
   const labels = host.split('.');
   if (labels.length >= 5 || (host.match(/-/g) ?? []).length >= 3) {
@@ -137,7 +167,7 @@ export function siteLab(page: PageFacts, suppliers: Array<{ name: string; domain
       hints.push({ id: 'young', strength: 2, text: `The site’s address was registered only ${extra.ageDays} days ago.` });
       rows.push({ ok: false, title: 'A brand-new address', detail: `Registered ${extra.ageDays} days ago` });
     } else if (extra.ageDays < 180) {
-      hints.push({ id: 'young', strength: 1, text: `The site’s address is only ${Math.round(extra.ageDays / 30)} months old.` });
+      hints.push({ id: 'young_months', strength: 1, text: `The site’s address is only ${Math.round(extra.ageDays / 30)} months old.` });
       rows.push({ ok: false, title: 'A young address', detail: `Registered ${extra.ageDays} days ago` });
     } else {
       rows.push({ ok: true, title: 'An established address', detail: `Registered ${Math.round(extra.ageDays / 365)} year(s) ago or more` });

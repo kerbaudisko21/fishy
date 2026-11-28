@@ -191,7 +191,7 @@ describe('score and red flags with nothing, or everything, at once', () => {
   const base = { id: 'x', name: '', at: '', checks: [] };
   it('an empty card is pending, with no sentence', () => {
     const s = scoreMedia({ ...base, kind: 'picture' });
-    expect(s).toEqual({ score: null, band: 'pending', reasons: [] });
+    expect(s).toMatchObject({ score: null, band: 'pending', reasons: [] });
     expect(whySentence(s)).toBe('');
   });
   it('every signal at once stays within 0–100 and names each red flag once', () => {

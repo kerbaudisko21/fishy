@@ -2,7 +2,7 @@ import { getAI, getGenerativeModel, InferenceMode, InferenceSource, type Generat
 import { FIREBASE_READY } from '../config';
 import { firebaseApp } from '../firebase';
 import type { Source } from '../types';
-import { secondOpinionReason } from './escalate';
+import { secondOpinionReason, type Trust } from './escalate';
 import { CHALLENGE_NOTE, mediaSchema, NANO_IMAGE, parseSite, SITE_PROMPT, siteSchema, parseMedia, PICTURE_PROMPT, VIDEO_PROMPT, VOICE_PROMPT, withMeasurements, type MediaReading } from './prompts';
 import { pictureForGemini, toBase64 } from './files';
 import { cloudBackend } from './provider';
@@ -44,6 +44,10 @@ export interface ReadOptions {
   localHint?: boolean;
   /** Video: the caller passed a hand across their face during the frames. */
   challenge?: boolean;
+  /** How far Nano has agreed with the cloud for this kind of check (self-tuning escalation). */
+  trust?: Trust;
+  /** Ask the cloud for a second opinion whatever Nano says, with this reason (watch mode's alarm). */
+  forceCloud?: string;
 }
 
 interface Pair {
@@ -89,7 +93,7 @@ async function lookTwice(prompt: string, picture: Blob, opts: ReadOptions, pair:
   const { hybrid, cloud } = pair;
   const parts = [withMeasurements(prompt, opts.measured), { type: 'inlineData' as const, inlineData: { mimeType: picture.type, data: await toBase64(picture) } }];
   const first = answer(await hybrid.generateContent(parts), parse);
-  const reason = secondOpinionReason(first, !!opts.localHint);
+  const reason = opts.forceCloud && first.source === 'on_device' ? opts.forceCloud : secondOpinionReason(first, !!opts.localHint, opts.trust);
   if (!reason) return { final: first };
   try {
     const second = answer(await cloud.generateContent(parts), parse);
@@ -110,6 +114,17 @@ export async function readPicture(blob: Blob, opts: ReadOptions = {}): Promise<H
 export async function readFrames(sheet: Blob, opts: ReadOptions = {}): Promise<HybridResult | null> {
   if (!FIREBASE_READY) return null;
   return lookTwice(opts.challenge ? `${VIDEO_PROMPT}\n${CHALLENGE_NOTE}` : VIDEO_PROMPT, await pictureForGemini(sheet), opts);
+}
+
+/**
+ * One quick look at a few frames for watch mode: the hybrid model once, no second opinion
+ * (Gemini Nano on the laptop when it is ready). The sequential test adds the rounds up.
+ */
+export async function glanceFrames(sheet: Blob, measured: string): Promise<MediaResult | null> {
+  if (!FIREBASE_READY) return null;
+  const picture = await pictureForGemini(sheet);
+  const parts = [withMeasurements(VIDEO_PROMPT, measured), { type: 'inlineData' as const, inlineData: { mimeType: picture.type, data: await toBase64(picture) } }];
+  return answer(await getModels().hybrid.generateContent(parts));
 }
 
 /**

@@ -6,7 +6,8 @@ import { line, Reveal, useTextSwap } from '../../lib/transitions';
 import { useFirstSeen } from '../motion';
 import { waitingFor } from '../../lib/call-wait';
 import type { CallStatus, CallTarget, MediaCheck, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
-import { ActionGrid, DropZone, RecentChecks, ScamType } from '../scanner';
+import { ActionGrid, DropZone, RecentChecks, ScamType, WatchPanel } from '../scanner';
+import type { WatchState } from '../useAnalysis';
 import { FlagRow, Icon, Privacy, Section, SourceBadge, Tile } from '../components';
 import { Amount, money } from '../format';
 import type { Screen } from '../routes';
@@ -43,6 +44,10 @@ interface Props {
   onFrame?: () => void;
   /** Check the website in this tab. */
   onSite?: () => void;
+  /** Watch mode: the face every 20 s, with a sequential test. */
+  watch: WatchState | null;
+  onWatch?: () => void;
+  onStopWatch: () => void;
 }
 
 const first = (name?: string) => firstName(name);
@@ -178,12 +183,13 @@ export function Verdict(p: Props) {
                   <span className="start-num">2</span> What’s open in this tab
                 </span>
                 <ActionGrid onFrame={p.onFrame} onVoice={p.onVoice} onSite={p.onSite} busy={!!p.busy} />
+                <WatchPanel watch={p.watch} onStart={p.onWatch} onStop={p.onStopWatch} disabled={!!p.busy} />
               </li>
               <li className="start-then">
                 <span className="start-label">
                   <span className="start-num">3</span> Then: call the real person
                 </span>
-                <span className="row-detail">On the number on record, never the one in the message. A fake can pass a check; it can’t answer the real phone.</span>
+                <span className="row-detail">On the number on record, never the one in the message, and ask your agreed code word (FBI and CISA advice). A fake can pass a check; it can’t answer the real phone.</span>
               </li>
             </ol>
 
@@ -204,6 +210,7 @@ export function Verdict(p: Props) {
           </Section>
         )}
 
+        {!waiting && (p.watch?.on || p.watch?.alarm) && <WatchPanel watch={p.watch} onStop={p.onStopWatch} />}
         {!waiting && <ScamType names={verdict.patterns} info={p.patternInfo} />}
 
         {p.media && p.media.length > 0 && !waiting && (

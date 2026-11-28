@@ -118,11 +118,11 @@ export function scanPicture(bytes: Uint8Array): PictureFacts {
 
   const checks: CheckItem[] = [];
   if (aiLabel) checks.push({ ok: false, title: 'Labelled as made by AI', detail: aiLabel });
-  else if (credentials) checks.push({ ok: true, title: 'Has Content Credentials', detail: 'A signed record of how it was made, with no AI label' });
+  else if (credentials) checks.push({ ok: true, title: 'Has Content Credentials', detail: 'A record of how it was made, with no AI label. FISHY sees it is there but doesn’t verify its signature, so treat it as a claim' });
   if (aiTool) checks.push({ ok: false, title: `Made with ${aiTool}`, detail: sdSettings ? 'Its generation settings are inside the file' : 'The AI tool is named in the file’s data' });
   if (editedWith) checks.push({ ok: false, title: `Edited in ${editedWith}`, detail: 'Editing is normal for photos, but not for a receipt, an ID or proof of payment' });
   if (!aiLabel && !aiTool && !editedWith && !credentials) {
-    checks.push({ ok: true, title: 'No AI or editing marks in the file', detail: camera ? `Camera recorded: ${camera}` : 'Marks are often removed by chat apps and screenshots, so this alone proves nothing' });
+    checks.push({ ok: true, title: 'No AI or editing marks in the file', detail: camera ? `Camera recorded: ${camera}` : 'No marks usually means it passed through WhatsApp or social media: that alone isn’t evidence either way (NSA/FBI/CISA). No AI watermark found doesn’t mean no AI was used' });
   }
   return { aiLabel, aiTool, editedWith, credentials, camera, checks };
 }

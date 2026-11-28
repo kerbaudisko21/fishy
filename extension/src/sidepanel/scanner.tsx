@@ -286,3 +286,47 @@ export function useWindowDrop(onFile: (f: File) => void) {
   }, [onFile]);
   return active;
 }
+
+/**
+ * Watch mode on the home screen: a start button, then the evidence meter between "looks real" and
+ * "looks fake" (the sequential test's two thresholds), the rounds so far and the last glance.
+ */
+export function WatchPanel({ watch, onStart, onStop, disabled }: { watch: { on: boolean; rounds: number; position: number; realRounds: number; last: string; alarm?: boolean } | null; onStart?: () => void; onStop: () => void; disabled?: boolean }) {
+  if (!watch?.on && !watch?.alarm) {
+    return (
+      <button className="watch-start" onClick={onStart} disabled={disabled || !onStart} title={onStart ? undefined : 'Open FISHY from the call’s tab'}>
+        <span className="watch-eye" aria-hidden="true">{Icon.video(16)}</span>
+        <span className="grow">
+          <span className="row-title">Keep watching this call</span>
+          <span className="row-detail">Checks the face every 20 s on this laptop, and alerts only when the signs add up.</span>
+        </span>
+      </button>
+    );
+  }
+  const pct = Math.round(watch.position * 100);
+  return (
+    <div className={`watch surface${watch.alarm ? ' alarm' : ''}`} role="status" aria-live="polite">
+      <div className="watch-head">
+        <span className={`watch-dot${watch.on ? ' on' : ''}`} aria-hidden="true" />
+        <span className="row-title grow">{watch.alarm ? 'Watch mode raised the alarm' : 'Watching the call'}</span>
+        {watch.on && (
+          <button className="btn secondary small" onClick={onStop}>
+            Stop
+          </button>
+        )}
+      </div>
+      <div className="meter" aria-label={`Evidence: ${pct}% of the way to the alarm`}>
+        <span className="meter-fill" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="meter-ends">
+        <span>Looks real</span>
+        <span>Looks fake</span>
+      </div>
+      <span className="row-detail">
+        {watch.alarm
+          ? 'The signs added up across rounds. The cloud is double-checking; see the result below.'
+          : `Round ${watch.rounds + 1}. Last look: ${watch.last}.${watch.realRounds ? ` Looked real for ${watch.realRounds} rounds so far.` : ''}`}
+      </span>
+    </div>
+  );
+}

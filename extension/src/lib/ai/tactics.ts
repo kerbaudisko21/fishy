@@ -46,10 +46,10 @@ declare const LanguageModel: { availability(options?: unknown): Promise<NanoStat
 
 export type NanoStatus = 'available' | 'downloadable' | 'downloading' | 'unavailable';
 
-export async function nanoStatus(): Promise<NanoStatus> {
+export async function nanoStatus(options: unknown = NANO_TEXT): Promise<NanoStatus> {
   if (typeof LanguageModel === 'undefined') return 'unavailable';
   try {
-    return await LanguageModel.availability(NANO_TEXT);
+    return await LanguageModel.availability(options);
   } catch {
     return 'unavailable';
   }

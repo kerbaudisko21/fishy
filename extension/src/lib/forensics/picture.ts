@@ -2,6 +2,9 @@ import type { CheckItem, ForensicHint, MediaForensics } from '../types';
 import { readJpeg } from './jpeg';
 import { elaFromPixels, gridPatternFromPixels, heatPixels, noiseFromPixels } from './picture-math';
 import { fft } from './voice-math';
+import { copyMoveFromPixels, copyMoveHint } from './copymove';
+import { jpegDouble, jpegGrid, jpegGridHints } from './jpeggrid';
+import { phash64 } from './phash';
 
 /*
  * The laptop's own look at a picture's pixels and structure, before any AI. Nothing leaves the
@@ -11,6 +14,8 @@ import { fft } from './voice-math';
 export interface PictureLab extends MediaForensics {
   /** For Gemini: what was measured, in a short paragraph. */
   measured: string;
+  /** The perceptual hash, for "reported before" (16 hex). */
+  phash?: string;
 }
 
 const MAX_PIXELS = 16_000_000;
@@ -122,7 +127,50 @@ export async function analysePicture(blob: Blob, bytes: Uint8Array, camera?: str
         }
       }
     }
-    return { hints, rows, heatmap, measured: measured.join(' ') };
+    // 4b. How many times it was saved as JPEG, and whether its grid was shifted (cropped, then saved
+    //     again). Weak signs: chat apps and screenshots crop and re-save innocently. Measured in
+    //     Chrome: 2 of 48 clean pictures flagged, about half of re-saved ones caught.
+    if (isJpeg && scale === 1) {
+      // At most a 2048 × 2048 corner, starting at (0, 0) so the JPEG grid stays where it was.
+      const cw = Math.min(w, 2048);
+      const ch = Math.min(h, 2048);
+      let part: Uint8ClampedArray = data;
+      if (cw < w || ch < h) {
+        part = new Uint8ClampedArray(cw * ch * 4);
+        for (let y = 0; y < ch; y++) part.set(data.subarray(y * w * 4, (y * w + cw) * 4), y * cw * 4);
+      }
+      const grid = jpegGrid(part, cw, ch);
+      const dq = jpegDouble(part, cw, ch, jpeg?.luma ?? null);
+      for (const hint of jpegGridHints(grid, dq)) {
+        hints.push({ id: hint.id, strength: 1, text: hint.text });
+        rows.push({ ok: false, title: hint.id === 'double_jpeg' ? 'Saved twice' : 'Cropped, then saved again', detail: `${hint.text} Common for pictures passed through chat apps, so it counts only a little.` });
+      }
+      if (!grid.shifted && !dq.doubleCompressed) rows.push({ ok: true, title: 'Saved once, uncropped', detail: 'As far as the compression shows (it needs some texture to tell)' });
+    }
+
+    // 5. Copy-move: one part of the picture cloned onto another. On a copy of at most 1 MP.
+    let boxes: PictureLab['boxes'];
+    {
+      const cm = Math.min(1, Math.sqrt(1_000_000 / (bitmap.width * bitmap.height)));
+      const cw = Math.max(1, Math.round(bitmap.width * cm));
+      const ch = Math.max(1, Math.round(bitmap.height * cm));
+      const r = copyMoveFromPixels(pixelsOf(bitmap, cw, ch).data, cw, ch);
+      const hint = copyMoveHint(r);
+      if (hint && r.source && r.target) {
+        hints.push(hint);
+        boxes = [r.source, r.target];
+        rows.push({ ok: false, title: 'Two identical areas', detail: `Outlined on the picture${r.place ? ` (one around the ${r.place})` : ''}: a clone, or the same thing shown twice` });
+        measured.push(`Two areas of the picture are pixel-for-pixel identical${r.place ? `, one around the ${r.place}` : ''}.`);
+      } else {
+        rows.push({ ok: true, title: 'No cloned areas', detail: 'Small clones (under about 32 px) can still be missed' });
+      }
+    }
+    // 6. A fingerprint that survives resizing and re-saving, to look up pictures reported as scams.
+    const small = Math.min(1, 512 / Math.max(bitmap.width, bitmap.height));
+    const pw = Math.max(1, Math.round(bitmap.width * small));
+    const ph = Math.max(1, Math.round(bitmap.height * small));
+    const phash = phash64(pixelsOf(bitmap, pw, ph).data, pw, ph);
+    return { hints, rows, heatmap, boxes, phash, measured: measured.join(' ') };
   } finally {
     bitmap.close();
   }

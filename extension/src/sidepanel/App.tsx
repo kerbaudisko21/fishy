@@ -92,6 +92,24 @@ export function App() {
     else void sendBanner('hidden', '', '');
   }, [call.state, who, a.hasInput, a.verdict]);
 
+  // "Check this picture with FISHY" from the right-click menu: the job waits in session storage.
+  const { checkPagePicture } = a;
+  useEffect(() => {
+    if (!IN_EXTENSION || !chrome.storage?.session) return;
+    type Job = { kind: 'picture'; src: string; tabId: number; pageUrl?: string; at: number };
+    const take = (job?: Job) => {
+      if (!job || job.kind !== 'picture' || Date.now() - job.at > 60_000) return;
+      void chrome.storage.session.remove('fishyJob');
+      void checkPagePicture(job);
+    };
+    void chrome.storage.session.get('fishyJob').then((v) => take(v.fishyJob as Job | undefined));
+    const onChange = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'session' && changes.fishyJob?.newValue) take(changes.fishyJob.newValue as Job);
+    };
+    chrome.storage.onChanged.addListener(onChange);
+    return () => chrome.storage.onChanged.removeListener(onChange);
+  }, [checkPagePicture]);
+
   // A file dragged anywhere over FISHY can be dropped to check it.
   const { checkFile } = a;
   const dropping = useWindowDrop(useCallback((file: File) => void checkFile(file), [checkFile]));
@@ -199,6 +217,9 @@ export function App() {
           onVoice={IN_EXTENSION ? () => void a.checkVoice() : undefined}
           onFrame={IN_EXTENSION ? () => void a.checkFrame() : undefined}
           onSite={IN_EXTENSION ? () => void a.checkSite() : undefined}
+          watch={a.watch}
+          onWatch={IN_EXTENSION ? () => void a.startWatch() : undefined}
+          onStopWatch={a.stopWatch}
         />
       )}
       {screen === 'directory' && <Directory people={a.directory.people} suppliers={a.directory.suppliers} />}
@@ -219,6 +240,8 @@ export function App() {
           patterns={a.verdict.patterns}
           patternInfo={info}
           onChallenge={IN_EXTENSION ? () => void a.checkFrame(true) : undefined}
+          onLipSync={IN_EXTENSION ? () => void a.checkLipSync() : undefined}
+          onReport={(id) => void a.reportPicture(id)}
         />
       )}
       {screen === 'paste' && (

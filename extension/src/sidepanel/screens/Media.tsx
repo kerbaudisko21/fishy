@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { BAND_LABEL, scoreMedia, whySentence } from '../../lib/media-score';
+import { BAND_LABEL, lrLabel, scoreMedia, whySentence } from '../../lib/media-score';
 import type { MediaAssessment, MediaCheck } from '../../lib/types';
 import { DetailHead, Icon, Note, Privacy, SourceBadge } from '../components';
 import { useFirstSeen } from '../motion';
@@ -17,6 +17,10 @@ interface Props {
   patternInfo?: (name: string) => { signs?: string[]; action?: string } | undefined;
   /** Check the call's video again while the caller passes a hand across their face. */
   onChallenge?: () => void;
+  /** 5 s of the call: does the mouth move with the voice? */
+  onLipSync?: () => void;
+  /** Report a picture as a scam (its fingerprint only). */
+  onReport?: (id: string) => void;
 }
 
 const TITLE: Record<MediaCheck['kind'], string> = { picture: 'Picture', document: 'Document', voice: 'Voice', frame: 'Video call', site: 'Website' };
@@ -68,6 +72,9 @@ function Preview({ item, stamp }: { item: MediaCheck; stamp: ReactNode }) {
           <span className="voice-placeholder">{kindIcon(item.kind, 28)}</span>
         )}
         {heatmap && heat && <img className="media-heat" src={heatmap} alt="" aria-hidden="true" />}
+        {item.forensics?.boxes?.map((b, i) => (
+          <span key={i} className="media-box" aria-hidden="true" style={{ left: `${b.x0 * 100}%`, top: `${b.y0 * 100}%`, width: `${(b.x1 - b.x0) * 100}%`, height: `${(b.y1 - b.y0) * 100}%` }} />
+        ))}
         {scanning && <span className="scan-line" aria-hidden="true" />}
         {stamp}
       </div>
@@ -81,7 +88,7 @@ function Preview({ item, stamp }: { item: MediaCheck; stamp: ReactNode }) {
   );
 }
 
-function Card({ item, focused, onChallenge }: { item: MediaCheck; focused: boolean; onChallenge?: () => void }) {
+function Card({ item, focused, onChallenge, onLipSync, onReport }: { item: MediaCheck; focused: boolean; onChallenge?: () => void; onLipSync?: () => void; onReport?: (id: string) => void }) {
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
     if (focused) ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -132,24 +139,37 @@ function Card({ item, focused, onChallenge }: { item: MediaCheck; focused: boole
         <div className="challenge">
           <span className="grow">
             <span className="row-title">Make sure: the hand check</span>
-            <span className="row-detail">Ask them to pass a hand slowly across their face. A real face stays whole; a live face swap often breaks up.</span>
+            <span className="row-detail">Ask them to pass a hand slowly across their face: a real face stays whole, a live face swap often breaks up. Then ask something only the real person would know (Hong Kong Police advice after the Arup case).</span>
           </span>
-          <button className="btn secondary small" onClick={onChallenge}>
-            {Icon.video(14)} Check with hand
-          </button>
+          <span className="challenge-actions">
+            <button className="btn secondary small" onClick={onChallenge}>
+              {Icon.video(14)} Check with hand
+            </button>
+            {onLipSync && (
+              <button className="btn secondary small" onClick={onLipSync} title="5 s while they talk: does the mouth move with the voice?">
+                {Icon.mic(14)} Mouth and voice
+              </button>
+            )}
+          </span>
         </div>
       )}
 
-      {s.reasons.length > 1 && (
+      {s.factors.some((f) => f.lr !== undefined) && (
         <details className="fold" open>
           <summary>
             Why <span className="fold-count">{s.reasons.length}</span>
           </summary>
           <ul className="why-list">
-            {s.reasons.map((r, i) => (
-              <li key={i}>{r}</li>
+            {s.factors.map((f, i) => (
+              <li key={i} className={f.lr === undefined ? 'detail' : undefined}>
+                <span>{f.text}</span>
+                {f.lr !== undefined && <span className={`odds ${f.lr >= 1 ? 'up' : 'down'}`} title="How much this sign changed the odds">{lrLabel(f.lr)}</span>}
+              </li>
             ))}
           </ul>
+          <p className="odds-note">
+            How the score is worked out: it starts at {Math.round(s.prior * 100)}%, about how often something people doubt turns out fake, and each sign multiplies the odds by its weight (similar signs count less each). The weights are estimates from research and FISHY’s tests, not proof.
+          </p>
         </details>
       )}
 
@@ -205,14 +225,49 @@ function Card({ item, focused, onChallenge }: { item: MediaCheck; focused: boole
               <span className="row-detail">{pending ? 'Still reading…' : (item.note ?? 'Gemini did not run.')}</span>
             )}
           </div>
+          {item.sourceUrl && (
+            <div className="media-verdict">
+              <span className="row-title">Seen elsewhere?</span>
+              <span className="row-detail">A reverse image search finds where else this picture appears, as NSA, FBI and CISA advise. It sends the picture’s web address to that service.</span>
+              <span className="link-row">
+                <a className="link" href={`https://lens.google.com/uploadbyurl?url=${encodeURIComponent(item.sourceUrl)}`} target="_blank" rel="noreferrer">
+                  Google Lens
+                </a>
+                <a className="link" href={`https://tineye.com/search?url=${encodeURIComponent(item.sourceUrl)}`} target="_blank" rel="noreferrer">
+                  TinEye
+                </a>
+              </span>
+            </div>
+          )}
+          {item.sha256 && (
+            <div className="media-verdict">
+              <span className="row-title">File fingerprint (SHA-256)</span>
+              <span className="row-detail mono hash">{item.sha256}</span>
+              <span className="row-detail">Keep it with the incident: it proves which file was checked.</span>
+            </div>
+          )}
         </div>
       </details>
+      {item.phash && onReport && s.score !== null && s.band !== 'low' && (
+        <div className="report-row">
+          {item.reported ? (
+            <span className="row-detail">{Icon.check(13)} Reported. Other FISHY users will see it was reported, by its fingerprint only.</span>
+          ) : (
+            <>
+              <span className="row-detail grow">Confirmed it’s a scam (the real person said no)? Warn other FISHY users.</span>
+              <button className="btn secondary small" onClick={() => onReport(item.id)}>
+                Report as a scam
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </article>
   );
 }
 
 /** What the checks found: one card per picture, document, voice or video frame, newest first. */
-export function Media({ items, busy, focusId, onBack, onFile, patterns = [], patternInfo, onChallenge }: Props) {
+export function Media({ items, busy, focusId, onBack, onFile, patterns = [], patternInfo, onChallenge, onLipSync, onReport }: Props) {
   const newest = items[items.length - 1]?.id;
   return (
     <>
@@ -220,12 +275,41 @@ export function Media({ items, busy, focusId, onBack, onFile, patterns = [], pat
       <main className="main">
         {patternInfo && <ScamType names={patterns} info={patternInfo} />}
         {[...items].reverse().map((item) => (
-          <Card key={item.id} item={item} focused={item.id === (focusId ?? newest) && items.length > 1} onChallenge={busy ? undefined : onChallenge} />
+          <Card key={item.id} item={item} focused={item.id === (focusId ?? newest) && items.length > 1} onChallenge={busy ? undefined : onChallenge} onLipSync={busy ? undefined : onLipSync} onReport={onReport} />
         ))}
 
         <Note icon={Icon.phone(15)}>
-          Signs, not proof: a good fake can pass every check. <strong>Before money moves, call the real person on the number on record.</strong>
+          Signs, not proof: a good fake can pass every check (US Treasury’s FinCEN: no single red flag proves fraud). <strong>Before money moves, hang up and call the real person on the number in your records, and ask your agreed code word or something only they would know</strong> (FBI and CISA advice).
         </Note>
+
+        <details className="fold how-fold">
+          <summary>Already paid, or sent details?</summary>
+          <ul className="why-list route">
+            <li>
+              <span>
+                <strong>Call your bank first, right now:</strong> the sooner, the better the chance the money can be stopped.
+              </span>
+            </li>
+            <li>
+              <span>
+                <strong>Indonesia:</strong> report at iasc.ojk.go.id (Indonesia Anti-Scam Centre) or OJK 157; QRIS problems: Bank Indonesia 131.
+              </span>
+            </li>
+            <li>
+              <span>
+                <strong>Singapore:</strong> ScamShield helpline 1799. <strong>Hong Kong:</strong> Anti-Deception Centre 18222.
+              </span>
+            </li>
+            <li>
+              <span>
+                <strong>United States:</strong> ic3.gov. <strong>Australia:</strong> cyber.gov.au (ReportCyber) and Scamwatch.
+              </span>
+            </li>
+            <li>
+              <span>Keep the file, its fingerprint (in Details) and the incident report link.</span>
+            </li>
+          </ul>
+        </details>
 
         <DropZone onFile={onFile} disabled={busy} compact />
 

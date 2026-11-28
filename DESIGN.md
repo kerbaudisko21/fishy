@@ -116,6 +116,10 @@ Radius 10 (small controls), 14 (buttons, tiles), 18 (surfaces), 26 (bottom of th
 - **How it ran** (trail): pills in a row, green for on this laptop, blue for the cloud: Laptop checks → Gemini Nano → Gemini cloud, with why the cloud was asked under the step. Shows the hybrid path on every result.
 - **Evidence the laptop measured**: a filmstrip of the video frames (an “=” on a frame that didn't change), a pitch line on a fixed one-octave scale (a flat voice looks flat), and a re-save heat map behind a text toggle. Their rows sit in Details under “Measured on this laptop”.
 - **Looks like** (scam type): a white surface with a coral left edge, the kicker “Looks like”, the scam's name in the heading size, its signs, and what to do with a phone icon. Other matches in one muted line.
+- **AI chip** (header): a pill on navy with a dot. Green: Gemini Nano (+ cloud). Blue: cloud only. Amber, pulsing: Nano getting ready. Grey: laptop checks only or offline. Its title says what that means.
+- **Odds chips** (Why): each reason ends with its weight, a small pill: red "×8" when it raised the odds, green "÷2" when it lowered them. One muted line under the list explains the score.
+- **Watch panel**: a dashed button "Keep watching this call" under the three actions. Once on, a surface with a live coral dot, Stop, and a meter from "Looks real" (green) to "Looks fake" (red) with an ink marker. It turns red-outlined when it raises the alarm.
+- **Outlined areas**: copy-move matches drawn as dashed coral boxes over the picture.
 - **Hand check**: an amber band under a video result: what to ask the caller, and “Check with hand”.
 - **Result card**: the preview with the **stamp** (FISHY in red, SUSPECT in amber, LOOKS OK in green, rotated -8°, stamped on once with a short overshoot), the **score ring** that fills and counts up, the verdict band, and one sentence that says why (“Fishy because…”). Why is open; Details folds. A coral line sweeps over the picture while Gemini looks.
 - **Take a closer look**: when there are signs but not enough to call it fishy, the hero goes navy (amber on the web) instead of saying "looks normal".

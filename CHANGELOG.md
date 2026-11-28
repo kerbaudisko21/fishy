@@ -2,6 +2,19 @@
 
 Each version's build also shows in the extension under **Settings → About** (version, commit, build time and what's new). The same list lives in `extension/src/lib/changes.ts`.
 
+## 0.7.0 · 29 Nov 2026
+- Score by evidence fusion: odds × each sign's likelihood ratio, shown on every reason ("×8", "÷1.4"), with the weights grounded in published figures (Jia 2024, GOTCHA, Interisle 2025, APWG, Layton 2024) and the rest marked as estimates
+- Gemini Nano status in the header: Nano + cloud, cloud only, Nano getting ready, offline, or laptop checks only
+- Self-tuning escalation: FISHY counts how often the cloud agrees with Gemini Nano and asks it less, or more, accordingly; Settings → How the AI ran shows the share answered on this laptop, times, agreement and cloud calls saved
+- Right-click any picture → "Check this picture with FISHY" (web pages, Gmail, WhatsApp Web), with Google Lens and TinEye for a reverse search
+- QR codes in pictures and PDFs: where the link goes (address checks, redirectors), and QRIS payment codes: who they pay, the amount, a checksum check and a name check against suppliers on record
+- Watch mode: checks the call's face every 20 s on this laptop and raises the alarm only when the evidence adds up (Wald's sequential test, 1% false alarms), then the cloud double-checks
+- Lip-sync check: 5 s of the call; does anything on screen move with the voice?
+- New picture checks: copy-move (two identical areas, outlined), and JPEG saved twice or cropped and re-saved; each tested in Chrome and counted only as weak signs
+- Reported before: a picture's fingerprint (never the picture) can be reported as a scam, and later checks show "reported by N users"
+- Website check: the most abused endings, free hosting asking for passwords, pages sending to chat bots, a supplier's name on someone else's address; private network addresses no longer count
+- Advice from the FBI, CISA, FinCEN, Hong Kong Police and Bank Indonesia on the cards: the code word, "signs, not proof", the SHA-256 fingerprint of each file, and where to report if money already moved
+
 ## 0.6.1 · 28 Nov 2026
 - Security review (OWASP Top 10 and the LLM Top 10): a website's title is quoted to Gemini cleaned and labelled, never as instructions; oversized pictures (decompression bombs) and hours-long recordings are refused before they are decoded; Remote Config and model answers are checked field by field
 - A damaged picture, an empty file or an SVG drawing now says so plainly instead of showing an empty result
