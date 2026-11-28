@@ -121,7 +121,7 @@ Design preview without installing: `npm run build -w extension`, then `npx vite 
 
 | File | What FISHY should show |
 |---|---|
-| `invoice-sinar-fishy.pdf` | Bank account changed (Mandiri •••• 9032, record says BCA •••• 4471), edited 3 days after it was made in an online editor, bank line in another font, known scam account |
+| `invoice-sinar-fishy.pdf` | Bank account changed (Bank Teluk •••• 9032, record says Bank Karang •••• 4471), edited 3 days after it was made in an online editor, bank line in another font, known scam account |
 | `invoice-sinar-clean.pdf` | Account matches the record, no later edits |
 
 ### Gemini Nano on the laptop

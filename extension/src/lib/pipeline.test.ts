@@ -8,7 +8,7 @@ import { highlight, toEvidence, toRequest, toSignals, type Findings } from './pi
 import { decide, DEFAULT_RULES } from './rules/engine';
 
 const caption = "Skip the usual approval, I'm authorising it myself. Keep this between us, it must go out today.";
-const invoiceText = 'Invoice No: INV-SL-2611\nTotal due: USD 186,400\nBank Mandiri Account No: 123-456-9032\nAccount name: Sinar Logistik Global';
+const invoiceText = 'Invoice No: INV-SL-2611\nTotal due: USD 186,400\nBank Teluk Account No: 123-456-9032\nAccount name: Sinar Logistik Global';
 
 function demoFindings(): Findings {
   const supplier = DEMO_SUPPLIERS[0];
@@ -27,7 +27,7 @@ function demoFindings(): Findings {
     invoice: { fileName: 'INV-SL-2611.pdf', number: 'INV-SL-2611', total: { value: 186400, currency: 'USD' }, accounts, compare: compareAccount(accounts, supplier.account), supplier, traces: [] },
     known: matchKnown(
       [
-        { kind: 'account', value: accounts[0].number, display: 'Mandiri •••• 9032' },
+        { kind: 'account', value: accounts[0].number, display: 'Bank Teluk •••• 9032' },
         { kind: 'domain', value: 'sinar-logistik.co', display: 'sinar-logistik.co' },
       ],
       DEMO_KNOWN_BAD,
@@ -56,7 +56,7 @@ describe('pipeline', () => {
   });
 
   it('reads the payment request off the invoice', () => {
-    expect(toRequest(demoFindings())?.payee).toEqual({ name: 'PT Sinar Logistik', bank: 'Mandiri', accountMasked: '•••• 9032' });
+    expect(toRequest(demoFindings())?.payee).toEqual({ name: 'PT Sinar Logistik', bank: 'Bank Teluk', accountMasked: '•••• 9032' });
   });
 
   it('adds sender-auth, young-domain and voice flags, and takes the asker from the captions', () => {

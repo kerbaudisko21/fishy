@@ -15,7 +15,7 @@ import { Brand, Version } from './ui';
  * details are matched against the demo company's list (labelled as such).
  */
 
-const SAMPLE = `Hi Rina, it's Budi. I'm in the board meeting so I can't talk. We need to pay Sinar today before 3pm or we lose the deal. Use the new account: Mandiri 1234569032. I approve it myself, no need to go through Sari. Keep this between us until it's announced.`;
+const SAMPLE = `Hi Rina, it's Budi. I'm in the board meeting so I can't talk. We need to pay Sinar today before 3pm or we lose the deal. Use the new account: Bank Teluk 1234569032. I approve it myself, no need to go through Sari. Keep this between us until it's announced.`;
 
 const LABEL: Record<Tactic, string> = {
   urgency: 'Urgency',

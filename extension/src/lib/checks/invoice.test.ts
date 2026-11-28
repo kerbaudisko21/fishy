@@ -4,18 +4,18 @@ import { compareAccount, editTraces, findAccounts, invoiceNumber, invoiceTotal, 
 const TEXT = `PT Sinar Logistik
 Invoice No: INV-SL-2611
 Total due: USD 186,400.00
-Please transfer to Bank Mandiri
+Please transfer to Bank Teluk
 Account No: 123-456-9032
 Account name: Sinar Logistik Global
 WhatsApp +62 857 1234 2219`;
 
 describe('invoice text', () => {
   it('reads the account, bank and holder', () => {
-    expect(findAccounts(TEXT)).toEqual([{ bank: 'Mandiri', number: '1234569032', holder: 'Sinar Logistik Global' }]);
+    expect(findAccounts(TEXT)).toEqual([{ bank: 'Bank Teluk', number: '1234569032', holder: 'Sinar Logistik Global' }]);
   });
 
   it('reads an account with the bank name between label and number', () => {
-    expect(findAccounts('Use the new account: Mandiri 123-456-9032.')).toEqual([{ bank: 'Mandiri', number: '1234569032', holder: undefined }]);
+    expect(findAccounts('Use the new account: Bank Teluk 123-456-9032.')).toEqual([{ bank: 'Bank Teluk', number: '1234569032', holder: undefined }]);
   });
 
   it('reads the invoice number and total', () => {
@@ -25,9 +25,9 @@ describe('invoice text', () => {
   });
 
   it('flags a changed bank account against the record (R4)', () => {
-    const usual = { bank: 'BCA', masked: '•••• 4471', holder: 'PT Sinar Logistik' };
+    const usual = { bank: 'Bank Karang', masked: '•••• 4471', holder: 'PT Sinar Logistik' };
     expect(compareAccount(findAccounts(TEXT), usual).changed).toBe(true);
-    expect(compareAccount(findAccounts('BCA Account: 8890 1234 4471'), usual).changed).toBe(false);
+    expect(compareAccount(findAccounts('Bank Karang Account: 8890 1234 4471'), usual).changed).toBe(false);
   });
 });
 

@@ -1,9 +1,9 @@
 // Writes two synthetic invoices from the demo supplier into test-fixtures/, for testing the
 // invoice check by hand (Gmail attachment, or drop into "Check it yourself").
 //
-//   invoice-sinar-fishy.pdf  account changed to Mandiri ....9032 (a known scam account in the demo),
+//   invoice-sinar-fishy.pdf  account changed to Bank Teluk ....9032 (a known scam account in the demo),
 //                            edited 3 days after it was made in an online editor, account line in another font
-//   invoice-sinar-clean.pdf  the usual BCA ....4471, never edited, one font
+//   invoice-sinar-clean.pdf  the usual Bank Karang ....4471, never edited, one font
 //
 // Plain PDF written by hand, no dependencies. Demo data only: no real company or account.
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -67,7 +67,7 @@ const fishy = pdf({
   lines: [
     ...header,
     // The swapped line: another font, like a number pasted over the original.
-    ['Account: Mandiri 123-456-9032', 11, 'F3'],
+    ['Account: Bank Teluk 123-456-9032', 11, 'F3'],
     ['Account name: Sinar Logistik Global', 11],
     ['Our bank details have changed. Please use the new account above for this and future payments.', 9, 'F1', 14],
     ['Kindly process today to avoid a delay to your shipment.', 9],
@@ -83,7 +83,7 @@ const fishy = pdf({
 const clean = pdf({
   lines: [
     ...header,
-    ['Account: BCA 012-345-4471', 11],
+    ['Account: Bank Karang 012-345-4471', 11],
     ['Account name: PT Sinar Logistik', 11],
     ['Thank you for your business.', 9, 'F1', 14],
   ],
