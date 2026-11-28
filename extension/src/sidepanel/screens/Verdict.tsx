@@ -110,35 +110,11 @@ export function Verdict(p: Props) {
         )}
 
         {waiting && (
-          <>
-            <ol className="start">
-              <li>
-                <span className="start-label">
-                  <span className="start-num">1</span> Something you were sent
-                </span>
-                <DropZone onFile={p.onFile} disabled={!!p.busy} />
-              </li>
-              <li>
-                <span className="start-label">
-                  <span className="start-num">2</span> What’s open in this tab
-                </span>
-                <ActionGrid onFrame={p.onFrame} onVoice={p.onVoice} onSite={p.onSite} busy={!!p.busy} />
-                <WatchPanel watch={p.watch} onStart={p.onWatch} onStop={p.onStopWatch} disabled={!!p.busy} />
-              </li>
-              <li className="start-then">
-                <span className="start-label">
-                  <span className="start-num">3</span> Then check with them another way
-                </span>
-                <span className="row-detail">Call back on the number you already have, and ask your code word.</span>
-              </li>
-            </ol>
-
-            <div className="start-links">
-              <button className="link" onClick={p.onPaste}>
-                Paste a message instead
-              </button>
-            </div>
-          </>
+          <div className="home">
+            <DropZone onFile={p.onFile} disabled={!!p.busy} />
+            <ActionGrid onFrame={p.onFrame} onVoice={p.onVoice} onSite={p.onSite} onText={p.onPaste} busy={!!p.busy} />
+            <WatchPanel watch={p.watch} onStart={p.onWatch} onStop={p.onStopWatch} disabled={!!p.busy} />
+          </div>
         )}
 
         {!waiting && (p.watch?.on || p.watch?.alarm) && <WatchPanel watch={p.watch} onStop={p.onStopWatch} />}

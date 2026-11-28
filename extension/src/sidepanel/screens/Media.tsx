@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { BAND_LABEL, lrLabel, pinOf, scoreMedia, whySentence } from '../../lib/media-score';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { BAND_LABEL, lrLabel, scoreMedia, STAMP, whySentence } from '../../lib/media-score';
+import { buildStops, pinsOf, zoomFor, type Stop } from '../../lib/replay';
+import { recordReplay, videoType } from '../../lib/replay-video';
 import type { MediaAssessment, MediaCheck } from '../../lib/types';
 import { DetailHead, Icon, Note, Privacy, SourceBadge } from '../components';
 import { useFirstSeen } from '../motion';
@@ -38,16 +40,71 @@ function kindIcon(kind: MediaCheck['kind'], size = 16) {
   return kind === 'voice' ? Icon.mic(size) : kind === 'frame' ? Icon.video(size) : kind === 'site' ? Icon.link(size) : kind === 'document' ? Icon.file(size) : Icon.image(size);
 }
 
+/** Plays the replay: frames advance, then each area Gemini pointed at is zoomed into and explained. */
+function useReplay(item: MediaCheck, stops: Stop[]) {
+  const [at, setAt] = useState<number | null>(null);
+  const scanning = item.gemini === undefined;
+  const wasScanning = useRef(scanning);
+  // Plays once by itself when a check finishes (not for checks reopened from the history).
+  useEffect(() => {
+    if (wasScanning.current && !scanning && stops.length) setAt(0);
+    wasScanning.current = scanning;
+  }, [scanning, stops.length]);
+  useEffect(() => {
+    if (at === null) return;
+    const t = setTimeout(() => setAt(at + 1 < stops.length ? at + 1 : null), stops[at]?.ms ?? 0);
+    return () => clearTimeout(t);
+  }, [at, stops]);
+  return { stop: at === null ? null : (stops[at] ?? null), playing: at !== null, play: () => setAt(0), halt: () => setAt(null) };
+}
+
 function Preview({ item, stamp }: { item: MediaCheck; stamp: ReactNode }) {
   const scanning = item.gemini === undefined;
   const [heat, setHeat] = useState(false);
   // A video check opens on the frame Gemini pointed at first.
   const firstPinned = item.gemini?.signs.find((sg) => sg.box && sg.frame !== undefined)?.frame;
   const [picked, setPicked] = useState(firstPinned ?? 0);
-  const pins = (item.gemini?.signs ?? [])
-    .map((sg, i, all) => (sg.box ? { n: pinOf(all, i), box: sg.box, frame: sg.frame, label: sg.sign } : null))
-    .filter((x): x is { n: number; box: { x0: number; y0: number; x1: number; y1: number }; frame: number | undefined; label: string } => !!x)
-    .filter((x) => (item.frames ? x.frame === picked : true));
+  // When the result arrives after the frames, move to that frame.
+  useEffect(() => {
+    if (firstPinned !== undefined) setPicked(firstPinned);
+  }, [firstPinned]);
+  const allPins = pinsOf(item);
+  const stops = useMemo(() => (scanning ? [] : buildStops(item)), [item, scanning]);
+  const replay = useReplay(item, stops);
+  // Tapping a numbered area zooms into it; tapping again (or the picture) zooms out.
+  const [zoomed, setZoomed] = useState<number | null>(null);
+  const [saving, setSaving] = useState<number | null>(null);
+  const [saveError, setSaveError] = useState('');
+  const frame = replay.stop?.frame ?? picked;
+  const focus = replay.playing ? replay.stop?.pin : allPins.find((p) => p.n === zoomed);
+  const pins = allPins.filter((x) => (item.frames ? x.frame === frame : true));
+  const z = zoomFor(focus?.box);
+  const caption = replay.stop?.caption ?? (focus && !replay.playing ? focus.label : undefined);
+
+  const save = async () => {
+    setSaveError('');
+    setSaving(0);
+    try {
+      const score = scoreMedia(item);
+      const images = item.frames?.length ? item.frames : item.preview ? [item.preview] : [];
+      const band = score.score === null || score.band === 'pending' ? 'low' : score.band;
+      const { blob, ext } = await recordReplay(
+        { stops, images, band: STAMP[band], bandColor: band === 'high' ? '#cf2419' : band === 'some' ? '#f7d51d' : '#1a5634', why: whySentence(score) },
+        (f) => setSaving(f),
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fishy-${item.name.replace(/\.[^.]+$/, '').replace(/[^\w-]+/g, '-').slice(0, 40) || 'check'}.${ext}`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'The video could not be made.');
+    } finally {
+      setSaving(null);
+    }
+  };
+
   if (item.kind === 'voice') {
     return (
       <>
@@ -67,29 +124,90 @@ function Preview({ item, stamp }: { item: MediaCheck; stamp: ReactNode }) {
       </>
     );
   }
-  const shown = item.frames?.[picked] ?? item.preview;
+  const shown = item.frames?.[frame] ?? item.preview;
   const heatmap = item.forensics?.heatmap;
+  const isVideo = !!item.frames && item.frames.length > 1;
   return (
     <>
-      <div className={`media-frame${scanning ? ' scanning' : ''}`}>
-        {shown ? (
-          <img className="media-preview" src={shown} alt={`The ${TITLE[item.kind].toLowerCase()} that was checked`} />
-        ) : (
-          <span className="voice-placeholder">{kindIcon(item.kind, 28)}</span>
-        )}
-        {heatmap && heat && <img className="media-heat" src={heatmap} alt="" aria-hidden="true" />}
-        {pins.map((pin) => (
-          <span key={`pin${pin.n}`} className="pin-box" title={pin.label} style={{ left: `${pin.box.x0 * 100}%`, top: `${pin.box.y0 * 100}%`, width: `${(pin.box.x1 - pin.box.x0) * 100}%`, height: `${(pin.box.y1 - pin.box.y0) * 100}%` }}>
-            <span className="pin-num">{pin.n}</span>
-          </span>
-        ))}
-        {item.forensics?.boxes?.map((b, i) => (
-          <span key={i} className="media-box" aria-hidden="true" style={{ left: `${b.x0 * 100}%`, top: `${b.y0 * 100}%`, width: `${(b.x1 - b.x0) * 100}%`, height: `${(b.y1 - b.y0) * 100}%` }} />
-        ))}
+      <div
+        className={`media-frame${scanning ? ' scanning' : ''}${isVideo ? ' reel' : ''}${focus ? ' zoomed' : ''}`}
+        onClick={() => !replay.playing && zoomed !== null && setZoomed(null)}
+      >
+        <div className="media-view">
+        <div className="media-stage" style={{ transform: `translate(${z.tx * 100}%, ${z.ty * 100}%) scale(${z.s})`, '--z': z.s } as CSSProperties}>
+          {shown ? (
+            <img className="media-preview" src={shown} alt={`The ${TITLE[item.kind].toLowerCase()} that was checked`} />
+          ) : (
+            <span className="voice-placeholder">{kindIcon(item.kind, 28)}</span>
+          )}
+          {heatmap && heat && <img className="media-heat" src={heatmap} alt="" aria-hidden="true" />}
+          {pins.map((pin) => (
+            <button
+              key={`pin${pin.n}`}
+              className={`pin-box${focus?.n === pin.n ? ' on' : ''}`}
+              title={pin.label}
+              aria-label={`Zoom into area ${pin.n}: ${pin.label}`}
+              aria-pressed={focus?.n === pin.n}
+              disabled={replay.playing}
+              onClick={(e) => {
+                e.stopPropagation();
+                setZoomed((n) => (n === pin.n ? null : pin.n));
+              }}
+              style={{ left: `${pin.box.x0 * 100}%`, top: `${pin.box.y0 * 100}%`, width: `${(pin.box.x1 - pin.box.x0) * 100}%`, height: `${(pin.box.y1 - pin.box.y0) * 100}%` }}
+            >
+              <span className="pin-num">{pin.n}</span>
+            </button>
+          ))}
+          {item.forensics?.boxes?.map((b, i) => (
+            <span key={i} className="media-box" aria-hidden="true" style={{ left: `${b.x0 * 100}%`, top: `${b.y0 * 100}%`, width: `${(b.x1 - b.x0) * 100}%`, height: `${(b.y1 - b.y0) * 100}%` }} />
+          ))}
+        </div>
         {scanning && <span className="scan-line" aria-hidden="true" />}
-        {stamp}
+        {isVideo && replay.playing && <span className="reel-count">Frame {frame + 1} of {item.frames!.length}</span>}
+        {!focus && stamp}
+        </div>
+        {/* Under the picture, so it never covers the area it describes. */}
+        {allPins.length > 0 && !scanning && (
+          <span className={`replay-caption${caption ? '' : ' idle'}`} aria-live="polite">
+            {focus && <span className="pin-num">{focus.n}</span>}
+            <span>{caption ?? 'Tap a numbered box to zoom in.'}</span>
+          </span>
+        )}
       </div>
-      {item.frames && item.frames.length > 1 && <Filmstrip frames={item.frames} motion={item.forensics?.motion} picked={picked} onPick={setPicked} />}
+      {isVideo && (
+        <Filmstrip
+          frames={item.frames!}
+          motion={item.forensics?.motion}
+          picked={frame}
+          onPick={(i) => {
+            replay.halt();
+            setZoomed(null);
+            setPicked(i);
+          }}
+        />
+      )}
+      {stops.length > 0 && (
+        <div className="replay-row">
+          <button
+            className="replay-btn"
+            onClick={() => {
+              setZoomed(null);
+              if (replay.playing) replay.halt();
+              else replay.play();
+            }}
+          >
+            {replay.playing ? Icon.stop(14) : Icon.play(14)}
+            {replay.playing ? 'Stop' : isVideo ? 'Replay what’s fishy' : 'Show me what’s fishy'}
+          </button>
+          {videoType() && (
+            <button className="replay-btn ghost" onClick={save} disabled={saving !== null}>
+              {Icon.download(14)}
+              {saving !== null ? `Making the video… ${Math.round(saving * 100)}%` : 'Save video'}
+            </button>
+          )}
+        </div>
+      )}
+      {saveError && <p className="replay-error" role="alert">{saveError}</p>}
       {heatmap && (
         <button className="heat-toggle" aria-pressed={heat} onClick={() => setHeat((h) => !h)}>
           {heat ? 'Hide the heat map' : 'Show the re-save heat map'}
@@ -130,7 +248,7 @@ function Card({ item, focused, onChallenge, onLipSync, onReport }: { item: Media
             <ScoreRing score={s.score} band={s.band} />
             <span className="grow">
               <span className={`result-band ${s.band}`}>{BAND_LABEL[s.band]}</span>
-              <span className="why-line">{why}</span>
+              <span className="why-line">{s.band === 'high' ? <mark className="marker">{why}</mark> : why}</span>
             </span>
           </>
         ) : pending ? (
@@ -294,22 +412,8 @@ export function Media({ items, busy, focusId, onBack, onFile, patterns = [], pat
         ))}
 
         <Note icon={Icon.phone(15)}>
-          Signs, not proof. <strong>Before money moves, call them back on the number you have.</strong>
+          Signs, not proof. <strong>Before you reply, click, sign in or pay, check with them another way.</strong>
         </Note>
-
-        <details className="fold how-fold">
-          <summary>Already paid?</summary>
-          <ul className="why-list route">
-            <li>
-              <span>
-                <strong>Call your bank now.</strong> The sooner, the better the chance to stop it.
-              </span>
-            </li>
-            <li>
-              <span>Then report: iasc.ojk.go.id or OJK 157. QRIS: Bank Indonesia 131. Elsewhere: your national scam line.</span>
-            </li>
-          </ul>
-        </details>
 
         <DropZone onFile={onFile} disabled={busy} compact />
 

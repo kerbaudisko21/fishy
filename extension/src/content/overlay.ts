@@ -1,38 +1,49 @@
 // FISHY as a floating window on top of the page, instead of a side panel that squeezes it.
 // Injected when the toolbar icon is clicked (see the service worker). Running it again toggles it.
 // The window is the side panel's own page in a frame, inside a closed Shadow DOM so the page's CSS
-// can't touch it. A thin bar on top drags it, minimises it and closes it.
+// can't touch it. An ink title bar with the logo drags it, minimises it to a red tag and closes it.
 
 const HOST_ID = 'fishy-overlay-host';
 const WIDTH = 400;
 
+const BAR = 40;
+
 const STYLE = `
 :host { all: initial; }
 .win { position: fixed; z-index: 2147483647; width: ${WIDTH}px; display: flex; flex-direction: column;
-  border-radius: 18px; overflow: hidden; background: #eaeff1;
-  box-shadow: 0 18px 48px rgba(16, 32, 46, .28), 0 2px 6px rgba(16, 32, 46, .18);
+  border: 3px solid #141414; border-radius: 8px; overflow: hidden; background: #e8d9b5; box-sizing: border-box;
+  box-shadow: 6px 6px 0 rgba(20, 20, 20, .9), 0 18px 48px rgba(20, 20, 20, .25);
   animation: pop .22s cubic-bezier(.23, 1, .32, 1) both; }
-.win.hidden { visibility: hidden; }
-.bar { height: 30px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px;
-  background: #10202e; color: #c8d3dc; cursor: grab; user-select: none; touch-action: none;
-  font: 700 12px system-ui, sans-serif; letter-spacing: .06em; }
+.win.hidden, .win.min { visibility: hidden; }
+.bar { height: ${BAR}px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 6px 0 8px;
+  background: #141414; color: #fbf7ec; cursor: grab; user-select: none; touch-action: none;
+  border-bottom: 4px solid #f7d51d; }
 .bar:active { cursor: grabbing; }
-.grip { flex: 1; display: flex; align-items: center; gap: 8px; }
-.dots { width: 14px; height: 10px; background: radial-gradient(circle, #5d7385 1.2px, transparent 1.4px) 0 0 / 5px 5px; }
-button { width: 26px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: #c8d3dc;
+.grip { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.word { font: 900 19px/1 'Arial Narrow', 'Roboto Condensed', Impact, system-ui, sans-serif; letter-spacing: .14em; }
+.hint { font: 600 11px/1 system-ui, sans-serif; color: #a59d8b; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+button { width: 30px; height: 28px; border: 0; border-radius: 3px; background: transparent; color: #fbf7ec;
   display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
-button:hover { background: #1b3042; color: #fff; }
-button:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
-iframe { border: 0; width: 100%; flex: 1; background: #eaeff1; }
-.win.min iframe { display: none; }
-@keyframes pop { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
-@media (prefers-reduced-motion: reduce) { .win { animation: none; } }
+button:focus-visible { outline: 2px solid #f7d51d; outline-offset: 1px; }
+@media (hover: hover) and (pointer: fine) { .bar button:hover { background: #cf2419; } .tag:hover { transform: rotate(-6deg) scale(1.05); } }
+iframe { border: 0; width: 100%; flex: 1; background: #e8d9b5; }
+/* Minimised: FISHY shrinks to its red tag on the edge of the page. Click it to bring the window back. */
+.tag { position: fixed; z-index: 2147483647; width: 52px; height: 52px; padding: 0; border-radius: 6px;
+  background: transparent; box-shadow: 4px 4px 0 rgba(20, 20, 20, .9); transition: transform .16s cubic-bezier(.23, 1, .32, 1);
+  animation: pop .22s cubic-bezier(.23, 1, .32, 1) both; }
+.tag[hidden] { display: none; }
+.tag svg { width: 52px; height: 52px; display: block; }
+@keyframes pop { from { opacity: 0; transform: translateY(-8px) scale(.96); } }
+@media (prefers-reduced-motion: reduce) { .win, .tag { animation: none; transition: none; } }
 `;
 
+/** The logo: a red evidence tag; a loupe whose handle bends into a fish hook. */
+const MARK = (size: number) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 128 128" aria-hidden="true"><rect x="4" y="4" width="120" height="120" rx="12" fill="#CF2419"/><circle cx="22" cy="22" r="6" fill="#FBF7EC"/><circle cx="56" cy="52" r="23" fill="none" stroke="#FBF7EC" stroke-width="11"/><path d="M73 69L87 83L87 97C87 105 81 110 74 110C67 110 62 105 62 98" fill="none" stroke="#FBF7EC" stroke-width="11" stroke-linecap="square"/><path d="M62 98L72 91" fill="none" stroke="#FBF7EC" stroke-width="11" stroke-linecap="square"/></svg>`;
+
 const ICON = {
-  min: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>',
-  max: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
-  close: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  min: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square" aria-hidden="true"><path d="M5 17h14"/></svg>',
+  close: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
 };
 
 function toggle() {
@@ -57,8 +68,7 @@ function toggle() {
   bar.className = 'bar';
   const grip = document.createElement('span');
   grip.className = 'grip';
-  grip.innerHTML = '<span class="dots" aria-hidden="true"></span>';
-  grip.append('FISHY');
+  grip.innerHTML = `${MARK(24)}<span class="word">FISHY</span><span class="hint">drag to move</span>`;
 
   const minBtn = document.createElement('button');
   minBtn.title = 'Minimise';
@@ -70,6 +80,13 @@ function toggle() {
   closeBtn.innerHTML = ICON.close;
   bar.append(grip, minBtn, closeBtn);
 
+  const tag = document.createElement('button');
+  tag.className = 'tag';
+  tag.hidden = true;
+  tag.title = 'Open FISHY';
+  tag.setAttribute('aria-label', 'Open FISHY');
+  tag.innerHTML = MARK(52);
+
   const frame = document.createElement('iframe');
   frame.title = 'FISHY';
   // autoplay: the meeting's sound is played back while the voice is recorded.
@@ -80,12 +97,12 @@ function toggle() {
   frame.src = chrome.runtime.getURL('src/sidepanel/index.html');
 
   win.append(bar, frame);
-  root.append(style, win);
+  root.append(style, win, tag);
   document.documentElement.append(host);
 
   // Size and place: top right, as tall as the window allows.
   const place = (left: number, top: number) => {
-    const height = win.classList.contains('min') ? 30 : Math.min(760, window.innerHeight - 24);
+    const height = Math.min(760, window.innerHeight - 24);
     const x = Math.min(Math.max(8, left), window.innerWidth - WIDTH - 8);
     const y = Math.min(Math.max(8, top), window.innerHeight - Math.min(height, 60));
     win.style.left = `${x}px`;
@@ -114,12 +131,20 @@ function toggle() {
     bar.addEventListener('pointercancel', up);
   });
 
+  // Minimise to the red tag at the window's top-right corner; the frame keeps running, so a
+  // check in progress carries on.
   minBtn.addEventListener('click', () => {
-    const min = win.classList.toggle('min');
-    minBtn.innerHTML = min ? ICON.max : ICON.min;
-    minBtn.title = min ? 'Restore' : 'Minimise';
-    minBtn.setAttribute('aria-label', min ? 'Restore FISHY' : 'Minimise FISHY');
-    place(win.offsetLeft, win.offsetTop);
+    win.classList.add('min');
+    const r = win.getBoundingClientRect();
+    tag.style.left = `${Math.min(r.right - 52, window.innerWidth - 60)}px`;
+    tag.style.top = `${Math.max(8, r.top)}px`;
+    tag.hidden = false;
+    tag.focus();
+  });
+  tag.addEventListener('click', () => {
+    tag.hidden = true;
+    win.classList.remove('min');
+    minBtn.focus();
   });
   closeBtn.addEventListener('click', () => host.remove());
 

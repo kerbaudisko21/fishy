@@ -112,7 +112,7 @@ async function warnIfRisky(tabId: number, url: string) {
   const score = scoreMedia({ id: 'auto', kind: 'site', name: page.host, at: '', checks: [], gemini: null, forensics: { hints: lab.hints, rows: lab.rows } });
   const band = score.score === null ? 'low' : score.band;
   await chrome.action.setBadgeText({ tabId, text: band === 'high' ? '!' : band === 'some' ? '?' : '' });
-  if (band !== 'low') await chrome.action.setBadgeBackgroundColor({ tabId, color: band === 'high' ? '#b42a14' : '#8a4b00' });
+  if (band !== 'low') await chrome.action.setBadgeBackgroundColor({ tabId, color: band === 'high' ? '#cf2419' : '#8a4b00' });
   await chrome.action.setTitle({ tabId, title: band === 'low' ? 'FISHY' : `FISHY: ${lab.hints[0]?.text ?? 'this site has signs of a scam'}` });
   if (band !== 'high') return;
   const { [DISMISSED_KEY]: dismissed = [] } = await chrome.storage.session.get(DISMISSED_KEY);
@@ -137,11 +137,11 @@ function showSiteWarning(reason: string, host: string) {
   const root = el.attachShadow({ mode: 'closed' });
   const style = document.createElement('style');
   style.textContent = `:host{all:initial}
-.bar{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2147483647;width:min(640px,calc(100vw - 32px));display:flex;gap:12px;align-items:center;padding:12px 12px 12px 14px;border-radius:16px;background:#b42a14;color:#fff;font:14px/1.4 system-ui,sans-serif;box-shadow:0 12px 32px rgba(16,32,46,.25)}
-.mark{flex:none;width:34px;height:34px;border-radius:10px;background:#f26b4e;color:#10202e;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+.bar{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2147483647;width:min(640px,calc(100vw - 32px));display:flex;gap:12px;align-items:center;padding:12px 12px 12px 14px;border-radius:6px;background:#cf2419;color:#fff;font:14px/1.4 system-ui,sans-serif;box-shadow:0 12px 32px rgba(20,20,20,.25)}
+.mark{flex:none;width:34px;height:34px;border-radius:10px;background:#141414;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
 .text{flex:1;min-width:0}.title{font-weight:700;font-size:15px}.line{opacity:.92;font-size:13px}
 button{flex:none;height:40px;padding:0 14px;border-radius:10px;border:0;font:600 13px system-ui,sans-serif;cursor:pointer}
-.why{background:#fff;color:#10202e}.later{background:transparent;color:#fff;text-decoration:underline}
+.why{background:#fff;color:#141414}.later{background:transparent;color:#fff;text-decoration:underline}
 button:focus-visible{outline:2px solid #fff;outline-offset:2px}`;
   const bar = document.createElement('div');
   bar.className = 'bar';

@@ -2,6 +2,28 @@
 
 Each version's build also shows in the extension under **Settings → About** (version, commit, build time and what's new). The same list lives in `extension/src/lib/changes.ts`.
 
+## 1.2.0 · 29 Nov 2026
+- A replay of what's fishy: after a video call check, the frames play back and stop on each frame Gemini pointed at, zooming into the area, dimming the rest and saying what is wrong underneath; frozen frames get a caption too. It plays once by itself when the check finishes
+- Pictures, PDF pages and website screenshots get the same walkthrough ("Show me what's fishy"), and you can tap any numbered box to zoom into it
+- Save video: records the walkthrough as a short MP4 (WebM where MP4 isn't available), with the verdict on top and the advice at the end, to send to someone who wouldn't open FISHY. It is made on the laptop; nothing is uploaded
+
+## 1.1.0 · 29 Nov 2026
+- A louder look: a deeper manila, a stronger signal red and a highlighter yellow for what to read first (the tab bar, the READY tag, the sentence that says why something is fishy)
+- New fonts: Big Shoulders for headings (drawn from Chicago street signage) and its stencil cut for the wordmark, in place of Archivo
+- FISHY's own icons: square ends and sharp corners, drawn for FISHY instead of a stock icon set (a face in a viewfinder, sound bars, a browser window, a ruled speech card)
+- A new logo for what FISHY does now: a magnifying glass whose handle bends into a fish hook, on the red evidence tag
+- The rubber stamp on results is now a strip of evidence tape across the corner (FISHY / SUSPECT / LOOKS OK)
+- The advice under results is general, not about payments: "Signs, not proof. Before you reply, click, sign in or pay, check with them another way." The "Already paid?" fold is gone
+- The floating window has an ink title bar with the logo, a heavier frame, and minimises to a small red tag you click to bring it back (a check keeps running meanwhile); the panel no longer repeats the logo inside it
+- The Try page (the phone version) matches the new look and asks for a message, not a payment request
+
+## 1.0.0 · 29 Nov 2026
+- A new look, the evidence tag: manila paper, black ink and one evidence red; condensed heavy Archivo for headings, labels and the stamp; square-ish paper tags instead of soft rounded cards
+- A new logo: a red evidence tag with a fish hook bent into a question mark
+- The home is just what FISHY can check: drop a picture, PDF or voice note, then four tiles (Face on a call, Voice on a call, This website, A message) and the watch switch. No numbered steps
+- Fixed: "Directory: Missing or insufficient permissions". The database rules are published to the project the extension uses, and the supplier list now loads quietly in the background (every check works without it)
+- The calling, approval, incident and alert functions are removed from the backend and the live project; only the website check's two lookups remain
+
 ## 0.9.0 · 29 Nov 2026
 - FISHY is now about checking, not payments: the payment card, calling a person with a PIN, "Hold the payment", the incident report and the Meet and Gmail page scripts are gone (two fewer Chrome permissions)
 - Gemini points at what looks wrong: numbered boxes on the picture, the website screenshot or the video frame, with the same numbers on the reasons

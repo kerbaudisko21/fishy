@@ -1,5 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import '@fontsource-variable/big-shoulders-display';
+import '@fontsource-variable/big-shoulders-stencil-display';
 import '@fontsource-variable/atkinson-hyperlegible-next';
 // One set of colours and fonts for the extension and these pages.
 import '../../extension/src/styles/tokens.css';

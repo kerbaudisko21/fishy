@@ -1,109 +1,102 @@
 ---
 version: 1
 name: FISHY
-description: An "is it real?" checker for pictures, documents, voices and video calls, beside Google Meet and Gmail. Navy and coral from the logo, a cool tide-grey canvas, white rounded surfaces, Atkinson Hyperlegible Next for everything, and one colour per verdict state. Calm while watching, loud only when money is at risk.
+description: An "is it real?" checker for pictures, PDFs, voices, video calls, websites and QR codes. The evidence-tag world: manila paper, black ink, one evidence red; a highlighter yellow for what to read first; Big Shoulders for headings and its stencil cut for the wordmark and the evidence tape, Atkinson Hyperlegible Next for text; square-ish tags instead of soft rounded cards. Quiet paper while you check, red evidence tape when it's fishy.
 
 colors:
-  ink: "#10202e"          # navy, from the logo: text, primary buttons, the header
-  ink-2: "#34434f"        # secondary text on light
-  muted: "#5a6874"        # labels, hints, metadata (4.9:1 on white)
-  navy-2: "#1b3042"       # raised surfaces on navy (chips, icon buttons)
-  on-navy: "#c8d3dc"      # secondary text on navy
-  brand: "#f26b4e"        # coral, from the logo: the "hold the payment" state and the logo. Fills only; too light for text on white
-  brand-text: "#b83a22"   # coral text on light (big numbers, scores)
-  bg: "#eaeff1"           # tide: the canvas
-  surface: "#ffffff"
-  surface-muted: "#f2f5f6"
-  note: "#e1e8eb"         # quiet notes, selection, passive icon tiles
-  line: "#d9e1e4"
-  line-soft: "#e8eef0"
-  danger: "#b42a14"       # "Do not pay"
-  danger-bg: "#fde1d9"
-  danger-text: "#a3260f"
-  ok: "#0e5a50"           # confirmed, clean checks
-  ok-bg: "#d6eee7"
-  ok-line: "#9fd3c7"
-  amber-bg: "#fff1d6"
-  amber-text: "#8a4b00"
-  cloud-bg: "#e3ecf7"     # the "Cloud" badge
-  cloud-text: "#1d4a80"
-  demo: "#f2c14e"         # the Demo tag only
-  focus: "#10202e"        # focus ring (white on navy and on the red hero)
+  ink: "#141414"          # black ink: text, the header, primary buttons, icon tiles
+  ink-2: "#3a352d"        # secondary text on paper
+  muted: "#6a6253"        # labels, hints (5.7:1 on paper, 4.7:1 on manila)
+  navy-2: "#2a2824"       # raised surfaces on ink (chips, icon buttons)
+  on-navy: "#d8cfbc"      # secondary text on ink
+  brand: "#cf2419"        # signal red: the logo, the tape, the "fishy" hero, the drop-zone icon. White on it 5.4:1
+  marker: "#f7d51d"       # highlighter yellow: the tab bar, the READY tag, the fishy "why" sentence. Ink on it 12.7:1
+  brand-text: "#a51b14"   # red text on light
+  bg: "#e8d9b5"           # manila: the canvas
+  surface: "#fbf7ec"      # paper: tags and panels
+  surface-muted: "#f4eddf"
+  note: "#e6dcc6"
+  line: "#d6c9ad"         # the hairline edge of every tag
+  line-soft: "#e4d9c1"
+  danger: "#cf2419"
+  danger-bg: "#f6dcd6"
+  danger-text: "#a51b14"
+  ok: "#1f5c3a"           # green ink: clean checks, "no clear signs"
+  ok-bg: "#dde8d2"
+  amber-bg: "#f6e3b0"
+  amber-text: "#7a4a00"
+  cloud-bg: "#e3e6ee"     # the "Cloud" badge
+  cloud-text: "#2a3a66"
+  focus: "#141414"
 
 typography:
-  hero:      { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 30px (22px at the narrowest), fontWeight: 700, lineHeight: 1.08, letterSpacing: -0.01em }
-  detail-h1: { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 26px, fontWeight: 700, lineHeight: 1.12 }
-  amount:    { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 24px (scales with its card), fontWeight: 700, fontVariantNumeric: tabular-nums }
-  section:   { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 17px, fontWeight: 700 }
-  body:      { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 14–14.5px, lineHeight: 1.45–1.55 }
-  meta:      { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 12.5–13px, color: muted }
-  mono:      { fontFamily: JetBrains Mono, use: bank accounts, masked numbers, sender addresses }
+  display:   { fontFamily: Big Shoulders Display Variable, fontWeight: 800, textTransform: uppercase on the home ("IS IT REAL?"), sentence case on results, lineHeight: 0.98 }
+  stencil:   { fontFamily: Big Shoulders Stencil Display Variable, fontWeight: 900, letterSpacing: 0.06–0.14em, uppercase, use: the wordmark and the evidence tape }
+  label:     { fontFamily: Big Shoulders Display Variable, fontWeight: 800, uppercase, letterSpacing: 0.04em (section heads, result band) }
+  body:      { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 13.5–15px, lineHeight: 1.45 }
+  mono:      { fontFamily: JetBrains Mono, use: fingerprints, accounts, addresses }
 
-radius: { sm: 10px, md: 14px, lg: 18px, hero-bottom: 26px, pill: 999px }
+radius: { sm: 4px, md: 6px, lg: 8px, chips: 3px, header: 0 }
 ---
 
 # FISHY design system
 
 ## Overview
 
-FISHY is a tool someone uses under pressure: a "CFO" is on a video call asking for an urgent transfer, or a receipt or a voice note arrives that asks them to act, and they have seconds to decide whether it is real. The interface is built for that moment. It stays quiet (navy, white, tide grey) while it watches, and gives the whole top of the panel to one colour and one sentence when something is wrong. Every screen answers *why* with a comparison (this email against the one on record, this account against six months of payments), not with prose.
+FISHY is a tool someone uses when something they were sent, or someone they're talking to, might be fake. The interface borrows from the world of evidence: **manila case files, black ink, evidence tape and a highlighter.** It stays quiet paper while you check, and gives the verdict to the tape and the header: a red field and "Something's fishy." when the evidence adds up.
 
-The surface mode is **Operate**: scanability, plain finance language and native expectations come before expression. Brand lives in the details: the navy header, the coral hero, the four-step track, the On device / Cloud badges.
+Mode: **Operate**. Brand lives in the tape, the highlighter, the condensed labels, the tag-shaped surfaces and the logo.
 
 ## Where it comes from
 
-The language was set in the FISHY deck (#BuildHybridAI 2026): navy `#0E1C27`, coral `#F2694B`, a warm bone canvas `#F1EFE7`, cards `#FAF9F4`, Space Grotesk for headings, Inter for text, JetBrains Mono for data. The product keeps the navy, the coral and JetBrains Mono. It replaced the deck's Inter and Space Grotesk with Atkinson Hyperlegible Next (see Typography), and made these deliberate changes:
+The first look (Nov 21–28) was navy and coral on a cool grey, with soft white cards and one rounded font. On review (Nov 29) it read as the default look of generated apps. The evidence-tag world replaced it: the subject is checking evidence, so the materials of evidence lead.
 
-| Deck | Product | Why |
-|---|---|---|
-| Bone canvas `#F1EFE7` (warm) | Tide canvas `#EAEFF1` (cool) | The panel sits beside Gmail and Meet, which are cool greys and white. A warm panel reads as a different app glued on |
-| Coral as an accent everywhere (eyebrows, icons, highlights) | Coral only for "hold the payment" and the logo | In the product coral is a warning. Used for focus, tabs and icons it stopped meaning anything (design review, Nov 23) |
-| Eyebrow labels in tracked caps | No eyebrows | Slides need wayfinding; a 400px panel needs the space |
-
-The navy is a shade lighter in the product (`#10202E`) to keep 4.5:1 for `on-navy` text at panel sizes.
-
-The original screen wireframes are the deck's slide 11 ("Nine screens, one side panel"). They were sketches; the built screens are the source of truth now.
+- **Logo (1.1.0):** a red evidence tag with a punched hole, and a magnifying glass whose handle bends into a fish hook: FISHY inspects the bait ([brand/](brand/)). The 1.0.0 mark, a hook bent into a question mark, read as a generic question icon.
+- **Colour:** manila `#e8d9b5`, paper `#fbf7ec`, ink `#141414`, signal red `#cf2419`, highlighter yellow `#f7d51d`, and a green ink for clean results. Yellow was added in 1.1.0 so the panel stands out on a page, not only when something is fishy.
+- **Type:**
+  - **Big Shoulders** (drawn from Chicago street signage) for headings and labels, and its **stencil** cut for the wordmark and the evidence tape. It replaced Archivo in 1.1.0: a font generated apps rarely reach for.
+  - **Atkinson Hyperlegible Next** for everything read, drawn to stay legible under pressure.
 
 ## Colours
 
-**One colour per state.** The hero, the in-page banner and the step track always agree:
+**One colour per state:**
 
-| State | Hero | Pill | Banner in Meet or Gmail |
-|---|---|---|---|
-| Watching / calling | ink (navy) | navy-2 | hidden / none |
-| Hold the payment | brand (coral), ink text | ink | amber |
-| Do not pay | danger, white text | white on danger | red |
-| Confirmed / looks normal | soft green `#cdeae1`, deep green text | ok | green |
+| State | Header (hero) | Pill |
+|---|---|---|
+| Ready / take a closer look | ink, paper text | ink-2 |
+| Fishy | evidence red, white text | ink |
+| No clear signs | ok-bg, green-ink text | ok |
 
-- Coral is a fill, never text on white (2.9:1). Coral text on light is `brand-text`.
-- Red flags use `danger-bg` tiles with `danger-text` icons; clean checks use `ok-bg` with `ok`.
-- Where it ran: **On device** is an ink badge, **Cloud** is `cloud-bg` with `cloud-text`. Every AI result carries one.
-- All text passes WCAG AA (measured Nov 23 on every view, including the coral and red heroes).
+- Red is for "fishy" and the logo only; the drop-zone icon is red because it's the main action.
+- Icon tiles are ink on paper; on hover they turn red and tilt 4°.
+- Where it ran: **On device** is an ink badge, **Cloud** is `cloud-bg` with `cloud-text`.
+- All text passes WCAG AA; the watch switch's track passes 3:1 against paper.
 
 ## Typography
 
-One family, **Atkinson Hyperlegible Next**, carries headings and text. The Braille Institute drew it to stay readable in hard conditions, which is when FISHY is read, and it replaced Inter and Space Grotesk (Nov 23): that pairing is the default of countless generated interfaces. JetBrains Mono stays for what people compare character by character: bank accounts, masked phone numbers, sender addresses. Emphasis comes from weight, never from a new size.
+Two families:
+- **Big Shoulders Display** (800–900) for headings, section labels, tabs, tile titles, the result band and the score; **Big Shoulders Stencil Display** for the wordmark and the tape.
+- **Atkinson Hyperlegible Next** for text.
+- **JetBrains Mono** stays for what is compared character by character.
 
-- The hero is one short sentence: "Something’s fishy." "Not verified." "Budi confirmed."
-- Amounts are never truncated. A currency code (IDR) wraps above the number when the number needs the width; a one-character symbol ($) stays attached. Tabular figures.
-- Names in sentences skip titles ("Call Kartika", not "Call Raden"). See `extension/src/lib/names.ts`.
+Rules:
+- The home says "IS IT REAL?" in capitals. Results speak in sentence case: "Something's fishy."
+- Emphasis is weight, the tape and the highlighter, never a new size.
 
 ## Layout
 
-- The panel is 400px wide (it must work at 320px and at 200% zoom, about 200px).
-- Page padding 16px; sections 22px apart; section heading 17px with an aside on the right.
-- Surfaces are white, radius 18px, with a 1px bottom line instead of a shadow. Rows inside a surface are separated by `line-soft`.
-- The hero and evidence headers end in a 26px bottom radius, so the page under them reads as one sheet.
-- The action bar (who to call, the Call button) is fixed at the bottom, white, radius 22px on top, with the only real shadow in the product. Its content always names the person: "Call Budi on record".
-- The hosted pages are phone-first: 440px max, 20px gutters, safe-area padding, 54px buttons.
+- **Width:** the panel is 400px wide, and works at 320px and 200% zoom.
+- **The home** is only what FISHY can check: the drop zone (black dashed), four tiles two by two (Face on a call, Voice on a call, This website, A message), and the watch switch.
+- **Surfaces** are paper tags with a 1px `line` edge, radius 6px; rows inside are separated by `line-soft`.
+- **The header and evidence headers** are square at the bottom.
 
 ## Elevation
 
-Flat by default. A surface sits on the canvas with `box-shadow: 0 1px 0 var(--line)`. The only lifted element is the action bar (`0 -8px 24px rgba(16,32,46,.12)`), because it floats over content.
+Flat. A tag is set off by its hairline edge (`box-shadow: 0 0 0 1px var(--line)`), not a shadow. Only the floating window over a page carries a shadow: a 3px ink frame with a hard 6px offset shadow (like a tag laid on the page) plus a soft one. Its title bar is ink with the logo, the stencil wordmark and a yellow rule; minimised, it becomes the red tag alone (52px, hard shadow), and a click brings the window back. Inside it, the panel hides its own logo.
 
 ## Shapes
 
-Radius 10 (small controls), 14 (buttons, tiles), 18 (surfaces), 26 (bottom of the hero), 999 (pills and badges). Icons are 1.8px stroke SVG, 24px grid, inside 36–40px rounded tiles.
+Radius 4 (small controls), 6 (tags, tiles, buttons), 8 (large surfaces), 3 (chips, pills), 0 (headers, the tape). Icons are FISHY's own: 2.2px strokes with square ends and mitred corners on a 24 grid, inside square-ish ink tiles. No stock icon set. Pictograms in the scam guide are drawn geometry in one 2.4px stroke with one red accent.
 
 ## Components
 
@@ -127,7 +120,8 @@ Radius 10 (small controls), 14 (buttons, tiles), 18 (surfaces), 26 (bottom of th
 - **Hero follows the strongest check**: if any checked file, voice, video or website scores "high", the home hero is coral "Something's fishy." and names it, so the hero never says "not enough" above a red score.
 - **Trail separators**: small drawn chevrons between the pills, not arrow characters.
 - **Hand check**: an amber band under a video result: what to ask the caller, and “Check with hand”.
-- **Result card**: the preview with the **stamp** (FISHY in red, SUSPECT in amber, LOOKS OK in green, rotated -8°, stamped on once with a short overshoot), the **score ring** that fills and counts up, the verdict band, and one sentence that says why (“Fishy because…”). Why is open; Details folds. A coral line sweeps over the picture while Gemini looks.
+- **Result card**: the preview with **evidence tape** across the top-right corner (FISHY on red, SUSPECT on yellow, LOOKS OK on green, at 32°, sliding in once), and the fishy “why” sentence under the highlighter, the **score ring** that fills and counts up, the verdict band, and one sentence that says why (“Fishy because…”). Why is open; Details folds. A coral line sweeps over the picture while Gemini looks.
+- **Replay** (1.2.0): the picture and its numbered boxes sit on one stage that zooms (450ms, ease-out-quint) into an area; the area gets a yellow outline and the rest is dimmed by 50% ink. The caption sits in an ink strip under the picture, never over it; at rest the strip says "Tap a numbered box to zoom in." A video check plays its frames back (450ms each) and holds 2.8s on each pointed-at frame. **Save video** draws the same walkthrough on a canvas (ink header with the logo and the verdict tag, ink caption strip, an end card with the reason and the advice) and records it as MP4.
 - **Take a closer look**: when there are signs but not enough to call it fishy, the hero goes navy (amber on the web) instead of saying "looks normal".
 - **Evidence screens**: a comparison first (red-tinted "on this invoice" over green-tinted "paid the last 6 times"), then the checks list, then a privacy line.
 - **End states**: "What to say now" (a line to get off the call), then "Start a new check" and "Copy the incident report link".

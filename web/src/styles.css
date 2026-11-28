@@ -112,3 +112,18 @@ summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; al
 .bar span { display: block; height: 100%; background: var(--ink); border-radius: 999px; transition: width .5s cubic-bezier(0.23, 1, 0.32, 1); }
 .score-card.high .bar span { background: var(--danger); }
 .why-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.45; }
+
+/* ---------- Evidence tag (1.1.0): the same world as the extension ---------- */
+/* Big Shoulders for headings, the stencil cut for the wordmark, square-ish tags, the highlighter. */
+h1, h2, .verdict h2, .result strong { font-family: 'Big Shoulders Display Variable', 'Arial Narrow', sans-serif; font-weight: 800; letter-spacing: .01em; }
+h1 { font-size: 30px; text-transform: uppercase; }
+.brand strong { font-family: 'Big Shoulders Stencil Display Variable', 'Arial Narrow', sans-serif; font-weight: 900; font-size: 22px; letter-spacing: .08em; }
+.brand img { border-radius: 4px; }
+.card, .result, .verdict, .panel, .try-preview { border-radius: 6px; }
+.card { box-shadow: 0 0 0 1px var(--line); }
+textarea, input { border-radius: 6px; border: 2px solid var(--ink); }
+.btn { border-radius: 6px; text-transform: uppercase; letter-spacing: .06em; }
+.dropzone { border: 2px dashed var(--ink); border-radius: 6px; }
+.nano { border-radius: 4px; background: var(--marker, #f7d51d); color: var(--ink); }
+.verdict-pill, .chips li, .ran { border-radius: 3px; }
+mark { background: linear-gradient(transparent 45%, #f7d51d 45%, #f7d51d 92%, transparent 92%); border-radius: 0; }

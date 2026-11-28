@@ -1,7 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="FISHY">
-  <rect width="32" height="32" rx="7" fill="#F26B4E"/>
-  <g fill="none" stroke="#10202E" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M19.5 5 V17.5 a5.25 5.25 0 0 1 -10.5 0 V16"/>
-    <path d="M9 16 L12.5 19"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>FISHY</title>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="3" fill="#CF2419"/>
+  <circle cx="13.5" cy="12.5" r="6" fill="none" stroke="#FBF7EC" stroke-width="3.6"/>
+  <path d="M18 17L22 21L22 24.5C22 26.5 20.5 28 18.5 28C16.7 28 15.5 26.7 15.5 25" fill="none" stroke="#FBF7EC" stroke-width="3.4" stroke-linecap="square"/>
 </svg>

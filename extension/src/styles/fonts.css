@@ -1,5 +1,7 @@
 /* Fonts are bundled from npm (@fontsource), because MV3 extension pages cannot load Google Fonts at runtime. */
 /* Atkinson Hyperlegible Next: drawn by the Braille Institute to stay readable in hard conditions,
    which is when FISHY is read. One family for headings and text; JetBrains Mono for accounts. */
+@import '@fontsource-variable/big-shoulders-display';
+@import '@fontsource-variable/big-shoulders-stencil-display';
 @import '@fontsource-variable/atkinson-hyperlegible-next';
 @import '@fontsource/jetbrains-mono/500.css';
