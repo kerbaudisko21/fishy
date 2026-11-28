@@ -135,6 +135,7 @@ export function App() {
         <Verdict
           verdict={a.verdict}
           hasInput={a.hasInput}
+          readerFailed={a.readerFailed}
           busy={a.busy}
           onNewCheck={newCheck}
           onOpenFlag={flagScreen}
