@@ -3,7 +3,7 @@ import { getAI, getGenerativeModel, InferenceMode, InferenceSource, type Generat
 import { firstThatWorks, geminiOrKeywords } from '../../extension/src/lib/ai/fallback';
 import { keywordTactics } from '../../extension/src/lib/ai/keywords';
 import { pictureForGemini, toBase64 } from '../../extension/src/lib/ai/files';
-import { explainPrompt, mediaSchema, NANO_IMAGE, NANO_TEXT, parseMedia, parseTactics, PICTURE_PROMPT, tacticInput, tacticSchema, templateExplanation, type MediaReading, type TacticHit } from '../../extension/src/lib/ai/prompts';
+import { explainPrompt, mediaSchema, NANO_IMAGE, NANO_TEXT, parseMedia, parseTactics, PICTURE_PROMPT, tacticInput, tacticSchema, templateExplanation, VIDEO_PROMPT, VOICE_PROMPT, withMeasurements, type MediaReading, type TacticHit } from '../../extension/src/lib/ai/prompts';
 import { cloudBackend } from '../../extension/src/lib/ai/provider';
 import { redact } from '../../extension/src/lib/redact';
 import type { Source, Verdict } from '../../extension/src/lib/types';
@@ -44,7 +44,7 @@ export async function nanoStatus(): Promise<NanoStatus> {
   }
 }
 
-let models: { onDevice: GenerativeModel; inCloud: GenerativeModel; explain: GenerativeModel; picture: GenerativeModel } | undefined;
+let models: { onDevice: GenerativeModel; inCloud: GenerativeModel; explain: GenerativeModel; picture: GenerativeModel; voice: GenerativeModel } | undefined;
 
 function getModels() {
   if (models) return models;
@@ -62,6 +62,11 @@ function getModels() {
     picture: getGenerativeModel(ai, {
       mode: InferenceMode.PREFER_ON_DEVICE,
       onDeviceParams: { createOptions: NANO_IMAGE, promptOptions: { responseConstraint: mediaSchema } },
+      inCloudParams: { model: cloudModel, generationConfig: { responseMimeType: 'application/json', responseSchema: mediaSchema } },
+    }),
+    // Audio goes to the cloud model only: Gemini Nano does not take audio through Firebase AI Logic.
+    voice: getGenerativeModel(ai, {
+      mode: InferenceMode.ONLY_IN_CLOUD,
       inCloudParams: { model: cloudModel, generationConfig: { responseMimeType: 'application/json', responseSchema: mediaSchema } },
     }),
     explain: getGenerativeModel(ai, {
@@ -133,4 +138,25 @@ export async function readPicture(blob: Blob): Promise<PictureReading | null> {
   const result = await getModels().picture.generateContent([PICTURE_PROMPT, { type: 'inlineData', inlineData: { mimeType: picture.type, data: await toBase64(picture) } }]);
   const onDevice = result.response.inferenceSource === InferenceSource.ON_DEVICE;
   return { ...parseMedia(result.response.text()), source: onDevice ? 'on_device' : 'cloud', reader: onDevice ? 'gemini-nano' : 'gemini-cloud' };
+}
+
+/**
+ * Frames of a video, side by side on one numbered sheet: Gemini Nano in this browser when it can,
+ * the cloud model otherwise. `measured` is what this device measured (the motion between frames).
+ */
+export async function readFrames(sheet: Blob, measured: string): Promise<PictureReading | null> {
+  if (!CONFIGURED) return null;
+  const picture = await pictureForGemini(sheet);
+  const result = await getModels().picture.generateContent([withMeasurements(VIDEO_PROMPT, measured), { type: 'inlineData', inlineData: { mimeType: picture.type, data: await toBase64(picture) } }]);
+  const onDevice = result.response.inferenceSource === InferenceSource.ON_DEVICE;
+  // Boxes point at the sheet, not at one frame: the page doesn't draw them.
+  const reading = parseMedia(result.response.text());
+  return { ...reading, signs: reading.signs.map(({ box: _box, ...s }) => s), source: onDevice ? 'on_device' : 'cloud', reader: onDevice ? 'gemini-nano' : 'gemini-cloud' };
+}
+
+/** A voice clip as 16 kHz WAV, to the cloud model (Gemini Nano does not take audio yet). Null without Firebase. */
+export async function readVoice(wav: Blob, measured: string): Promise<PictureReading | null> {
+  if (!CONFIGURED) return null;
+  const result = await getModels().voice.generateContent([withMeasurements(VOICE_PROMPT, measured), { type: 'inlineData', inlineData: { mimeType: 'audio/wav', data: await toBase64(wav) } }]);
+  return { ...parseMedia(result.response.text()), source: 'cloud', reader: 'gemini-cloud' };
 }

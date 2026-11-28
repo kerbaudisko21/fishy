@@ -7,7 +7,9 @@ import { CONFIGURED } from './api';
 import { PARTLY_CHECKED } from '../../extension/src/lib/ai/fallback';
 import { explain, nanoStatus, readTactics, type Explanation, type NanoStatus, type ReadResult } from './hybrid';
 import { line, Reveal } from '../../extension/src/lib/transitions';
-import { PictureCheck } from './PictureCheck';
+import { FileCheck } from './FileCheck';
+import { InstallHint } from './Install';
+import { forgetSharedParam, takeShared } from './share';
 import { Brand, Version } from './ui';
 
 /*
@@ -77,12 +79,38 @@ export function TryPage() {
   const [why, setWhy] = useState<Explanation | null>(null);
   const resultRef = useRef<HTMLHeadingElement>(null);
 
+  const [incoming, setIncoming] = useState<File | null>(null);
+  const [shareNote, setShareNote] = useState('');
+  const messageRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     void nanoStatus().then(setNano);
   }, []);
 
-  const check = async () => {
-    const message = text.trim();
+  // Shared from another app (Android's share sheet, through the service worker): load it once, then check it.
+  useEffect(() => {
+    const key = new URLSearchParams(location.search).get('shared');
+    if (!key) return;
+    forgetSharedParam();
+    if (key === 'failed') return setShareNote('That share didn’t come through. Try again, or choose the file below.');
+    void takeShared(key).then((shared) => {
+      if (!shared || (!shared.file && !shared.text)) return setShareNote('That share was already opened. Share it again, or choose the file below.');
+      if (shared.file) {
+        setIncoming(shared.file);
+        // A caption that came with it waits in the message box, unchecked.
+        if (shared.text) setText(shared.text);
+      } else {
+        setText(shared.text);
+        requestAnimationFrame(() => messageRef.current?.scrollIntoView({ block: 'start' }));
+        void check(shared.text);
+      }
+    });
+    // Once, on load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const check = async (given?: string) => {
+    const message = (given ?? text).trim();
     if (!message) return;
     setError('');
     setResult(null);
@@ -116,8 +144,8 @@ export function TryPage() {
       <section className="stack">
         <h1>Is it real?</h1>
         <p className="lead">
-          Check a picture or a message the way the FISHY extension does. Gemini runs through Firebase AI Logic: on this device with Gemini Nano when
-          your browser has it, in the cloud otherwise.
+          Got a picture, video, voice note or message you’re not sure about? Check it before you act on it. Gemini runs on this device when your
+          browser has Gemini Nano, in the cloud otherwise.
         </p>
         <p className={`nano ${nano === 'available' ? 'on' : ''}`} role="status">
           {!CONFIGURED
@@ -128,14 +156,20 @@ export function TryPage() {
                 ? 'Gemini Nano is ready in this browser: the text stays on this device.'
                 : 'Gemini Nano is not available in this browser, so the cloud model reads a redacted copy.'}
         </p>
+        <InstallHint />
+        {shareNote && (
+          <p className="notice" role="alert">
+            {shareNote}
+          </p>
+        )}
       </section>
 
-      <section className="stack" aria-label="A picture">
-        <h2 className="try-h2">A picture</h2>
-        <PictureCheck />
+      <section className="stack anchor" aria-label="A file">
+        <h2 className="try-h2">A picture, video or voice note</h2>
+        <FileCheck incoming={incoming} />
       </section>
 
-      <div className="stack">
+      <div className="stack anchor" ref={messageRef}>
         <h2 className="try-h2">A message</h2>
         <label htmlFor="message">Paste a message, an email or a chat</label>
         <textarea id="message" autoCapitalize="sentences" spellCheck={false} value={text} onChange={(e) => setText(e.target.value)} placeholder="An email, a chat message or meeting captions…" rows={7} />
@@ -162,16 +196,16 @@ export function TryPage() {
       {result && (
         <Reveal as="section" key={result.read.hits.map((h) => h.quote).join('|') + result.verdict.flags.length} className="stack" aria-label="Result">
           <div className={line(1, `verdict ${fishy ? 'fishy' : partly ? 'look' : 'clear'}`)}>
-            <span className="verdict-pill">{fishy ? 'Hold the payment' : partly ? PARTLY_CHECKED.pill : 'No red flags'}</span>
+            <span className="verdict-pill">{fishy ? 'Don’t act yet' : partly ? PARTLY_CHECKED.pill : 'No red flags'}</span>
             <h2 tabIndex={-1} ref={resultRef}>
               {fishy ? 'Something’s fishy.' : partly ? PARTLY_CHECKED.title : 'Looks normal.'}
             </h2>
             <span>
               {fishy
-                ? `${result.verdict.flags.length} red flag${result.verdict.flags.length === 1 ? '' : 's'}. Don’t pay until the person confirms on the number on record.`
+                ? `${result.verdict.flags.length} red flag${result.verdict.flags.length === 1 ? '' : 's'}. Don’t act on it until the person confirms on a number you already have.`
                 : partly
                   ? PARTLY_CHECKED.line
-                  : 'For a payment, a call on the number on record is still the safe step.'}
+                  : 'If it asks you to act, a call on a number you already have is still the safe step.'}
             </span>
           </div>
 

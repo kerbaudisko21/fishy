@@ -9,6 +9,13 @@ import '../../extension/src/styles/transitions.css';
 import './styles.css';
 import { App } from './App';
 
+// Offline shell and "Share to FISHY" on Android (public/sw.js). Not in development: it would cache the dev server.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((e) => console.warn('[FISHY] service worker not registered', e));
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
