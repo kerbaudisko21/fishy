@@ -11,6 +11,7 @@ import { test } from 'node:test';
 
 import { answerApproval, getApproval } from '../src/approve/approval.ts';
 import { RequestError } from '../src/call/ports.ts';
+import { PERSON_PIN_FAILURES } from '../src/call/steps.ts';
 import { BUDI_PHONE, BUDI_PIN, check, harness, NOW, waiting } from './helpers.ts';
 import type { Harness } from './helpers.ts';
 
@@ -114,6 +115,29 @@ test('"no" with a wrong PIN still marks the request as not theirs, and the PIN c
 
   await answerApproval(h.deps, { token: TOKEN, answer: 'no', pin: BUDI_PIN });
   assert.equal((await h.store.getVerification('v-test'))?.pinVerified, true);
+});
+
+test('with the PIN locked, the page is told so instead of "wrong PIN", and nothing is confirmed', async () => {
+  const h = harness(ON);
+  for (let i = 0; i < PERSON_PIN_FAILURES; i += 1) {
+    await h.store.recordPinFailure('budi', NOW - 1000);
+  }
+  await pageCheck(h);
+
+  await rejects(() => answerApproval(h.deps, { token: TOKEN, answer: 'yes', pin: BUDI_PIN }), 'resource-exhausted');
+  assert.notEqual(await statusOf(h), 'confirmed');
+});
+
+test('with the PIN locked, "no" is still recorded, only not proven with the PIN', async () => {
+  const h = harness(ON);
+  for (let i = 0; i < PERSON_PIN_FAILURES; i += 1) {
+    await h.store.recordPinFailure('budi', NOW - 1000);
+  }
+  await pageCheck(h);
+
+  await rejects(() => answerApproval(h.deps, { token: TOKEN, answer: 'no', pin: BUDI_PIN }), 'resource-exhausted');
+  assert.equal(await statusOf(h), 'denied');
+  assert.equal((await h.store.getVerification('v-test'))?.pinVerified, false);
 });
 
 test('after "no", the answer cannot be turned into "yes"', async () => {

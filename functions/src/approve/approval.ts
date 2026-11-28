@@ -130,12 +130,16 @@ export async function answerApproval(deps: CheckDeps, data: unknown): Promise<{ 
     // For example "yes" after "no": an answer that was given is never turned round.
     throw notFound();
   }
-  const { outcome } = await answerPin(deps, verification.id, pin);
+  const { outcome, locked } = await answerPin(deps, verification.id, pin);
   if (outcome === 'confirmed' || outcome === 'denied_verified') {
     return { ok: true };
   }
   if (outcome === 'closed') {
     throw notFound();
+  }
+  if (locked) {
+    // Its own code, so the page can say the PIN is locked. "Wrong PIN" would send the real person guessing.
+    throw new RequestError('resource-exhausted', 'This PIN is locked after too many wrong tries.');
   }
   throw new RequestError('permission-denied', 'That PIN is not right.');
 }

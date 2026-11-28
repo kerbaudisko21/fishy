@@ -39,6 +39,11 @@ export interface SeedOutput {
   knownBad: Record<string, KnownBadEntry>;
   /** People who were left out because no number was given for them. */
   skipped: string[];
+  /**
+   * Everyone who can be called. Seeding clears their PIN lock and hourly call count, so a
+   * rehearsal that used them up can start again.
+   */
+  clearLimitsFor: string[];
 }
 
 const INTERNATIONAL = /^\+[1-9]\d{7,14}$/;
@@ -69,7 +74,7 @@ export function buildSeed(input: SeedInput): SeedOutput {
     }
   }
 
-  const output: SeedOutput = { directory: {}, directoryPublic: {}, knownBad: {}, skipped: [] };
+  const output: SeedOutput = { directory: {}, directoryPublic: {}, knownBad: {}, skipped: [], clearLimitsFor: [] };
 
   for (const { id, ...person } of people) {
     const given = phones[id];
@@ -107,5 +112,6 @@ export function buildSeed(input: SeedInput): SeedOutput {
   for (const entry of knownBad) {
     output.knownBad[`${entry.kind}:${entry.value}`] = { ...entry };
   }
+  output.clearLimitsFor = Object.keys(output.directory);
   return output;
 }
