@@ -73,7 +73,10 @@ function toggle() {
   const frame = document.createElement('iframe');
   frame.title = 'FISHY';
   // autoplay: the meeting's sound is played back while the voice is recorded.
-  frame.allow = 'clipboard-write; autoplay';
+  // language-model: this frame sits in someone else's page, and Chrome gives Gemini Nano (the
+  // Prompt API) only to a top-level window and its same-origin frames unless the page passes it on.
+  // Without it the panel in this window would find no on-device model and use the cloud every time.
+  frame.allow = 'clipboard-write; autoplay; language-model';
   frame.src = chrome.runtime.getURL('src/sidepanel/index.html');
 
   win.append(bar, frame);
