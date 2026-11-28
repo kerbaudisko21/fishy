@@ -167,9 +167,12 @@ function Card({ item, focused, onChallenge, onLipSync, onReport }: { item: Media
               </li>
             ))}
           </ul>
-          <p className="odds-note">
-            How the score is worked out: it starts at {Math.round(s.prior * 100)}%, about how often something people doubt turns out fake, and each sign multiplies the odds by its weight (similar signs count less each). The weights are estimates from research and FISHY’s tests, not proof.
-          </p>
+          <details className="odds-how">
+            <summary>How is this scored?</summary>
+            <p>
+              It starts at {Math.round(s.prior * 100)}%, about how often something people doubt turns out fake. Each sign multiplies the odds by its weight (×3 makes fake three times as likely); similar signs count less each. The weights come from published research where it exists, and are FISHY’s estimates where it doesn’t. Signs, not proof.
+            </p>
+          </details>
         </details>
       )}
 

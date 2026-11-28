@@ -130,7 +130,13 @@ export function useAnalysis() {
   const readTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    loadDirectory().then(setDirectory).catch((e) => setError(`Directory: ${String(e.message ?? e)}`));
+    loadDirectory()
+      .then((d) => {
+        setDirectory(d);
+        // For the automatic website warnings: supplier names and domains only, kept on this laptop.
+        if (IN_EXTENSION) void chrome.storage.local.set({ fishySuppliers: d.suppliers.map((s) => ({ name: s.name, domain: s.domain })) });
+      })
+      .catch((e) => setError(`Directory: ${String(e.message ?? e)}`));
     loadKnownBad().then(setKnown).catch((e) => console.warn('[FISHY] known list', e));
     loadRules().then(setRules);
     void loadStats();
@@ -806,6 +812,36 @@ export function useAnalysis() {
     [findings.media, patchMedia],
   );
 
+  /**
+   * A link, checked by its address only, without opening it: look-alike of a supplier, look-alike
+   * letters, risky ending, a bare number; and in the cloud (the address only) its age and Google's
+   * unsafe-sites list. Opening it is the person's choice afterwards.
+   */
+  const checkLink = useCallback(
+    async (url: string) => {
+      goLive();
+      setError(null);
+      let u: URL;
+      try {
+        u = new URL(url);
+      } catch {
+        return setError('That link isn’t a web address FISHY can check.');
+      }
+      if (!/^https?:$/.test(u.protocol)) return setError('FISHY checks web links (http and https).');
+      const id = newId();
+      const page: PageFacts = { url: `${u.origin}${u.pathname}`.slice(0, 2048), host: u.hostname, https: u.protocol === 'https:', title: '', text: '', passwordFields: 0, cardFields: 0, otpFields: 0, formHosts: [] };
+      let lab = siteLab(page, directory.suppliers);
+      putMedia({ id, kind: 'site', name: u.hostname, at: clock(), checks: [], gemini: null, note: 'Only the address was checked: FISHY didn’t open the link. If you open it, use “The website” to check the page too.', forensics: { hints: lab.hints, rows: lab.rows } });
+      setBusy('Looking up the address…');
+      const within = <T,>(p: Promise<T>) => Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), 6000))]);
+      const [age, links] = await Promise.all([within(domainAge(registrable(u.hostname))), within(checkLinks([page.url]))]);
+      lab = siteLab(page, directory.suppliers, { ageDays: age ? age.days : undefined, unsafe: links ? links.unsafe.length > 0 : undefined });
+      patchMedia(id, { forensics: { hints: lab.hints, rows: lab.rows } });
+      setBusy(null);
+    },
+    [directory.suppliers, goLive, patchMedia, putMedia],
+  );
+
   /** Paste-text fallback (deck risk: Meet pages change). */
   const checkText = useCallback(
     (text: string) => {
@@ -871,6 +907,7 @@ export function useAnalysis() {
     checkVoice,
     checkFrame,
     checkSite,
+    checkLink,
     checkPagePicture,
     checkLipSync,
     reportPicture,

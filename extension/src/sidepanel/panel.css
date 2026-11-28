@@ -550,7 +550,7 @@ mark { background: var(--danger-bg); color: var(--ink); border-radius: 4px; padd
 .film img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .film.on { box-shadow: 0 0 0 2px var(--ink); }
 .film-num { position: absolute; left: 3px; top: 2px; font-size: 10px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .8); }
-.film-still { position: absolute; right: 3px; bottom: 1px; font-size: 12px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .8); }
+.film.still img { opacity: .45; filter: grayscale(1); }
 
 .pitch { margin: -6px 0 0; display: flex; flex-direction: column; gap: 2px; }
 .pitch svg { width: 100%; height: 56px; background: var(--surface-muted); border-radius: 8px; }
@@ -561,7 +561,7 @@ mark { background: var(--danger-bg); color: var(--ink); border-radius: 4px; padd
 .trail { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 4px; align-items: center; }
 .trail-step { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border-radius: 999px; font-size: 12px; background: var(--ok-bg); color: var(--ok); }
 .trail-step.cloud { background: var(--cloud-bg); color: var(--cloud-text); }
-.trail-step + .trail-step::before { content: '→'; margin: 0 4px 0 -2px; color: var(--muted); }
+.trail-step + .trail-step::before { content: ''; width: 6px; height: 6px; margin: 0 6px 0 -4px; border-top: 1.5px solid var(--muted); border-right: 1.5px solid var(--muted); transform: rotate(45deg); }
 .trail-dot { width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
 .trail-label { font-weight: 800; }
 .trail-where { opacity: .85; }
@@ -572,8 +572,9 @@ mark { background: var(--danger-bg); color: var(--ink); border-radius: 4px; padd
 .challenge .btn { flex: none; align-self: center; }
 
 /* What kind of scam */
-.scam-type { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; border-left: 4px solid var(--brand); }
-.scam-kicker { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-text); }
+.scam-type { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.scam-head { display: flex; align-items: flex-start; gap: 10px; }
+.scam-icon { flex: none; width: 26px; height: 26px; margin-top: 1px; border-radius: 8px; background: var(--brand); color: var(--ink); display: flex; align-items: center; justify-content: center; }
 .scam-name { font-family: var(--font-head); font-size: 19px; line-height: 1.2; }
 .scam-signs { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
 .scam-action { margin: 2px 0 0; display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; font-weight: 700; line-height: 1.4; }
@@ -636,3 +637,40 @@ mark { background: var(--danger-bg); color: var(--ink); border-radius: 4px; padd
 .report-row { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
 .report-row .btn { flex: none; }
 .route li { display: block; }
+
+/* Watch mode as a switch, not a second drop zone */
+.watch-start { border: 0; background: var(--surface); box-shadow: 0 1px 0 var(--line); }
+@media (hover: hover) and (pointer: fine) { .watch-start:not(:disabled):hover { background: var(--surface-muted); } }
+.switch { flex: none; position: relative; width: 42px; height: 26px; border-radius: 999px; background: #76889a; transition: background-color 160ms ease; }
+.switch-thumb { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(16, 32, 46, .3); transition: transform 200ms cubic-bezier(.34, 1.36, .64, 1); }
+.watch-start:active:not(:disabled) .switch-thumb { transform: translateX(6px); }
+
+/* How the score works, on demand */
+.odds-how { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+.odds-how summary { cursor: pointer; width: fit-content; font-weight: 700; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; list-style: none; }
+.odds-how summary::-webkit-details-marker { display: none; }
+.odds-how p { margin: 6px 0 0; line-height: 1.5; }
+
+/* What's new, folded */
+.changes-fold summary { cursor: pointer; font-weight: 700; list-style: none; }
+.changes-fold summary::-webkit-details-marker { display: none; }
+.changes-fold[open] summary { margin-bottom: 10px; }
+
+/* Browser surfaces in the palette */
+html { scrollbar-color: #b9c6cc transparent; scrollbar-width: thin; caret-color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .switch, .switch-thumb { transition: none; } }
+
+.odds-how summary::after { content: none; }
+.odds-how summary { min-height: 0; display: inline; }
+.scam-name { min-width: 0; overflow-wrap: anywhere; }
+.changes-fold summary { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.changes-fold summary::after { content: ''; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform 200ms var(--ease-out); }
+.changes-fold[open] summary::after { transform: rotate(225deg); }
+@media (prefers-reduced-motion: reduce) { .changes-fold summary::after { transition: none; } }
+
+/* Keys, and the switch when on */
+.key { display: inline-block; min-width: 22px; padding: 1px 6px; border-radius: 6px; background: var(--surface); box-shadow: inset 0 -1.5px 0 var(--line), 0 0 0 1px var(--line); font: 700 11.5px var(--font-body); color: var(--ink); text-align: center; white-space: nowrap; }
+.start-hint { margin: 0; font-size: 12.5px; line-height: 1.7; color: var(--muted); text-align: center; }
+.switch.on { background: var(--ok); }
+.switch.on .switch-thumb { transform: translateX(16px); }
+.card-pad > .row-title { margin-top: 2px; }

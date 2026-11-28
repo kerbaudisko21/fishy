@@ -422,6 +422,21 @@ All of it lives in FISHY's own database, `fishy`, not in `(default)`.
 - FISHY never calls a number taken from a message.
 - The team sees a summary, never the message.
 
+## Use it without opening FISHY
+
+- **Keyboard shortcuts.** Change them at `chrome://extensions/shortcuts`. A shortcut counts as clicking FISHY on that tab, so the video and voice checks work straight away.
+  - `Alt+Shift+F` opens FISHY.
+  - `Alt+Shift+W` checks this website.
+  - `Alt+Shift+V` checks the face on this call.
+  - `Alt+Shift+A` checks the voice.
+- **Right-click** "Check … with FISHY" on:
+  - a picture;
+  - a video (its face);
+  - a link (its address only, without opening it);
+  - selected text (pressure in a message);
+  - the page itself.
+- **Warn me about risky websites** (Settings, off by default). Chrome asks once for access to all sites. Each page is then checked on the laptop with the website check's address and page tests, and nothing is sent. The FISHY icon shows `!` on a clearly risky site and `?` on a doubtful one. A clearly risky site also gets a banner with "See why", which runs the full website check, and "Not now".
+
 ## Research behind FISHY
 
 FISHY follows what recognised organisations recommend, and its weights come from published figures where they exist.

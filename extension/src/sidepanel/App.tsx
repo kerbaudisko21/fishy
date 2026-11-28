@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { suspectsFrom } from '../lib/checks/known';
 import { patternInfo } from '../lib/rules/engine';
+import { validJob } from '../lib/jobs';
 import { firstName } from '../lib/names';
 import { IN_EXTENSION } from '../lib/config';
 import { isPageMessage, type BannerState, type PanelMessage } from '../lib/messages';
@@ -92,23 +93,32 @@ export function App() {
     else void sendBanner('hidden', '', '');
   }, [call.state, who, a.hasInput, a.verdict]);
 
-  // "Check this picture with FISHY" from the right-click menu: the job waits in session storage.
-  const { checkPagePicture } = a;
+  // Work from outside the panel: a keyboard shortcut, a right-click item or a banner's "See why".
+  const { checkPagePicture, checkSite, checkFrame, checkVoice, checkLink, checkText } = a;
   useEffect(() => {
     if (!IN_EXTENSION || !chrome.storage?.session) return;
-    type Job = { kind: 'picture'; src: string; tabId: number; pageUrl?: string; at: number };
-    const take = (job?: Job) => {
-      if (!job || job.kind !== 'picture' || Date.now() - job.at > 60_000) return;
+    const take = (v: unknown) => {
+      const job = validJob(v);
+      if (!job) return;
       void chrome.storage.session.remove('fishyJob');
-      void checkPagePicture(job);
+      if (job.kind === 'picture') void checkPagePicture(job);
+      if (job.kind === 'site') void checkSite();
+      if (job.kind === 'face') void checkFrame();
+      if (job.kind === 'voice') void checkVoice();
+      if (job.kind === 'link') void checkLink(job.url);
+      if (job.kind === 'text') {
+        void checkText(job.text);
+        setScreen('verdict');
+      }
     };
-    void chrome.storage.session.get('fishyJob').then((v) => take(v.fishyJob as Job | undefined));
+    void chrome.storage.session.get('fishyJob').then((v) => take(v.fishyJob));
     const onChange = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
-      if (area === 'session' && changes.fishyJob?.newValue) take(changes.fishyJob.newValue as Job);
+      if (area === 'session' && changes.fishyJob?.newValue) take(changes.fishyJob.newValue);
     };
     chrome.storage.onChanged.addListener(onChange);
     return () => chrome.storage.onChanged.removeListener(onChange);
-  }, [checkPagePicture]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkPagePicture, checkSite, checkFrame, checkVoice, checkLink, checkText]);
 
   // A file dragged anywhere over FISHY can be dropped to check it.
   const { checkFile } = a;

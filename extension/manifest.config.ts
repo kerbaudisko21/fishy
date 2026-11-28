@@ -22,8 +22,19 @@ export default defineManifest({
   // No 'tabs': FISHY never reads a tab's address or title (security review L4).
   // activeTab: clicking the FISHY icon on the call's tab is what lets Chrome capture that tab.
   // scripting: the toolbar icon puts the floating window on the page it was clicked on.
+  // contextMenus: right-click a picture, video, link, selected text or page to check it.
   permissions: ['sidePanel', 'storage', 'tabCapture', 'activeTab', 'scripting', 'contextMenus'],
   host_permissions: ['https://meet.google.com/*', 'https://mail.google.com/*'],
+  // Only when the person switches on "Warn me about risky websites" in Settings (asked at that moment,
+  // never at install): every page is checked on the laptop, nothing is sent.
+  optional_host_permissions: ['<all_urls>'],
+  // Use FISHY without opening it first. A shortcut also grants activeTab, like clicking the icon.
+  commands: {
+    _execute_action: { suggested_key: { default: 'Alt+Shift+F' }, description: 'Open FISHY' },
+    'check-website': { suggested_key: { default: 'Alt+Shift+W' }, description: 'Check this website' },
+    'check-face': { suggested_key: { default: 'Alt+Shift+V' }, description: 'Check the face on this video call' },
+    'check-voice': { suggested_key: { default: 'Alt+Shift+A' }, description: 'Check the voice on this call (10 s)' },
+  },
   // The floating window loads the panel page in a frame on the page.
   web_accessible_resources: [{ resources: ['src/sidepanel/index.html'], matches: ['<all_urls>'], use_dynamic_url: true }],
   content_scripts: [

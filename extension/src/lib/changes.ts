@@ -9,6 +9,28 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '0.8.0',
+    date: '29 Nov 2026',
+    items: [
+      'Use FISHY without opening it first: keyboard shortcuts Alt+Shift+F (open FISHY), Alt+Shift+W (check this website), Alt+Shift+V (check the face on this call), Alt+Shift+A (check the voice); change them at chrome://extensions/shortcuts',
+      'Right-click anything to check it: a picture, a video (its face), a link (checked by its address, without opening it), selected text (pressure in a message) or the page itself',
+      'Warn me about risky websites (off until you switch it on in Settings): each site you open is checked on this laptop, nothing is sent; the FISHY icon shows “!” or “?”, and a clearly risky site gets a banner with “See why” and “Not now”',
+      'Settings → Without opening FISHY lists your shortcuts and the switch for automatic warnings',
+    ],
+  },
+  {
+    version: '0.7.1',
+    date: '29 Nov 2026',
+    items: [
+      'Fixed: the home screen now follows the strongest check, so it never says “not enough to call it fake” above a red score',
+      'Fixed: “Don’t pay until them confirms” now reads “until the real person confirms” (the 0.6.0 fix had not landed)',
+      '“Looks like” is one heading with a small coral mark; watch mode is a switch instead of a dashed box that looked like a drop zone',
+      '“Fishy because…” keeps to the core of each reason; “How is this scored?” opens the explanation only when asked',
+      'Frames that didn’t change are greyed out in the filmstrip; drawn chevrons between the steps of how a check ran; What’s new in Settings is folded',
+      'Accessibility: the watch switch’s track now meets the 3:1 contrast rule for controls; themed scrollbar and caret',
+    ],
+  },
+  {
     version: '0.7.0',
     date: '29 Nov 2026',
     items: [

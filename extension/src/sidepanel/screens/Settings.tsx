@@ -7,6 +7,67 @@ import { DetailHead, Icon, Section } from '../components';
 import { currentStats, onStats, resetStats, summary } from '../../lib/ai/stats';
 import { DOUBTFUL, TRUSTED, TUNE_AFTER } from '../../lib/ai/escalate';
 
+/** Use FISHY without opening it: the shortcuts as set in Chrome, the right-click items, and automatic warnings. */
+function WithoutOpening() {
+  const [keys, setKeys] = useState<Array<{ name: string; description: string; shortcut: string }>>([]);
+  const [auto, setAuto] = useState(false);
+  const [note, setNote] = useState('');
+  useEffect(() => {
+    if (typeof chrome === 'undefined' || !chrome.commands) return;
+    void chrome.commands.getAll().then((all) => setKeys(all.map((c) => ({ name: c.name ?? '', description: c.name === '_execute_action' ? 'Open FISHY' : (c.description ?? ''), shortcut: c.shortcut ?? '' }))));
+    void Promise.all([chrome.storage.local.get('fishyAutoWarn'), chrome.permissions.contains({ origins: ['<all_urls>'] })]).then(([v, granted]) => setAuto(!!v.fishyAutoWarn && granted));
+  }, []);
+  const toggle = async () => {
+    setNote('');
+    if (auto) {
+      await chrome.storage.local.set({ fishyAutoWarn: false });
+      // Give the access back too: FISHY only keeps what it uses.
+      await chrome.permissions.remove({ origins: ['<all_urls>'] }).catch(() => undefined);
+      setAuto(false);
+      return;
+    }
+    // Chrome asks the person here, on this click: FISHY never has this access unless they say yes.
+    const granted = await chrome.permissions.request({ origins: ['<all_urls>'] }).catch(() => false);
+    if (!granted) return setNote('Chrome didn’t give access, so automatic warnings stay off.');
+    await chrome.storage.local.set({ fishyAutoWarn: true });
+    setAuto(true);
+  };
+  return (
+    <div className="surface card-pad">
+      <span className="row-title">Keyboard shortcuts</span>
+      {keys.length ? (
+        <dl className="kv">
+          {keys.map((k) => (
+            <div key={k.name} style={{ display: 'contents' }}>
+              <dt>{k.description}</dt>
+              <dd>{k.shortcut ? <kbd className="key">{k.shortcut}</kbd> : <span className="row-detail">not set</span>}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <span className="row-detail">Open FISHY in Chrome to see them.</span>
+      )}
+      <button className="link" onClick={() => void chrome.tabs?.create({ url: 'chrome://extensions/shortcuts' })}>
+        Change the shortcuts
+      </button>
+      <span className="row-title">Right-click</span>
+      <span className="row-detail">Right-click a picture, a video, a link, selected text or the page itself and choose “Check … with FISHY”.</span>
+      <button className="watch-start" role="switch" aria-checked={auto} onClick={() => void toggle()}>
+        <span className="grow">
+          <span className="row-title">Warn me about risky websites</span>
+          <span className="row-detail">
+            Checks each site you open, on this laptop: nothing is sent. Shows “!” on the FISHY icon and a banner when a site is clearly risky. Chrome asks you to allow access to all sites.
+          </span>
+        </span>
+        <span className={`switch${auto ? ' on' : ''}`} aria-hidden="true">
+          <span className="switch-thumb" />
+        </span>
+      </button>
+      {note && <span className="row-detail" role="status">{note}</span>}
+    </div>
+  );
+}
+
 /** How the hybrid AI has run on this laptop: the numbers behind "on device first". */
 function AiStats() {
   const [stats, setStats] = useState(currentStats);
@@ -143,6 +204,10 @@ export function Settings({ rulesVersion, knownCount, onBack, onClear }: Props) {
         </div>
         </Section>
 
+        <Section title="Without opening FISHY">
+          <WithoutOpening />
+        </Section>
+
         <Section title="How the AI ran">
           <AiStats />
         </Section>
@@ -157,14 +222,17 @@ export function Settings({ rulesVersion, knownCount, onBack, onClear }: Props) {
         </Section>
 
         <Section title="What’s new" aside={CHANGES[0].version === VERSION ? `in v${VERSION}` : `latest notes: v${CHANGES[0].version}`}>
-          <div className="surface card-pad">
+          <details className="surface card-pad changes-fold">
+            <summary>
+              {CHANGES[0].items.length} changes in this version
+            </summary>
             <ul className="changes">
               {CHANGES[0].items.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
             <span className="row-detail">Every version is listed in CHANGELOG.md.</span>
-          </div>
+          </details>
         </Section>
       </main>
     </>

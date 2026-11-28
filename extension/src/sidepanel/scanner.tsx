@@ -163,10 +163,17 @@ export function Filmstrip({ frames, motion, onPick, picked }: { frames: string[]
   return (
     <div className="filmstrip" role="group" aria-label="Frames of the call">
       {frames.map((f, i) => (
-        <button key={f} className={`film${i === picked ? ' on' : ''}`} onClick={() => onPick(i)} aria-label={`Frame ${i + 1}`} aria-pressed={i === picked}>
+        <button
+          key={f}
+          className={`film${i === picked ? ' on' : ''}${motion && i > 0 && motion[i - 1] < 0.6 ? ' still' : ''}`}
+          onClick={() => onPick(i)}
+          aria-label={`Frame ${i + 1}${motion && i > 0 && motion[i - 1] < 0.6 ? ', no change from the frame before' : ''}`}
+          title={motion && i > 0 && motion[i - 1] < 0.6 ? 'No change from the frame before' : undefined}
+          aria-pressed={i === picked}
+        >
           <img src={f} alt="" />
           <span className="film-num">{i + 1}</span>
-          {motion && i > 0 && motion[i - 1] < 0.6 && <span className="film-still" title="No change from the frame before">=</span>}
+
         </button>
       ))}
     </div>
@@ -206,8 +213,10 @@ export function ScamType({ names, info }: { names: string[]; info: (name: string
   const p = info(main);
   return (
     <section className="scam-type surface" aria-label="What kind of scam this looks like">
-      <span className="scam-kicker">Looks like</span>
-      <strong className="scam-name">{main}</strong>
+      <div className="scam-head">
+        <span className="scam-icon" aria-hidden="true">{Icon.bang(14)}</span>
+        <strong className="scam-name">Looks like: {main}</strong>
+      </div>
       {p?.signs && (
         <ul className="scam-signs">
           {p.signs.map((s) => (
@@ -294,11 +303,13 @@ export function useWindowDrop(onFile: (f: File) => void) {
 export function WatchPanel({ watch, onStart, onStop, disabled }: { watch: { on: boolean; rounds: number; position: number; realRounds: number; last: string; alarm?: boolean } | null; onStart?: () => void; onStop: () => void; disabled?: boolean }) {
   if (!watch?.on && !watch?.alarm) {
     return (
-      <button className="watch-start" onClick={onStart} disabled={disabled || !onStart} title={onStart ? undefined : 'Open FISHY from the call’s tab'}>
-        <span className="watch-eye" aria-hidden="true">{Icon.video(16)}</span>
+      <button className="watch-start" role="switch" aria-checked={false} onClick={onStart} disabled={disabled || !onStart} title={onStart ? undefined : 'Open FISHY from the call’s tab'}>
         <span className="grow">
           <span className="row-title">Keep watching this call</span>
           <span className="row-detail">Checks the face every 20 s on this laptop, and alerts only when the signs add up.</span>
+        </span>
+        <span className="switch" aria-hidden="true">
+          <span className="switch-thumb" />
         </span>
       </button>
     );
