@@ -32,7 +32,7 @@ describe('the FISHY score', () => {
   });
 
   it('adds a little for a photo editor', () => {
-    expect(scoreMedia(item({ facts: { editedWith: 'Photoshop' }, gemini: g('no_clear_signs', 0) })).score).toBe(40);
+    expect(scoreMedia(item({ facts: { editedWith: 'a photo editor' }, gemini: g('no_clear_signs', 0) })).score).toBe(40);
   });
 
   it('has no score while Gemini reads, and says why when it could not run', () => {

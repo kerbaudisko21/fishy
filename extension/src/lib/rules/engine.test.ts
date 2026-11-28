@@ -65,7 +65,7 @@ describe('decide', () => {
     });
 
     it('editing software alone is not fishy: photos are edited every day', () => {
-      expect(decide(mediaSignals([item({ facts: { editedWith: 'Lightroom' } })])).level).toBe('clear');
+      expect(decide(mediaSignals([item({ facts: { editedWith: 'a photo editor' } })])).level).toBe('clear');
     });
   });
 });

@@ -74,7 +74,7 @@ export function CheckYourself({ busy, emailOpen, onBack, onText, onFile, onAttac
           )}
         </Section>
 
-        <Section title="The call you are in" aside="Meet, Zoom or Teams in Chrome">
+        <Section title="The call you are in" aside="A video call open in a Chrome tab">
           <div className="surface">
             <button className="start-row action" disabled={busy} onClick={() => take(onFrame)}>
               <span className="start-icon">{Icon.video(18)}</span>
