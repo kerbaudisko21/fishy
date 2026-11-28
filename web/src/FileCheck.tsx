@@ -3,9 +3,7 @@ import { decodeMono16k, VOICE_RATE, wavFrom } from '../../extension/src/lib/ai/f
 import { scanPicture } from '../../extension/src/lib/checks/media';
 import { videoLab, voiceLab } from '../../extension/src/lib/forensics/labs';
 import { MAX_VOICE_SECONDS, recordingSeconds, VOICE_ANALYSIS_SECONDS } from '../../extension/src/lib/forensics/limits';
-import { BAND_LABEL, scoreMedia } from '../../extension/src/lib/media-score';
-import { mediaSignals } from '../../extension/src/lib/media-signals';
-import { decide } from '../../extension/src/lib/rules/engine';
+import { BAND_LABEL, scoreMedia, STAMP } from '../../extension/src/lib/media-score';
 import { line, Reveal } from '../../extension/src/lib/transitions';
 import type { CheckItem, ForensicHint, MediaCheck } from '../../extension/src/lib/types';
 import { readFrames, readPicture, readVoice, type PictureReading } from './hybrid';
@@ -18,7 +16,7 @@ import { isAudio, isPdf, isPicture, isVideo, videoFrames } from './media';
  *    Gemini compares them on one numbered sheet;
  *  - voice note: this device measures pitch, pauses, breaths and background, then Gemini in the
  *    cloud listens (Gemini Nano doesn't take audio).
- * The verdict and the score come from the extension's own rules, not from the model.
+ * The verdict is the score's band (the extension's own evidence fusion), so the two never disagree.
  */
 
 const LOOKS: Record<PictureReading['assessment'], string> = {
@@ -189,10 +187,10 @@ export function FileCheck({ incoming }: { incoming?: File | null }) {
     gemini: result.gemini ? { assessment: result.gemini.assessment, signs: result.gemini.signs, source: result.gemini.source, model: result.gemini.reader } : result.gemini,
   };
   const score = item ? scoreMedia(item) : null;
-  const verdict = item ? decide(mediaSignals([item])) : null;
-  const fishy = verdict?.level === 'fishy';
-  // Not fishy, but something to look at (an editor named in the file, "hard to tell").
-  const look = !fishy && (verdict?.flags.length ?? 0) > 0;
+  // One source of truth: the verdict card says what the score's band says.
+  const band = score && score.band !== 'pending' ? score.band : 'low';
+  const fishy = band === 'high';
+  const look = band === 'some';
   const voice = result?.kind === 'voice';
 
   return (
@@ -241,13 +239,13 @@ export function FileCheck({ incoming }: { incoming?: File | null }) {
             )}
             {result.gemini !== undefined && (
               <div className={line(2, `verdict ${fishy ? 'fishy' : look ? 'look' : 'clear'}`)}>
-                <span className="verdict-pill">{fishy ? 'Don’t trust it yet' : look ? 'A sign to look at' : 'No red flags'}</span>
-                <h2>{fishy ? 'Something’s fishy.' : look ? 'Take a closer look.' : 'Nothing obvious.'}</h2>
+                <span className="verdict-pill">{STAMP[band]}</span>
+                <h2>{fishy ? 'Something’s fishy.' : look ? 'Take a closer look.' : 'No clear signs.'}</h2>
                 <span>
                   {fishy
                     ? 'Before you act on it, call the person on a number you already have.'
                     : look
-                      ? 'Not enough to call it fake. Check the sign below, and call the person before you act.'
+                      ? 'Not enough to call it fake. Check the signs below, and call the person before you act.'
                       : 'That isn’t proof it’s real: a good fake passes checks. If it asks you to act, call the person first.'}
                 </span>
               </div>

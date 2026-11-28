@@ -81,7 +81,6 @@ export function TryPage() {
 
   const [incoming, setIncoming] = useState<File | null>(null);
   const [shareNote, setShareNote] = useState('');
-  const messageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void nanoStatus().then(setNano);
@@ -97,11 +96,13 @@ export function TryPage() {
       if (!shared || (!shared.file && !shared.text)) return setShareNote('That share was already opened. Share it again, or choose the file below.');
       if (shared.file) {
         setIncoming(shared.file);
-        // A caption that came with it waits in the message box, unchecked.
-        if (shared.text) setText(shared.text);
+        // A caption that came with it is checked as a message too.
+        if (shared.text) {
+          setText(shared.text);
+          void check(shared.text, true);
+        }
       } else {
         setText(shared.text);
-        requestAnimationFrame(() => messageRef.current?.scrollIntoView({ block: 'start' }));
         void check(shared.text);
       }
     });
@@ -109,7 +110,7 @@ export function TryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const check = async (given?: string) => {
+  const check = async (given?: string, besideFile = false) => {
     const message = (given ?? text).trim();
     if (!message) return;
     setError('');
@@ -120,7 +121,8 @@ export function TryPage() {
       const read = await readTactics(message);
       const verdict = decide(signalsFrom(message, read));
       setResult({ read, verdict });
-      requestAnimationFrame(() => resultRef.current?.focus());
+      // A shared caption is checked alongside a shared file: don't scroll away from the file's result.
+      requestAnimationFrame(() => resultRef.current?.focus({ preventScroll: besideFile }));
       if (verdict.level === 'fishy') {
         setBusy('Gemini is explaining the red flags…');
         setWhy(await explain(verdict));
@@ -136,6 +138,9 @@ export function TryPage() {
   const fishy = result?.verdict.level === 'fishy';
   // Gemini never read the message and the keyword list found nothing: that is not "Looks normal".
   const partly = !!result?.read.geminiFailed && !fishy;
+  // Below the rules' threshold but with red flags: never "No red flags".
+  const flagged = !fishy && (result?.verdict.flags.length ?? 0) > 0;
+  const nFlags = result ? `${result.verdict.flags.length} red flag${result.verdict.flags.length === 1 ? '' : 's'}` : '';
 
   return (
     <main className="page try">
@@ -169,7 +174,7 @@ export function TryPage() {
         <FileCheck incoming={incoming} />
       </section>
 
-      <div className="stack anchor" ref={messageRef}>
+      <div className="stack anchor">
         <h2 className="try-h2">A message</h2>
         <label htmlFor="message">Paste a message, an email or a chat</label>
         <textarea id="message" autoCapitalize="sentences" spellCheck={false} value={text} onChange={(e) => setText(e.target.value)} placeholder="An email, a chat message or meeting captions…" rows={7} />
@@ -195,17 +200,19 @@ export function TryPage() {
 
       {result && (
         <Reveal as="section" key={result.read.hits.map((h) => h.quote).join('|') + result.verdict.flags.length} className="stack" aria-label="Result">
-          <div className={line(1, `verdict ${fishy ? 'fishy' : partly ? 'look' : 'clear'}`)}>
-            <span className="verdict-pill">{fishy ? 'Don’t act yet' : partly ? PARTLY_CHECKED.pill : 'No red flags'}</span>
+          <div className={line(1, `verdict ${fishy ? 'fishy' : flagged || partly ? 'look' : 'clear'}`)}>
+            <span className="verdict-pill">{fishy ? 'Don’t act yet' : flagged ? nFlags.replace(/^./, (c) => c.toUpperCase()) : partly ? PARTLY_CHECKED.pill : 'No red flags'}</span>
             <h2 tabIndex={-1} ref={resultRef}>
-              {fishy ? 'Something’s fishy.' : partly ? PARTLY_CHECKED.title : 'Looks normal.'}
+              {fishy ? 'Something’s fishy.' : flagged ? 'Take a closer look.' : partly ? PARTLY_CHECKED.title : 'Looks normal.'}
             </h2>
             <span>
               {fishy
-                ? `${result.verdict.flags.length} red flag${result.verdict.flags.length === 1 ? '' : 's'}. Don’t act on it until the person confirms on a number you already have.`
-                : partly
-                  ? PARTLY_CHECKED.line
-                  : 'If it asks you to act, a call on a number you already have is still the safe step.'}
+                ? `${nFlags}. Don’t act on it until the person confirms on a number you already have.`
+                : flagged
+                  ? 'Not enough on its own to call it a scam. Before you act on it, call the person on a number you already have.'
+                  : partly
+                    ? PARTLY_CHECKED.line
+                    : 'If it asks you to act, a call on a number you already have is still the safe step.'}
             </span>
           </div>
 
