@@ -1,7 +1,7 @@
 ---
 version: 1
 name: FISHY
-description: An "is it real?" checker for pictures, PDFs, voices, video calls, websites and QR codes. The evidence-tag world: manila paper, black ink, one evidence red; condensed heavy Archivo for headings and the stamp, Atkinson Hyperlegible Next for text; square-ish tags instead of soft rounded cards. Quiet paper while you check, a red stamp when it's fishy.
+description: An "is it real?" checker for pictures, PDFs, voices, video calls, websites and QR codes. The evidence-tag world: manila paper, black ink, one evidence red; a highlighter yellow for what to read first; Big Shoulders for headings and its stencil cut for the wordmark and the evidence tape, Atkinson Hyperlegible Next for text; square-ish tags instead of soft rounded cards. Quiet paper while you check, red evidence tape when it's fishy.
 
 colors:
   ink: "#141414"          # black ink: text, the header, primary buttons, icon tiles
@@ -9,15 +9,16 @@ colors:
   muted: "#6a6253"        # labels, hints (5.7:1 on paper, 4.7:1 on manila)
   navy-2: "#2a2824"       # raised surfaces on ink (chips, icon buttons)
   on-navy: "#d8cfbc"      # secondary text on ink
-  brand: "#c8221a"        # evidence red: the logo, the stamp, the "fishy" hero, the drop-zone icon. White on it 5.7:1
+  brand: "#cf2419"        # signal red: the logo, the tape, the "fishy" hero, the drop-zone icon. White on it 5.4:1
+  marker: "#f7d51d"       # highlighter yellow: the tab bar, the READY tag, the fishy "why" sentence. Ink on it 12.7:1
   brand-text: "#a51b14"   # red text on light
-  bg: "#ede3cc"           # manila: the canvas
-  surface: "#fbf8f1"      # paper: tags and panels
+  bg: "#e8d9b5"           # manila: the canvas
+  surface: "#fbf7ec"      # paper: tags and panels
   surface-muted: "#f4eddf"
   note: "#e6dcc6"
   line: "#d6c9ad"         # the hairline edge of every tag
   line-soft: "#e4d9c1"
-  danger: "#c8221a"
+  danger: "#cf2419"
   danger-bg: "#f6dcd6"
   danger-text: "#a51b14"
   ok: "#1f5c3a"           # green ink: clean checks, "no clear signs"
@@ -29,9 +30,9 @@ colors:
   focus: "#141414"
 
 typography:
-  display:   { fontFamily: Archivo Variable, fontStretch: 72%, fontWeight: 850, textTransform: uppercase on the home ("IS IT REAL?"), sentence case on results, lineHeight: 0.98 }
-  stamp:     { fontFamily: Archivo Variable, fontStretch: 72%, fontWeight: 900, letterSpacing: 0.08em, uppercase }
-  label:     { fontFamily: Archivo Variable, fontStretch: 72%, fontWeight: 800, uppercase, letterSpacing: 0.04em (section heads, result band) }
+  display:   { fontFamily: Big Shoulders Display Variable, fontWeight: 800, textTransform: uppercase on the home ("IS IT REAL?"), sentence case on results, lineHeight: 0.98 }
+  stencil:   { fontFamily: Big Shoulders Stencil Display Variable, fontWeight: 900, letterSpacing: 0.06–0.14em, uppercase, use: the wordmark and the evidence tape }
+  label:     { fontFamily: Big Shoulders Display Variable, fontWeight: 800, uppercase, letterSpacing: 0.04em (section heads, result band) }
   body:      { fontFamily: Atkinson Hyperlegible Next Variable, fontSize: 13.5–15px, lineHeight: 1.45 }
   mono:      { fontFamily: JetBrains Mono, use: fingerprints, accounts, addresses }
 
@@ -42,18 +43,18 @@ radius: { sm: 4px, md: 6px, lg: 8px, chips: 3px, header: 0 }
 
 ## Overview
 
-FISHY is a tool someone uses when something they were sent, or someone they're talking to, might be fake. The interface borrows from the world of evidence: **manila case files, black ink, and a red rubber stamp.** It stays quiet paper while you check, and gives the verdict to the stamp and the header: a red field and "Something's fishy." when the evidence adds up.
+FISHY is a tool someone uses when something they were sent, or someone they're talking to, might be fake. The interface borrows from the world of evidence: **manila case files, black ink, evidence tape and a highlighter.** It stays quiet paper while you check, and gives the verdict to the tape and the header: a red field and "Something's fishy." when the evidence adds up.
 
-Mode: **Operate**. Brand lives in the stamp, the condensed labels, the tag-shaped surfaces and the logo.
+Mode: **Operate**. Brand lives in the tape, the highlighter, the condensed labels, the tag-shaped surfaces and the logo.
 
 ## Where it comes from
 
 The first look (Nov 21–28) was navy and coral on a cool grey, with soft white cards and one rounded font. On review (Nov 29) it read as the default look of generated apps. The evidence-tag world replaced it: the subject is checking evidence, so the materials of evidence lead.
 
-- **Logo:** a red evidence tag with a punched hole, and a fish hook bent into a question mark ([brand/](brand/)).
-- **Colour:** manila `#ede3cc`, paper `#fbf8f1`, ink `#141414`, evidence red `#c8221a`, and a green ink for clean results.
+- **Logo (1.1.0):** a red evidence tag with a punched hole, and a magnifying glass whose handle bends into a fish hook: FISHY inspects the bait ([brand/](brand/)). The 1.0.0 mark, a hook bent into a question mark, read as a generic question icon.
+- **Colour:** manila `#e8d9b5`, paper `#fbf7ec`, ink `#141414`, signal red `#cf2419`, highlighter yellow `#f7d51d`, and a green ink for clean results. Yellow was added in 1.1.0 so the panel stands out on a page, not only when something is fishy.
 - **Type:**
-  - Condensed heavy **Archivo** (its width axis at 72%) for headings, labels and the stamp, set the way case files and warning labels are.
+  - **Big Shoulders** (drawn from Chicago street signage) for headings and labels, and its **stencil** cut for the wordmark and the evidence tape. It replaced Archivo in 1.1.0: a font generated apps rarely reach for.
   - **Atkinson Hyperlegible Next** for everything read, drawn to stay legible under pressure.
 
 ## Colours
@@ -74,13 +75,13 @@ The first look (Nov 21–28) was navy and coral on a cool grey, with soft white 
 ## Typography
 
 Two families:
-- **Archivo** (condensed, 800–900) for headings, section labels, the result band, the score and the stamp.
+- **Big Shoulders Display** (800–900) for headings, section labels, tabs, tile titles, the result band and the score; **Big Shoulders Stencil Display** for the wordmark and the tape.
 - **Atkinson Hyperlegible Next** for text.
 - **JetBrains Mono** stays for what is compared character by character.
 
 Rules:
 - The home says "IS IT REAL?" in capitals. Results speak in sentence case: "Something's fishy."
-- Emphasis is weight and the stamp, never a new size.
+- Emphasis is weight, the tape and the highlighter, never a new size.
 
 ## Layout
 
@@ -91,11 +92,11 @@ Rules:
 
 ## Elevation
 
-Flat. A tag is set off by its hairline edge (`box-shadow: 0 0 0 1px var(--line)`), not a shadow. Only the floating window over a page carries a shadow, because it floats over someone else's page.
+Flat. A tag is set off by its hairline edge (`box-shadow: 0 0 0 1px var(--line)`), not a shadow. Only the floating window over a page carries a shadow: a 3px ink frame with a hard 6px offset shadow (like a tag laid on the page) plus a soft one. Its title bar is ink with the logo, the stencil wordmark and a yellow rule; minimised, it becomes the red tag alone (52px, hard shadow), and a click brings the window back. Inside it, the panel hides its own logo.
 
 ## Shapes
 
-Radius 4 (small controls), 6 (tags, tiles, buttons), 8 (large surfaces), 3 (chips, pills, the stamp's corners), 0 (headers). Icons are 1.8px stroke SVG inside square-ish ink tiles. Pictograms in the scam guide are drawn geometry in one 2.4px stroke with one red accent.
+Radius 4 (small controls), 6 (tags, tiles, buttons), 8 (large surfaces), 3 (chips, pills), 0 (headers, the tape). Icons are FISHY's own: 2.2px strokes with square ends and mitred corners on a 24 grid, inside square-ish ink tiles. No stock icon set. Pictograms in the scam guide are drawn geometry in one 2.4px stroke with one red accent.
 
 ## Components
 
@@ -119,7 +120,7 @@ Radius 4 (small controls), 6 (tags, tiles, buttons), 8 (large surfaces), 3 (chip
 - **Hero follows the strongest check**: if any checked file, voice, video or website scores "high", the home hero is coral "Something's fishy." and names it, so the hero never says "not enough" above a red score.
 - **Trail separators**: small drawn chevrons between the pills, not arrow characters.
 - **Hand check**: an amber band under a video result: what to ask the caller, and “Check with hand”.
-- **Result card**: the preview with the **stamp** (FISHY in red, SUSPECT in amber, LOOKS OK in green, rotated -8°, stamped on once with a short overshoot), the **score ring** that fills and counts up, the verdict band, and one sentence that says why (“Fishy because…”). Why is open; Details folds. A coral line sweeps over the picture while Gemini looks.
+- **Result card**: the preview with **evidence tape** across the top-right corner (FISHY on red, SUSPECT on yellow, LOOKS OK on green, at 32°, sliding in once), and the fishy “why” sentence under the highlighter, the **score ring** that fills and counts up, the verdict band, and one sentence that says why (“Fishy because…”). Why is open; Details folds. A coral line sweeps over the picture while Gemini looks.
 - **Take a closer look**: when there are signs but not enough to call it fishy, the hero goes navy (amber on the web) instead of saying "looks normal".
 - **Evidence screens**: a comparison first (red-tinted "on this invoice" over green-tinted "paid the last 6 times"), then the checks list, then a privacy line.
 - **End states**: "What to say now" (a line to get off the call), then "Start a new check" and "Copy the incident report link".

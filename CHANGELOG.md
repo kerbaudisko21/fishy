@@ -2,6 +2,16 @@
 
 Each version's build also shows in the extension under **Settings → About** (version, commit, build time and what's new). The same list lives in `extension/src/lib/changes.ts`.
 
+## 1.1.0 · 29 Nov 2026
+- A louder look: a deeper manila, a stronger signal red and a highlighter yellow for what to read first (the tab bar, the READY tag, the sentence that says why something is fishy)
+- New fonts: Big Shoulders for headings (drawn from Chicago street signage) and its stencil cut for the wordmark, in place of Archivo
+- FISHY's own icons: square ends and sharp corners, drawn for FISHY instead of a stock icon set (a face in a viewfinder, sound bars, a browser window, a ruled speech card)
+- A new logo for what FISHY does now: a magnifying glass whose handle bends into a fish hook, on the red evidence tag
+- The rubber stamp on results is now a strip of evidence tape across the corner (FISHY / SUSPECT / LOOKS OK)
+- The advice under results is general, not about payments: "Signs, not proof. Before you reply, click, sign in or pay, check with them another way." The "Already paid?" fold is gone
+- The floating window has an ink title bar with the logo, a heavier frame, and minimises to a small red tag you click to bring it back (a check keeps running meanwhile); the panel no longer repeats the logo inside it
+- The Try page (the phone version) matches the new look and asks for a message, not a payment request
+
 ## 1.0.0 · 29 Nov 2026
 - A new look, the evidence tag: manila paper, black ink and one evidence red; condensed heavy Archivo for headings, labels and the stamp; square-ish paper tags instead of soft rounded cards
 - A new logo: a red evidence tag with a fish hook bent into a question mark

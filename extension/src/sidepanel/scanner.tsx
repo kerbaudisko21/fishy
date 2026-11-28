@@ -55,8 +55,8 @@ export function ScoreRing({ score, band, size = 76 }: { score: number; band: Sco
 export function Stamp({ band, play }: { band: ScoreBand; play: boolean }) {
   if (band === 'pending') return null;
   return (
-    <span className={`stamp ${band}${play ? ' play' : ''}`} aria-hidden="true">
-      {STAMP[band]}
+    <span className={`tape ${band}${play ? ' play' : ''}`} aria-hidden="true">
+      <span className="tape-band">{Array.from({ length: 6 }, () => STAMP[band]).join('  ·  ')}</span>
     </span>
   );
 }
@@ -104,11 +104,11 @@ export function ActionGrid({ onFrame, onVoice, onSite, onText, busy }: { onFrame
   return (
     <div className="actions">
       <button className="action" onClick={onFrame} disabled={busy || !onFrame} title={why}>
-        <span className="action-icon">{Icon.video(22)}</span>
+        <span className="action-icon">{Icon.face(22)}</span>
         <span className="action-title">Face on a call</span>
       </button>
       <button className="action" onClick={onVoice} disabled={busy || !onVoice} title={why}>
-        <span className="action-icon">{Icon.mic(22)}</span>
+        <span className="action-icon">{Icon.wave(22)}</span>
         <span className="action-title">Voice on a call</span>
       </button>
       <button className="action" onClick={onSite} disabled={busy || !onSite} title={why}>

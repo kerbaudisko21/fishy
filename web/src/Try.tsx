@@ -137,7 +137,7 @@ export function TryPage() {
 
       <div className="stack">
         <h2 className="try-h2">A message</h2>
-        <label htmlFor="message">Paste a payment request</label>
+        <label htmlFor="message">Paste a message, an email or a chat</label>
         <textarea id="message" autoCapitalize="sentences" spellCheck={false} value={text} onChange={(e) => setText(e.target.value)} placeholder="An email, a chat message or meeting captions…" rows={7} />
         <div className="row">
           <button className="link" onClick={() => setText(SAMPLE)}>

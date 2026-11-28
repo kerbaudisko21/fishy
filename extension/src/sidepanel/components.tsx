@@ -3,40 +3,48 @@ import { AiChip } from './AiStatus';
 import { versionLine } from '../lib/version';
 import type { CallState, CheckItem, Signal, SignalKind, Source, Step, Verdict } from '../lib/types';
 
-/* ---------- Icons (inline stroke SVG, decorative) ---------- */
+/* ---------- Icons: FISHY's own set ----------
+ * Drawn for FISHY, not taken from a stock set: square ends, sharp corners, one heavier stroke,
+ * like marks cut into a stencil or ruled on an evidence form. Decorative (aria-hidden).
+ */
 
-const svg = (size: number, children: ReactNode, strokeWidth = 1.8) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+const svg = (size: number, children: ReactNode, strokeWidth = 2.2) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="square" strokeLinejoin="miter" aria-hidden="true">
     {children}
   </svg>
 );
 
 export const Icon = {
-  chip: (s = 11) => svg(s, <><rect x="6" y="6" width="12" height="12" rx="2" /><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4" /></>, 2.2),
-  cloud: (s = 12) => svg(s, <path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.1 9.5 4.25 4.25 0 0 0 7 18z" />, 2),
-  chevron: (s = 18) => svg(s, <path d="M9 6l6 6-6 6" />, 2),
-  back: (s = 16) => svg(s, <path d="M15 6l-6 6 6 6" />, 2),
-  lock: (s = 15) => svg(s, <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>),
-  shield: (s = 18) => svg(s, <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z" />),
-  file: (s = 18) => svg(s, <><path d="M14 3H6v18h12V7l-4-4z" /><path d="M14 3v4h4M9 13h6M9 17h4" /></>),
-  database: (s = 18) => svg(s, <><ellipse cx="12" cy="6" rx="7" ry="3" /><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3" /></>),
-  users: (s = 18) => svg(s, <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5" /></>),
-  clipboard: (s = 15) => svg(s, <><rect x="6" y="4" width="12" height="17" rx="2" /><path d="M9 4h6v3H9z" /></>),
-  check: (s = 13) => svg(s, <path d="M5 12.5l4.5 4.5L19 7" />, 2.6),
-  bang: (s = 13) => svg(s, <path d="M12 6v8M12 18v.5" />, 2.6),
-  mail: (s = 13) => svg(s, <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></>, 2),
-  clock: (s = 16) => svg(s, <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>),
-  phone: (s = 18) => svg(s, <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" />, 1.9),
-  sliders: (s = 18) => svg(s, <><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></>),
-  wave: (s = 16) => svg(s, <path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2" />),
-  upload: (s = 16) => svg(s, <><path d="M12 16V4M7 9l5-5 5 5" /><path d="M5 20h14" /></>),
-  bank: (s = 18) => svg(s, <><path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" /></>),
-  speech: (s = 18) => svg(s, <><path d="M4 5h16v11H9l-5 4V5z" /><path d="M12 8v3M12 13.5v.01" /></>),
-  link: (s = 18) => svg(s, <><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></>),
-  face: (s = 18) => svg(s, <><circle cx="12" cy="12" r="9" /><path d="M9 10v.01M15 10v.01M9 15c1.7 1.3 4.3 1.3 6 0" /></>),
-  video: (s = 18) => svg(s, <><rect x="3" y="6" width="13" height="12" rx="2" /><path d="M16 10l5-3v10l-5-3" /></>),
-  image: (s = 18) => svg(s, <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="M21 16l-5-5-9 9" /></>),
-  mic: (s = 18) => svg(s, <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>),
+  chip: (s = 11) => svg(s, <><path d="M6 6h12v12H6z" /><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" /></>, 2.4),
+  cloud: (s = 12) => svg(s, <path d="M5 18h14l2-4-3-4h-2l-2-4H9L7 10H5l-2 4z" />, 2.2),
+  chevron: (s = 18) => svg(s, <path d="M9 5l7 7-7 7" />, 2.4),
+  back: (s = 16) => svg(s, <path d="M15 5l-7 7 7 7" />, 2.4),
+  lock: (s = 15) => svg(s, <><path d="M5 11h14v10H5z" /><path d="M8 11V6h8v5" /></>),
+  shield: (s = 18) => svg(s, <path d="M12 3l8 3v7l-8 8-8-8V6z" />),
+  file: (s = 18) => svg(s, <><path d="M5 3h10l4 4v14H5z" /><path d="M15 3v4h4M8 12h8M8 16h5" /></>),
+  database: (s = 18) => svg(s, <path d="M4 4h16v5H4zM4 9.5h16v5H4zM4 15h16v5H4z" />),
+  users: (s = 18) => svg(s, <><path d="M6 4h6v6H6zM3 20v-5h12v5" /><path d="M16 5h4v5h-4M18 14h3v6" /></>),
+  /** A message: a ruled speech card. */
+  clipboard: (s = 15) => svg(s, <><path d="M3 4h18v12H10l-5 4v-4H3z" /><path d="M7 8h10M7 12h6" /></>),
+  check: (s = 13) => svg(s, <path d="M4 12.5l5 5L20 6" />, 2.8),
+  bang: (s = 13) => svg(s, <path d="M12 4v10M12 18v2" />, 2.8),
+  mail: (s = 13) => svg(s, <><path d="M3 5h18v14H3z" /><path d="M3 5l9 7 9-7" /></>),
+  clock: (s = 16) => svg(s, <><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z" /><path d="M12 7v5h4" /></>),
+  phone: (s = 18) => svg(s, <path d="M5 3h4l2 5-3 2c1 3 3 5 6 6l2-3 5 2v4l-2 2C9.5 21 3 14.5 3 5z" />, 2),
+  sliders: (s = 18) => svg(s, <><path d="M3 6h18M3 12h18M3 18h18" /><path d="M14 4h3v4h-3zM6 10h3v4H6zM11 16h3v4h-3z" fill="currentColor" /></>, 2),
+  /** Sound, as bars: the voice check. */
+  wave: (s = 16) => svg(s, <path d="M3 10v4M7 6v12M11 3v18M15 7v10M19 10v4" />, 2.4),
+  /** Drop a file: into a tray. */
+  upload: (s = 16) => svg(s, <><path d="M4 14v6h16v-6" /><path d="M12 16V4M7 9l5-5 5 5" /></>, 2.4),
+  bank: (s = 18) => svg(s, <path d="M3 9l9-5 9 5zM5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" />),
+  speech: (s = 18) => svg(s, <><path d="M3 4h18v12H10l-5 4v-4H3z" /><path d="M12 7v4M12 13v1" /></>),
+  /** A website: a browser window. */
+  link: (s = 18) => svg(s, <><path d="M3 4h18v16H3zM3 9h18" /><path d="M6 6.5h1M9 6.5h1" /><path d="M14 12v4.5a2 2 0 0 1-4 0V15" /></>),
+  /** A face in a viewfinder: the deepfake check. */
+  face: (s = 18) => svg(s, <><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4" /><path d="M9 10v1M15 10v1M9 15h6" /></>, 2.3),
+  video: (s = 18) => svg(s, <><path d="M3 6h12v12H3z" /><path d="M15 10l6-4v12l-6-4" /></>),
+  image: (s = 18) => svg(s, <><path d="M3 4h18v16H3z" /><path d="M3 16l5-5 4 4 3-3 6 6" /><path d="M15 7h2v2h-2z" fill="currentColor" /></>),
+  mic: (s = 18) => svg(s, <><path d="M9 3h6v11H9z" /><path d="M5 11c0 4 3 7 7 7s7-3 7-7M12 18v3M8 21h8" /></>),
 };
 
 /** One icon per kind of red flag, so a list of flags can be scanned without reading. */

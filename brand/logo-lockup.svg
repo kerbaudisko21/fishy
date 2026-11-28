@@ -1,10 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" width="360" height="96">
   <title>FISHY</title>
   <g transform="translate(8 8) scale(0.625)">
-    <rect x="4" y="4" width="120" height="120" rx="14" fill="#C8221A"/>
-    <circle cx="24" cy="24" r="6" fill="#F1EADB"/>
-    <path d="M44 48C44 33 54 24 67 24C81 24 90 33 90 46C90 58 80 64 69 69L69 87C69 100 62 107 52 107C43 107 37 101 37 93" fill="none" stroke="#F1EADB" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M37 93L47 84" fill="none" stroke="#F1EADB" stroke-width="13" stroke-linecap="round"/>
+  <rect x="4" y="4" width="120" height="120" rx="12" fill="#CF2419"/>
+  <circle cx="22" cy="22" r="6" fill="#FBF7EC"/>
+  <circle cx="56" cy="52" r="23" fill="none" stroke="#FBF7EC" stroke-width="11"/>
+  <path d="M73 69L87 83L87 97C87 105 81 110 74 110C67 110 62 105 62 98" fill="none" stroke="#FBF7EC" stroke-width="11" stroke-linecap="square" stroke-linejoin="miter"/>
+  <path d="M62 98L72 91" fill="none" stroke="#FBF7EC" stroke-width="11" stroke-linecap="square"/>
   </g>
-  <text x="102" y="72" font-family="'Archivo Variable', 'Archivo Narrow', 'Arial Narrow', Arial, sans-serif" font-stretch="condensed" font-weight="900" font-size="68" letter-spacing="1" fill="#141414">FISHY</text>
+  <text x="104" y="76" font-family="'Big Shoulders Stencil Display', 'Big Shoulders Display', 'Arial Narrow', Arial, sans-serif" font-weight="900" font-size="78" letter-spacing="4" fill="#141414">FISHY</text>
 </svg>

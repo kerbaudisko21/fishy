@@ -751,3 +751,40 @@ h1, h2, .hero h1, .section-title, .guide-name, .scam-name, .stamp, .ring-num, .b
 .header { background: var(--ink); }
 .section-head h2 { font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: 15px; }
 .detail-head h1 { font-weight: 850; font-size: 30px; line-height: 1; }
+
+/* ---------- Big Shoulders, the highlighter, the evidence tape ---------- */
+h1, h2, .hero h1, .section-title, .guide-name, .scam-name, .ring-num, .action-title, .start-label, .result-band { font-stretch: normal; }
+.hero h1 { font-weight: 800; font-size: clamp(34px, 12vw, 48px); line-height: .95; letter-spacing: .005em; }
+.hero.navy h1 { font-size: clamp(44px, 16vw, 64px); letter-spacing: .01em; }
+.detail-head h1 { font-weight: 800; font-size: 34px; }
+.brand-word { font-family: var(--font-stencil); font-weight: 900; font-size: 26px; letter-spacing: .06em; }
+.section-head h2 { font-weight: 800; font-size: 17px; letter-spacing: .05em; }
+.action-title { font-weight: 800; font-size: 18px; letter-spacing: .02em; text-transform: uppercase; }
+.result-band { font-size: 15px; font-weight: 800; letter-spacing: .07em; }
+.ring-num { font-weight: 900; font-size: 28px; }
+.guide-name, .scam-name { font-weight: 800; font-size: 20px; letter-spacing: .01em; }
+
+/* The highlighter: what to read first. */
+mark.marker { background: linear-gradient(transparent 45%, var(--marker) 45%, var(--marker) 92%, transparent 92%); color: inherit; padding: 0 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.hero.navy .hero-pill { background: var(--marker); color: var(--ink); }
+
+
+/* Evidence tape across the corner of the picture, instead of a rubber stamp. */
+.stamp { display: none; }
+.tape { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; border-radius: inherit; }
+.tape-band { position: absolute; top: 22px; right: -64px; width: 260px; padding: 5px 0 4px; transform: rotate(32deg); transform-origin: center;
+  font-family: var(--font-stencil); font-weight: 900; font-size: 16px; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; text-align: center;
+  box-shadow: 0 2px 6px rgba(20, 20, 20, .35); border-top: 2px solid rgba(255, 255, 255, .35); border-bottom: 2px solid rgba(20, 20, 20, .25); }
+.tape.high .tape-band { background: var(--brand); color: #fff; }
+.tape.some .tape-band { background: var(--marker); color: var(--ink); }
+.tape.low .tape-band { background: var(--ok); color: #fff; }
+.tape.play .tape-band { animation: tape-in 520ms cubic-bezier(.2, .9, .25, 1) backwards; animation-delay: 300ms; }
+@keyframes tape-in { from { transform: rotate(32deg) translateX(120%); } }
+@media (prefers-reduced-motion: reduce) { .tape.play .tape-band { animation: none; } }
+.tab-bar { background: var(--marker); height: 4px; border-radius: 0; }
+.tab { color: #a59d8b; font-family: var(--font-head); font-weight: 800; font-size: 17px; letter-spacing: .06em; text-transform: uppercase; }
+
+/* In the floating window the title bar carries the logo and name: the panel header doesn't repeat them. */
+.floating .brand { display: none; }
+.floating .header-row { justify-content: flex-end; }
+.hero.navy .hero-pill .pulse { background: var(--ink); }

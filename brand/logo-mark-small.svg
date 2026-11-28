@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <title>FISHY</title>
-  <rect x="0.5" y="0.5" width="31" height="31" rx="4" fill="#C8221A"/>
-  <path d="M10.5 12C10.5 8 13 5.5 16.5 5.5C20 5.5 22.5 8 22.5 11.3C22.5 14.4 20 16 17.2 17.2L17.2 21.5C17.2 24.8 15.4 26.5 12.9 26.5C10.6 26.5 9 25 9 23" fill="none" stroke="#F1EADB" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="3" fill="#CF2419"/>
+  <circle cx="13.5" cy="12.5" r="6" fill="none" stroke="#FBF7EC" stroke-width="3.6"/>
+  <path d="M18 17L22 21L22 24.5C22 26.5 20.5 28 18.5 28C16.7 28 15.5 26.7 15.5 25" fill="none" stroke="#FBF7EC" stroke-width="3.4" stroke-linecap="square"/>
 </svg>

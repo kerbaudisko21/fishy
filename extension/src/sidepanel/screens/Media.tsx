@@ -130,7 +130,7 @@ function Card({ item, focused, onChallenge, onLipSync, onReport }: { item: Media
             <ScoreRing score={s.score} band={s.band} />
             <span className="grow">
               <span className={`result-band ${s.band}`}>{BAND_LABEL[s.band]}</span>
-              <span className="why-line">{why}</span>
+              <span className="why-line">{s.band === 'high' ? <mark className="marker">{why}</mark> : why}</span>
             </span>
           </>
         ) : pending ? (
@@ -294,22 +294,8 @@ export function Media({ items, busy, focusId, onBack, onFile, patterns = [], pat
         ))}
 
         <Note icon={Icon.phone(15)}>
-          Signs, not proof. <strong>Before money moves, call them back on the number you have.</strong>
+          Signs, not proof. <strong>Before you reply, click, sign in or pay, check with them another way.</strong>
         </Note>
-
-        <details className="fold how-fold">
-          <summary>Already paid?</summary>
-          <ul className="why-list route">
-            <li>
-              <span>
-                <strong>Call your bank now.</strong> The sooner, the better the chance to stop it.
-              </span>
-            </li>
-            <li>
-              <span>Then report: iasc.ojk.go.id or OJK 157. QRIS: Bank Indonesia 131. Elsewhere: your national scam line.</span>
-            </li>
-          </ul>
-        </details>
 
         <DropZone onFile={onFile} disabled={busy} compact />
 

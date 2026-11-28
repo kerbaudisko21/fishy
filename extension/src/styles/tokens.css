@@ -1,39 +1,41 @@
 /* Design tokens. Navy and coral come from the logo; the page sits on a cool tide grey. */
 :root {
-  /* Evidence tag: manila paper, black ink, one evidence red. Headings in condensed Archivo,
-     the way case files and warning labels are set; text in Atkinson Hyperlegible, made to stay
-     readable under pressure. */
+  /* Evidence tag: manila paper, black ink, a signal red and a highlighter yellow. Headings in
+     Big Shoulders (drawn from Chicago street signage), the wordmark and the evidence tape in its
+     stencil cut; text in Atkinson Hyperlegible, made to stay readable under pressure. */
   --font-body: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
-  --font-head: 'Archivo Variable', 'Arial Narrow', system-ui, sans-serif;
-  --head-stretch: 72%;
+  --font-head: 'Big Shoulders Display Variable', 'Arial Narrow', system-ui, sans-serif;
+  --font-stencil: 'Big Shoulders Stencil Display Variable', 'Big Shoulders Display Variable', 'Arial Narrow', sans-serif;
+  --head-stretch: 100%;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  --bg: #ede3cc; /* manila */
-  --surface: #fbf8f1; /* paper */
-  --surface-muted: #f4eddf;
-  --note: #e6dcc6;
-  --line: #d6c9ad;
-  --line-soft: #e4d9c1;
+  --bg: #e8d9b5; /* manila */
+  --surface: #fbf7ec; /* paper */
+  --surface-muted: #f3ead6;
+  --note: #e9dcbd;
+  --line: #cdbb92;
+  --line-soft: #e6d9b9;
   --ink: #141414; /* black ink */
   --ink-2: #3a352d;
-  --muted: #6a6253; /* 5.7:1 on paper, 4.7:1 on manila */
+  --muted: #655c4c; /* 6.2:1 on paper, 4.7:1 on manila */
   --navy-2: #2a2824; /* raised surfaces on ink */
   --on-navy: #d8cfbc;
 
-  --brand: #c8221a; /* evidence red: the stamp, the logo, "fishy". White on it is 5.7:1 */
+  --brand: #cf2419; /* signal red: the tape, the logo, "fishy". White on it is 5.4:1 */
+  --marker: #f7d51d; /* highlighter yellow: what to look at first. Ink on it is 12.7:1 */
   --focus: var(--ink);
   --demo: #e9b949;
-  --brand-text: #a51b14;
+  --brand-text: #b01e17;
 
   --amber-bg: #f6e3b0;
   --amber-line: #d9b45c;
   --amber-text: #7a4a00;
 
-  --danger: #c8221a;
+  --danger: #cf2419;
   --danger-bg: #f6dcd6;
-  --danger-text: #a51b14;
+  --danger-text: #b01e17;
 
-  --ok: #1f5c3a;
+  --ok: #1a5634;
   --ok-bg: #dde8d2;
   --ok-line: #a9c59a;
 
