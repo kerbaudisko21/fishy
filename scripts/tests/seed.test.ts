@@ -86,6 +86,12 @@ test('a supplier is always listed, and its contact can be called only when a num
   assert.equal(directory[otherSupplier.id], undefined);
 });
 
+test('everyone who can be called gets their PIN lock and hourly call count cleared, so a rehearsal can start again', () => {
+  const output = seed();
+  // The third person has no number, so there is nothing of theirs to clear.
+  assert.deepEqual([...output.clearLimitsFor].sort(), [first.id, second.id, supplier.id].sort());
+});
+
 test('a number that is not in international format stops the seed', () => {
   assert.throws(() => seed({ [first.id]: '0812' }), /international format/);
 });

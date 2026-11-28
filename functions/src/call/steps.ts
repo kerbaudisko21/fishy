@@ -110,10 +110,19 @@ export async function answerChoice(deps: CheckDeps, id: string, digit: string): 
   return { outcome: seen.outcome, verification };
 }
 
-export async function answerPin(deps: CheckDeps, id: string, pin: string): Promise<Answered<PinOutcome>> {
+export interface PinAnswered extends Answered<PinOutcome> {
+  /**
+   * The person's PIN is locked (PERSON_PIN_FAILURES), so this PIN was treated as wrong whatever it
+   * was. The phone and the page say so: "wrong PIN" would send the real person guessing.
+   * It is worked out before the PIN is looked at, so it says nothing about the PIN that was entered.
+   */
+  locked: boolean;
+}
+
+export async function answerPin(deps: CheckDeps, id: string, pin: string): Promise<PinAnswered> {
   const before = await deps.store.getVerification(id);
   if (!before) {
-    return { outcome: 'closed', verification: null };
+    return { outcome: 'closed', verification: null, locked: false };
   }
   const person = await deps.store.getPerson(before.personId);
   const now = deps.now();
@@ -140,5 +149,6 @@ export async function answerPin(deps: CheckDeps, id: string, pin: string): Promi
       // The answer stands. The list simply did not learn from this one.
     }
   }
-  return { outcome: seen.outcome, verification };
+  // A check that was already closed is answered as closed, locked or not.
+  return { outcome: seen.outcome, verification, locked: locked && seen.outcome !== 'closed' };
 }

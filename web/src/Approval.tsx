@@ -5,7 +5,7 @@ import { firstName, moneyParts } from '../../extension/src/lib/names';
 import { line, Reveal, useErrorShake } from '../../extension/src/lib/transitions';
 import { Brand, Version } from './ui';
 
-type Step = 'loading' | 'ask' | 'pin' | 'done' | 'invalid' | 'offline';
+type Step = 'loading' | 'ask' | 'pin' | 'done' | 'invalid' | 'offline' | 'locked';
 type Answer = 'yes' | 'no';
 
 /** The server's refusal, e.g. "not-found" from a callable function's "functions/not-found". */
@@ -81,6 +81,9 @@ export function Approval() {
         setPin('');
         setError(left > 0 ? `That PIN is not right. ${left} ${left === 1 ? 'try' : 'tries'} left.` : 'That PIN is not right.');
         pinField.shake();
+      } else if (code === 'resource-exhausted') {
+        // Too many wrong PINs for this person in a day: no PIN works now, so do not ask for another.
+        setStep('locked');
       } else if (code === 'not-found') {
         setStep('invalid');
       } else {
@@ -200,6 +203,16 @@ export function Approval() {
             </button>
           </div>
         </Reveal>
+      )}
+
+      {step === 'locked' && (
+        <section className="card" role="alert">
+          <h1>Your PIN is locked</h1>
+          <span className="muted">
+            Too many wrong PINs were entered for you in the last day, so no PIN works for now.{' '}
+            {answer === 'no' ? 'Your answer “No, it wasn’t me” was recorded, but it is not proven with your PIN.' : 'Nothing was confirmed.'} Tell the finance team to reach you another way.
+          </span>
+        </section>
       )}
 
       {step === 'done' && answer === 'no' && (

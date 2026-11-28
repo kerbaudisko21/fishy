@@ -83,9 +83,17 @@ export async function handleVoice(deps: CheckDeps, request: VoiceRequest): Promi
   }
 
   if (step === 'pin') {
-    const { outcome, verification } = await answerPin(deps, id, fields.Digits ?? '');
+    const { outcome, verification, locked } = await answerPin(deps, id, fields.Digits ?? '');
     if (!verification) {
       return { status: 404 };
+    }
+    if (locked) {
+      // No PIN can work now, so the call does not ask for it again. Pressing 2 before this still stands.
+      const stands = verification.status === 'denied' ? 'The request stays marked as not yours.' : 'The request is not confirmed.';
+      return {
+        status: 200,
+        xml: goodbyeTwiml(`This PIN is locked after too many wrong tries. ${stands} Please tell the finance team. Goodbye.`),
+      };
     }
     switch (outcome) {
       case 'confirmed':

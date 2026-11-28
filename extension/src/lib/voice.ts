@@ -68,7 +68,7 @@ export async function recordTabClip(tabId: number, seconds = 10, onTick?: (left:
 }
 
 /**
- * One frame of the tab the person is looking at (a Google Meet, Zoom or Teams call in the browser),
+ * One frame of the tab the person is looking at (a video call in the browser),
  * as a PNG, only on their click. Uses the same tab capture as the voice clip; nothing is recorded.
  */
 export async function captureTabFrame(tabId: number): Promise<Blob> {

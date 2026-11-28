@@ -8,7 +8,7 @@ export const DEMO_REQUEST: PaymentRequest = {
   place: 'meet',
   askedBy: { name: 'Budi Santoso', role: 'CFO', directoryId: 'budi' },
   amount: { value: 186400, currency: 'USD' },
-  payee: { name: 'PT Sinar Logistik', bank: 'Mandiri', accountMasked: '•••• 9032' },
+  payee: { name: 'PT Sinar Logistik', bank: 'Bank Teluk', accountMasked: '•••• 9032' },
   dueText: 'today, before 3 pm',
 };
 
@@ -26,7 +26,7 @@ export const DEMO_SIGNALS: Signal[] = [
   { kind: 'pressure_tactics', step: 'read', source: 'on_device', title: 'Pressure in the request', detail: 'Urgency, secrecy and authority in the captions.', strength: 4 },
   { kind: 'bank_account_changed', step: 'check', source: 'on_device', title: 'Bank account changed', detail: 'The invoice account differs from the last 6 payments to Sinar Logistik.' },
   { kind: 'lookalike_sender', step: 'check', source: 'on_device', title: 'Lookalike sender', detail: 'sinar-logistik.co, 9 days old. On record: sinarlogistik.co.id.' },
-  { kind: 'known_bad_account', step: 'match', source: 'on_device', title: 'Known scam account', detail: 'Mandiri •••• 9032 is in 2 confirmed scams.', seenCount: 2 },
+  { kind: 'known_bad_account', step: 'match', source: 'on_device', title: 'Known scam account', detail: 'Bank Teluk •••• 9032 is in 2 confirmed scams.', seenCount: 2 },
   { kind: 'picture_signs', step: 'check', source: 'on_device', title: 'Signs of AI in the video', detail: 'The earrings change shape when he turns his head (left ear), plus 2 more. A sign, not proof.', strength: 3 },
   { kind: 'voice_signs', step: 'check', source: 'cloud', title: 'Signs of a cloned voice', detail: 'No breathing between sentences (whole clip), plus 2 more. A sign, not proof.', strength: 3 },
 ];
@@ -95,8 +95,8 @@ export const DEMO_EVIDENCE: Evidence = {
     from: 'billing@sinar-logistik.co',
     due: 'Due today',
     amount: { value: 186400, currency: 'USD' },
-    newAccount: { bank: 'Bank Mandiri', masked: '•••• 9032', holder: 'Sinar Logistik Global' },
-    usual: { bank: 'BCA', masked: '•••• 4471', holder: 'PT Sinar Logistik', months: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'] },
+    newAccount: { bank: 'Bank Teluk', masked: '•••• 9032', holder: 'Sinar Logistik Global' },
+    usual: { bank: 'Bank Karang', masked: '•••• 4471', holder: 'PT Sinar Logistik', months: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'] },
     traces: [
       { ok: false, title: 'Changed after it was made', detail: 'Created 18 Nov · edited 21 Nov in an online PDF editor' },
       { ok: false, title: 'Bank line set in another font', detail: 'Only the account number differs from the rest' },
@@ -146,7 +146,7 @@ export const DEMO_EVIDENCE: Evidence = {
   known: {
     matches: [
       {
-        value: 'Mandiri •••• 9032',
+        value: 'Bank Teluk •••• 9032',
         count: 2,
         events: [
           { date: '14 Nov', what: 'Fake CFO on a video call · another company' },
@@ -181,7 +181,7 @@ export const DEMO_SUPPLIERS: Supplier[] = [
     name: 'PT Sinar Logistik',
     domain: 'sinarlogistik.co.id',
     contact: { name: 'Dewi Lestari', role: 'Billing', phoneMasked: '+62 21 •••• 7710' },
-    account: { bank: 'BCA', masked: '•••• 4471', holder: 'PT Sinar Logistik' },
+    account: { bank: 'Bank Karang', masked: '•••• 4471', holder: 'PT Sinar Logistik' },
     paidMonths: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
   },
   {
@@ -189,7 +189,7 @@ export const DEMO_SUPPLIERS: Supplier[] = [
     name: 'PT Mitra Kemas',
     domain: 'mitrakemas.id',
     contact: { name: 'Yusuf Rahman', role: 'Finance', phoneMasked: '+62 31 •••• 2046' },
-    account: { bank: 'BNI', masked: '•••• 1185', holder: 'PT Mitra Kemas' },
+    account: { bank: 'Bank Ombak', masked: '•••• 1185', holder: 'PT Mitra Kemas' },
     paidMonths: ['Aug', 'Sep', 'Oct', 'Nov'],
   },
 ];
@@ -198,7 +198,7 @@ export const DEMO_KNOWN_BAD: KnownBadEntry[] = [
   {
     kind: 'account',
     value: '9032',
-    display: 'Mandiri •••• 9032',
+    display: 'Bank Teluk •••• 9032',
     count: 2,
     events: [
       { date: '14 Nov', what: 'Fake CFO on a video call · another company' },

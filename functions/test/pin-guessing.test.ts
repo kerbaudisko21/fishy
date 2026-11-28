@@ -46,6 +46,26 @@ test('after five wrong PINs over any checks, even the right PIN is refused for a
   assert.equal((await answerPin(later.deps, 'v-test', BUDI_PIN)).outcome, 'confirmed');
 });
 
+test('a locked person is told the PIN is locked, so nobody keeps guessing why the right PIN fails', async () => {
+  const h = harness();
+  for (let i = 0; i < PERSON_PIN_FAILURES; i += 1) {
+    await h.store.recordPinFailure('budi', h.clock.now - 1000);
+  }
+  await waiting(h);
+  await answerChoice(h.deps, 'v-test', '1');
+  const answered = await answerPin(h.deps, 'v-test', BUDI_PIN);
+  assert.equal(answered.locked, true);
+  assert.notEqual(answered.outcome, 'confirmed');
+});
+
+test('someone who is not locked is never told they are, right PIN or wrong', async () => {
+  const h = harness();
+  await waiting(h);
+  await answerChoice(h.deps, 'v-test', '1');
+  assert.equal((await answerPin(h.deps, 'v-test', WRONG)).locked, false);
+  assert.equal((await answerPin(h.deps, 'v-test', BUDI_PIN)).locked, false);
+});
+
 test('every wrong PIN counts against the person, not only the check', async () => {
   const h = harness();
   await waiting(h);

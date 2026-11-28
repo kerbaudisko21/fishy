@@ -54,7 +54,7 @@ function captureError(what: 'video' | 'voice', e: unknown): string {
     return `Chrome lets FISHY capture a tab only after you click the FISHY icon on that tab. Go to the call’s tab, click the FISHY icon in the toolbar, then check the ${what} again.`;
   }
   if (/chrome:\/\/|cannot be captured|Chrome pages/i.test(message)) {
-    return `This tab can’t be captured. Open the call (Meet, Zoom or Teams in Chrome) and check the ${what} there.`;
+    return `This tab can’t be captured. Open the video call in a Chrome tab and check the ${what} there.`;
   }
   if (/active stream|already being captured|another capture/i.test(message)) {
     return `The tab is already being captured (screen sharing or another extension). Stop that, then check the ${what} again.`;

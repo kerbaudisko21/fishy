@@ -1,5 +1,7 @@
 // Loads the demo company into Firestore: the directory (private and masked
-// copies) and the starting known-bad list.
+// copies) and the starting known-bad list. It also clears the PIN lock and the
+// hourly call count of everyone it loads, so a rehearsal that used them up can
+// start again.
 //
 // Phone numbers and the PIN are read from the environment, never from a file
 // in this repository. Use numbers you have verified with the phone provider
@@ -16,7 +18,7 @@
 import { randomBytes } from 'node:crypto';
 
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldPath, getFirestore } from 'firebase-admin/firestore';
 
 import { DEMO_DIRECTORY, DEMO_KNOWN_BAD, DEMO_SUPPLIERS } from '../extension/src/demo/fixtures.ts';
 import { DATABASE_ID } from '../functions/src/call/store-firestore.ts';
@@ -74,6 +76,7 @@ const summary = [
   `Left out, no number given: ${seed.skipped.join(', ') || 'nobody'}`,
   `Suppliers: ${listed.filter((entry) => entry.type === 'supplier').map((entry) => entry.name).join(', ')}`,
   `Known-bad entries: ${Object.keys(seed.knownBad).length}`,
+  `PIN lock and hourly call count cleared for: ${seed.clearLimitsFor.join(', ') || 'nobody'}`,
 ];
 
 if (dryRun) {
@@ -92,6 +95,20 @@ for (const [id, entry] of Object.entries(seed.directoryPublic)) {
 }
 for (const [id, entry] of Object.entries(seed.knownBad)) {
   batch.set(db.collection('knownBad').doc(id), entry);
+}
+// Five wrong PINs lock a person for a day and five checks fill their hour (functions/src/call).
+// Both are easy to use up while rehearsing, and nothing else clears them.
+for (const id of seed.clearLimitsFor) {
+  batch.delete(db.collection('pinFailures').doc(id));
+  // One counter per person and hour, named "<person>_<hour>".
+  const counters = await db
+    .collection('personCounters')
+    .where(FieldPath.documentId(), '>=', `${id}_`)
+    .where(FieldPath.documentId(), '<', `${id}_\uf8ff`)
+    .get();
+  for (const counter of counters.docs) {
+    batch.delete(counter.ref);
+  }
 }
 await batch.commit();
 console.log([`Written to the "${DATABASE_ID}" database of ${required('SEED_PROJECT_ID')}.`, ...summary].join('\n'));

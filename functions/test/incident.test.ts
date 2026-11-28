@@ -39,7 +39,7 @@ function setup(options: { verification?: Verification | null; flags?: string[] }
     place: 'meet',
     flags: options.flags ?? ['pressure_tactics', 'known_bad_account'],
     amount: { value: 186400, currency: 'USD' },
-    payee: 'PT Sinar Logistik · Mandiri •••• 9032',
+    payee: 'PT Sinar Logistik · Bank Teluk •••• 9032',
   };
   const links = new Map<string, IncidentLink>();
   const store: IncidentStore = {
@@ -93,7 +93,7 @@ test('the report says who was impersonated, what was asked and how it ended', as
   const incident = await getIncident(deps, { id: TOKEN });
   assert.equal(incident.status, 'stopped');
   assert.equal(incident.posedAs, 'Budi Santoso, CFO');
-  assert.equal(incident.askedFor, '$186,400 to PT Sinar Logistik · Mandiri •••• 9032');
+  assert.equal(incident.askedFor, '$186,400 to PT Sinar Logistik · Bank Teluk •••• 9032');
   assert.equal(incident.confirmed, 'Budi said “not me” and entered the right PIN');
   assert.deepEqual(incident.flags, ['Pressure', 'Known scam account']);
   assert.equal(incident.handled, false);

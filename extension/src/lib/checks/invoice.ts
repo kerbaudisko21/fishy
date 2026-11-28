@@ -1,7 +1,10 @@
 import type { BankAccount, CheckItem } from '../types';
 
-/** Indonesian and regional banks we recognise by name on an invoice. */
-const BANKS = ['BCA', 'Mandiri', 'BNI', 'BRI', 'CIMB Niaga', 'Permata', 'Danamon', 'BSI', 'OCBC', 'Maybank', 'Panin', 'BTN', 'UOB', 'DBS', 'HSBC', 'Jago', 'SeaBank'];
+/**
+ * Banks we recognise by name on an invoice. The first four are the demo company's made-up banks,
+ * so that no real bank is named in the demo; the rest are Indonesian and regional banks.
+ */
+const BANKS = ['Bank Teluk', 'Bank Karang', 'Bank Ombak', 'Bank Selat', 'BCA', 'Mandiri', 'BNI', 'BRI', 'CIMB Niaga', 'Permata', 'Danamon', 'BSI', 'OCBC', 'Maybank', 'Panin', 'BTN', 'UOB', 'DBS', 'HSBC', 'Jago', 'SeaBank'];
 
 export interface AccountFound {
   bank?: string;
@@ -12,7 +15,7 @@ export interface AccountFound {
 /** Account numbers next to an account label ("Account", "A/C", "Rekening", "No. Rek"). */
 export function findAccounts(text: string): AccountFound[] {
   const out: AccountFound[] = [];
-  // The label, an optional bank name ("account: Mandiri 123-456-9032"), then the number.
+  // The label, an optional bank name ("account: Bank Teluk 123-456-9032"), then the number.
   const re = /(?:account(?:\s*(?:no\.?|number))?|acct\.?|a\/c|rekening|no\.?\s*rek\.?)\s*[:#]?\s*(?:(?:bank\s+)?[A-Za-z]{2,12}\s*[:,-]?\s+)?([0-9][0-9\s.-]{4,24}[0-9])/gi;
   for (const m of text.matchAll(re)) {
     const number = m[1].replace(/\D/g, '');

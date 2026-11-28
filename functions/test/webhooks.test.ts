@@ -9,6 +9,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { PERSON_PIN_FAILURES } from '../src/call/steps.ts';
 import { handleVoice } from '../src/call/webhooks.ts';
 import { BASE_URL, BUDI_PIN, harness, sign, waiting } from './helpers.ts';
 import type { Harness } from './helpers.ts';
@@ -107,6 +108,37 @@ test('a wrong PIN never produces a confirmation, and three wrong PINs close the 
   // The right PIN afterwards is too late.
   await post(h, 'pin', { Digits: BUDI_PIN });
   assert.equal(await statusOf(h), 'pin_failed');
+});
+
+test('with the PIN locked, the call says so and ends, instead of asking for the PIN again', async () => {
+  const h = harness();
+  for (let i = 0; i < PERSON_PIN_FAILURES; i += 1) {
+    await h.store.recordPinFailure('budi', h.clock.now - 1000);
+  }
+  await waiting(h);
+  await post(h, 'choice', { Digits: '1' });
+
+  const reply = await post(h, 'pin', { Digits: BUDI_PIN });
+  assert.equal(reply.status, 200);
+  assert.match(reply.xml ?? '', /locked/);
+  assert.match(reply.xml ?? '', /not confirmed/);
+  assert.match(reply.xml ?? '', /<Hangup/);
+  assert.doesNotMatch(reply.xml ?? '', /<Gather/);
+  assert.notEqual(await statusOf(h), 'confirmed');
+});
+
+test('with the PIN locked, pressing 2 still stands and the call says the request stays marked as not theirs', async () => {
+  const h = harness();
+  for (let i = 0; i < PERSON_PIN_FAILURES; i += 1) {
+    await h.store.recordPinFailure('budi', h.clock.now - 1000);
+  }
+  await waiting(h);
+  await post(h, 'choice', { Digits: '2' });
+
+  const reply = await post(h, 'pin', { Digits: BUDI_PIN });
+  assert.match(reply.xml ?? '', /locked/);
+  assert.match(reply.xml ?? '', /stays marked as not yours/);
+  assert.equal(await statusOf(h), 'denied');
 });
 
 test('a PIN sent before any choice does nothing', async () => {

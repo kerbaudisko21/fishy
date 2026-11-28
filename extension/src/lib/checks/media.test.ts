@@ -15,15 +15,37 @@ describe('hard evidence in a picture (scanPicture)', () => {
     expect(scanPicture(bytes('Iptc4xmpExt:DigitalSourceType="compositeWithTrainedAlgorithmicMedia"')).aiLabel).toContain('part made by AI');
   });
 
-  it('names the AI tool from the creator field or the Stable Diffusion settings', () => {
-    expect(scanPicture(bytes('<x:xmpmeta xmp:CreatorTool="Adobe Firefly"/>')).aiTool).toBe('Adobe Firefly');
-    expect(scanPicture(bytes('\x89PNG tEXtparameters\0a cat, Steps: 30, Sampler: Euler a, CFG scale: 7')).aiTool).toBe('Stable Diffusion');
+  it('finds an AI image generator from the creator field or the generation settings', () => {
+    expect(scanPicture(bytes('<x:xmpmeta xmp:CreatorTool="Adobe Firefly"/>')).aiTool).toBe('an AI image generator');
+    expect(scanPicture(bytes('\x89PNG tEXtparameters\0a cat, Steps: 30, Sampler: Euler a, CFG scale: 7')).aiTool).toBe('an AI image generator');
   });
 
-  it('names a photo editor', () => {
+  it('finds a photo editor, and does not take it for an AI generator', () => {
     const f = scanPicture(bytes('<x:xmpmeta xmp:CreatorTool="Adobe Photoshop 26.1 (Windows)"/>'));
-    expect(f.editedWith).toBe('Photoshop');
+    expect(f.editedWith).toBe('a photo editor');
     expect(f.aiTool).toBeUndefined();
+  });
+
+  it('trusts a name that is also an everyday word only in the creator field', () => {
+    // "gemini" in a caption is not a tool; in the creator field it is.
+    expect(scanPicture(bytes('\xff\xd8 caption: gemini twins at the zoo')).aiTool).toBeUndefined();
+    expect(scanPicture(bytes('<x:xmpmeta xmp:CreatorTool="Gemini"/>')).aiTool).toBe('an AI image generator');
+  });
+
+  it('says what kind of tool wrote the file, never the product name', () => {
+    const files = [
+      '<x:xmpmeta xmp:CreatorTool="Midjourney"/>',
+      '<x:xmpmeta xmp:CreatorTool="Adobe Firefly"/>',
+      '<x:xmpmeta xmp:CreatorTool="Adobe Photoshop 26.1 (Windows)"/>',
+      '<x:xmpmeta xmp:CreatorTool="Canva"/>',
+      '\x89PNG tEXtparameters\0a cat, Steps: 30, Sampler: Euler a, CFG scale: 7',
+    ];
+    for (const file of files) {
+      const facts = scanPicture(bytes(file));
+      const shown = [facts.aiLabel, facts.aiTool, facts.editedWith, ...facts.checks.flatMap((c) => [c.title, c.detail])].join(' | ');
+      expect(shown).not.toMatch(/midjourney|firefly|adobe|photoshop|canva|stable diffusion/i);
+      expect(facts.checks.some((c) => !c.ok)).toBe(true);
+    }
   });
 
   it('never calls a file without marks authentic', () => {

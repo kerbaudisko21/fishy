@@ -70,7 +70,7 @@ export const WORST_SUPPLIERS: Supplier[] = [
     name: 'CV Jo',
     domain: 'jo.id',
     contact: { name: 'Jo', role: 'Owner', phoneMasked: '+62 31 •••• 2046' },
-    account: { bank: 'BRI', masked: '•••• 1185', holder: 'CV Jo' },
+    account: { bank: 'Bank Selat', masked: '•••• 1185', holder: 'CV Jo' },
     paidMonths: ['Aug', 'Sep', 'Oct', 'Nov'],
   },
 ];
@@ -81,10 +81,10 @@ export const ONE_REQUEST: PaymentRequest = {
   place: 'gmail',
   askedBy: { name: 'Dewi Lestari', role: 'Billing', directoryId: 'dewi' },
   amount: { value: 1, currency: 'USD' },
-  payee: { name: 'PT Mitra Kemas', bank: 'BNI', accountMasked: '•••• 1185' },
+  payee: { name: 'PT Mitra Kemas', bank: 'Bank Ombak', accountMasked: '•••• 1185' },
 };
 export const ONE_SIGNALS: Signal[] = [
-  { kind: 'known_bad_account', step: 'match', source: 'on_device', title: 'Known scam account', detail: 'BNI •••• 1185 is in 1 confirmed scam.', seenCount: 1 },
+  { kind: 'known_bad_account', step: 'match', source: 'on_device', title: 'Known scam account', detail: 'Bank Ombak •••• 1185 is in 1 confirmed scam.', seenCount: 1 },
 ];
 export const ONE_DIRECTORY: DirectoryPerson[] = [{ id: 'dewi', name: 'Dewi Lestari', role: 'Billing', phoneMasked: '+62 21 •••• 7710', pinSet: true }];
 export const ONE_SUPPLIERS: Supplier[] = [WORST_SUPPLIERS[1]];

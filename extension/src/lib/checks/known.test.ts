@@ -3,7 +3,7 @@ import { candidatesFromText, international, matchKnown, suspectsFrom } from './k
 import type { KnownBadEntry } from '../types';
 
 const LIST: KnownBadEntry[] = [
-  { kind: 'account', value: '9032', display: 'Mandiri •••• 9032', count: 2 },
+  { kind: 'account', value: '9032', display: 'Bank Teluk •••• 9032', count: 2 },
   { kind: 'domain', value: 'sinar-logistik.co', display: 'sinar-logistik.co', count: 1 },
 ];
 
@@ -11,7 +11,7 @@ describe('known bad details (R5)', () => {
   it('matches a masked account on its last digits and a domain on its registrable part, with the seen count', () => {
     const m = matchKnown(
       [
-        { kind: 'account', value: '123-456-9032', display: 'Mandiri •••• 9032' },
+        { kind: 'account', value: '123-456-9032', display: 'Bank Teluk •••• 9032' },
         { kind: 'domain', value: 'pay.sinar-logistik.co', display: 'sinar-logistik.co' },
         { kind: 'phone', value: '+62 857 1234 2219', display: '+62 857 •••• 2219' },
       ],

@@ -121,7 +121,7 @@ Design preview without installing: `npm run build -w extension`, then `npx vite 
 
 | File | What FISHY should show |
 |---|---|
-| `invoice-sinar-fishy.pdf` | Bank account changed (Mandiri •••• 9032, record says BCA •••• 4471), edited 3 days after it was made in an online editor, bank line in another font, known scam account |
+| `invoice-sinar-fishy.pdf` | Bank account changed (Bank Teluk •••• 9032, record says Bank Karang •••• 4471), edited 3 days after it was made in an online editor, bank line in another font, known scam account |
 | `invoice-sinar-clean.pdf` | Account matches the record, no later edits |
 
 ### Gemini Nano on the laptop
@@ -260,6 +260,8 @@ Three things are still shared by the whole project, so check them with whoever o
    SEED_PROJECT_ID=your-project-id SEED_PHONES='{"budi":"+00000000000"}' SEED_PIN=0000 npm run seed
    ```
 
+   Running it again is also how to start a rehearsal clean: it clears the PIN lock and the hourly call count of everyone it loads (see "What the phone menu does" below).
+
 12. Try it without a phone: set `APPROVAL_PAGE_ENABLED=true`, deploy again and start a call from the side panel. The panel says that no phone call was placed and shows **Open the approval page**. Answer **No** with the PIN: `checks/{id}.call.state` becomes `not_me`.
 13. Try it with a phone: set `CALLS_ENABLED=true` and put your own verified number in `CALL_ALLOWLIST`, then deploy again.
 
@@ -338,7 +340,7 @@ Three things to know before switching it on:
 | `APPROVAL_PAGE_ENABLED` | Web approval page, for a demo without a phone account and for judges, who cannot receive a trial call. A demo device: the link goes to the person who asked for the check, so keep it off in real use. The PIN is still required | `false` |
 | `COMPANY_NAME`, `COMPANY_DOMAIN` | Shown on the approval page; the domain can never be added to the known-scam list | empty |
 
-What the phone menu does: pressing 2 sets `not_me` at once. Pressing 1 confirms nothing until the right PIN follows. Three wrong PINs close the check without confirming it. A `not_me` followed by the right PIN adds the reported account, domain and number to `knownBad`; the company's own domain and its suppliers' domains and accounts can never be added.
+What the phone menu does: pressing 2 sets `not_me` at once. Pressing 1 confirms nothing until the right PIN follows. Three wrong PINs close the check without confirming it. Five wrong PINs for one person in a day, over any number of checks, lock that person's PIN for a day: the phone and the approval page then say the PIN is locked, and nothing is confirmed. One person can be asked five times an hour. `npm run seed` clears both. A `not_me` followed by the right PIN adds the reported account, domain and number to `knownBad`; the company's own domain and its suppliers' domains and accounts can never be added.
 
 ### Firestore data
 

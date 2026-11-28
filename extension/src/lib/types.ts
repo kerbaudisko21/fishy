@@ -201,7 +201,7 @@ export interface KnownBadEntry {
   kind: KnownKind;
   /** Normalised: digits only for accounts and phones, lower-case registrable domain. */
   value: string;
-  /** How it is shown, e.g. "Mandiri •••• 9032". */
+  /** How it is shown, e.g. "Bank Teluk •••• 9032". */
   display: string;
   count: number;
   events?: Array<{ date: string; what: string }>;

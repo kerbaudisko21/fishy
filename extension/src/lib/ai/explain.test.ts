@@ -7,7 +7,7 @@ const flag = (title: string, detail: string): Signal => ({ kind: 'pressure_tacti
 const fishy: Verdict = {
   level: 'fishy',
   flags: [
-    flag('Bank account changed', 'Mandiri 1234567890 differs from the last 6 payments'),
+    flag('Bank account changed', 'Bank Teluk 1234567890 differs from the last 6 payments'),
     flag('Pressure in the request', 'Urgency and secrecy'),
     flag('Known scam account', 'Seen in 2 confirmed scams'),
     flag('Look-alike sender', 'sinar-abadi.co vs sinarabadi.co.id'),

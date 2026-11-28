@@ -17,9 +17,9 @@ import type { CheckItem } from '../types';
 export interface PictureFacts {
   /** The file says it was made by AI (Content Credentials or the IPTC source type). */
   aiLabel?: string;
-  /** An AI generator named in the file's data. */
+  /** Set when an AI generator is named in the file's data. Says what kind of tool, not which one. */
   aiTool?: string;
-  /** A photo editor named in the file's data. */
+  /** Set when a photo editor is named in the file's data. Says what kind of tool, not which one. */
   editedWith?: string;
   /** Content Credentials are present (whatever they say). */
   credentials: boolean;
@@ -29,32 +29,45 @@ export interface PictureFacts {
   checks: CheckItem[];
 }
 
-const AI_TOOLS: Array<[RegExp, string]> = [
-  [/midjourney/i, 'Midjourney'],
-  [/dall[·.\- ]?e/i, 'DALL·E'],
-  [/openai|chatgpt|gpt-4o|gpt-image/i, 'OpenAI'],
-  [/stable[\s_-]?diffusion|sdxl/i, 'Stable Diffusion'],
-  [/adobe firefly|\bfirefly\b/i, 'Adobe Firefly'],
-  [/imagen|gemini|google ai/i, 'Google Imagen or Gemini'],
-  [/black forest labs|\bflux(?:\.1)?\b/i, 'FLUX'],
-  [/leonardo\.ai/i, 'Leonardo.Ai'],
-  [/ideogram/i, 'Ideogram'],
-  [/comfyui/i, 'ComfyUI'],
-  [/novelai/i, 'NovelAI'],
+/**
+ * What a match is called on screen. A file's data is matched against product names, but the name
+ * itself is not shown: FISHY's screens carry no third-party names. The invoice check does the
+ * same when it says "an online PDF editor".
+ */
+const AI_TOOL = 'an AI image generator';
+const EDITOR = 'a photo editor';
+
+/**
+ * AI generators, by the names they write into a file.
+ * creatorOnly: also an everyday word or a company name, so it counts only in the creator field.
+ */
+const AI_TOOLS: Array<{ name: RegExp; creatorOnly?: boolean }> = [
+  { name: /midjourney/i },
+  { name: /dall[·.\- ]?e/i },
+  { name: /openai|chatgpt|gpt-4o|gpt-image/i, creatorOnly: true },
+  { name: /stable[\s_-]?diffusion|sdxl/i },
+  { name: /adobe firefly|\bfirefly\b/i },
+  { name: /imagen|gemini|google ai/i, creatorOnly: true },
+  { name: /black forest labs|\bflux(?:\.1)?\b/i },
+  { name: /leonardo\.ai/i },
+  { name: /ideogram/i },
+  { name: /comfyui/i },
+  { name: /novelai/i },
 ];
 
-const EDITORS: Array<[RegExp, string]> = [
-  [/adobe photoshop/i, 'Photoshop'],
-  [/lightroom/i, 'Lightroom'],
-  [/\bgimp\b/i, 'GIMP'],
-  [/pixelmator/i, 'Pixelmator'],
-  [/affinity photo/i, 'Affinity Photo'],
-  [/snapseed/i, 'Snapseed'],
-  [/\bcanva\b/i, 'Canva'],
-  [/picsart/i, 'Picsart'],
-  [/facetune/i, 'Facetune'],
-  [/photopea/i, 'Photopea'],
-  [/paint\.net/i, 'Paint.NET'],
+/** Photo editors, by the names they write into a file. */
+const EDITORS: RegExp[] = [
+  /adobe photoshop/i,
+  /lightroom/i,
+  /\bgimp\b/i,
+  /pixelmator/i,
+  /affinity photo/i,
+  /snapseed/i,
+  /\bcanva\b/i,
+  /picsart/i,
+  /facetune/i,
+  /photopea/i,
+  /paint\.net/i,
 ];
 
 /** The bytes as Latin-1 text, so ASCII markers inside binary data can be searched. Large files: the first and last 4 MB. */
@@ -75,9 +88,9 @@ function field(text: string, names: string[]): string | undefined {
   return undefined;
 }
 
-/** EXIF ASCII strings near a tag are not addressable without a full parser; this finds tool names anywhere in the file. */
-function findTool(text: string, list: Array<[RegExp, string]>): string | undefined {
-  return list.find(([re]) => re.test(text))?.[1];
+/** EXIF ASCII strings near a tag are not addressable without a full parser; this looks for tool names anywhere in the text given. */
+function named(text: string, names: RegExp[]): boolean {
+  return names.some((name) => name.test(text));
 }
 
 export function scanPicture(bytes: Uint8Array): PictureFacts {
@@ -92,8 +105,12 @@ export function scanPicture(bytes: Uint8Array): PictureFacts {
   const sdSettings = /parameters\0[^\0]{0,400}Steps:\s*\d+[^\0]{0,200}Sampler:/i.test(text);
 
   const creator = field(text, ['xmp:CreatorTool', 'CreatorTool', 'tiff:Software', 'Software']);
-  const aiTool = (creator && findTool(creator, AI_TOOLS)) ?? (sdSettings ? 'Stable Diffusion' : findTool(text, AI_TOOLS.filter(([, n]) => n !== 'Google Imagen or Gemini' && n !== 'OpenAI')));
-  const editedWith = (creator && findTool(creator, EDITORS)) ?? findTool(text, EDITORS);
+  const madeByAi =
+    (!!creator && named(creator, AI_TOOLS.map((tool) => tool.name))) ||
+    sdSettings ||
+    named(text, AI_TOOLS.filter((tool) => !tool.creatorOnly).map((tool) => tool.name));
+  const aiTool = madeByAi ? AI_TOOL : undefined;
+  const editedWith = (!!creator && named(creator, EDITORS)) || named(text, EDITORS) ? EDITOR : undefined;
   const make = field(text, ['tiff:Make', 'exif:Make']);
   const model = field(text, ['tiff:Model', 'exif:Model']);
   const camera = [make, model].filter(Boolean).join(' ') || undefined;
