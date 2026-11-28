@@ -2,7 +2,7 @@ import { getAI, getGenerativeModel, InferenceMode, InferenceSource, type Generat
 import { FIREBASE_READY } from '../config';
 import { firebaseApp } from '../firebase';
 import type { Source, Verdict } from '../types';
-import { explainPrompt, templateExplanation, type ExplainContext } from './prompts';
+import { explainPrompt, NANO_TEXT, templateExplanation, type ExplainContext } from './prompts';
 import { cloudBackend } from './provider';
 
 export { explainPrompt, templateExplanation, type ExplainContext } from './prompts';
@@ -32,6 +32,7 @@ function getModel() {
   const ai = getAI(firebaseApp(), { backend: cloudBackend(import.meta.env.VITE_AI_PROVIDER) });
   model = getGenerativeModel(ai, {
     mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions: NANO_TEXT },
     inCloudParams: {
       model: import.meta.env.VITE_CLOUD_MODEL || 'gemini-3.5-flash-lite',
       generationConfig: { maxOutputTokens: 160, temperature: 0.2 },

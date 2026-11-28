@@ -5,7 +5,7 @@ import { redact } from '../redact';
 import type { Source } from '../types';
 import { keywordTactics } from './keywords';
 import { cloudBackend } from './provider';
-import { parseTactics, tacticInput, tacticSchema, type TacticHit } from './prompts';
+import { NANO_TEXT, parseTactics, tacticInput, tacticSchema, type TacticHit } from './prompts';
 
 export { TACTICS, type TacticHit } from './prompts';
 
@@ -28,7 +28,7 @@ function getModels() {
   models = {
     onDevice: getGenerativeModel(ai, {
       mode: InferenceMode.ONLY_ON_DEVICE,
-      onDeviceParams: { promptOptions: { responseConstraint: tacticSchema } },
+      onDeviceParams: { createOptions: NANO_TEXT, promptOptions: { responseConstraint: tacticSchema } },
     }),
     inCloud: getGenerativeModel(ai, {
       mode: InferenceMode.ONLY_IN_CLOUD,
@@ -42,14 +42,14 @@ function getModels() {
 }
 
 /** Prompt API global (Chrome 139+). Typed loosely because @types/chrome does not cover it yet. */
-declare const LanguageModel: { availability(): Promise<NanoStatus> } | undefined;
+declare const LanguageModel: { availability(options?: unknown): Promise<NanoStatus> } | undefined;
 
 export type NanoStatus = 'available' | 'downloadable' | 'downloading' | 'unavailable';
 
 export async function nanoStatus(): Promise<NanoStatus> {
   if (typeof LanguageModel === 'undefined') return 'unavailable';
   try {
-    return await LanguageModel.availability();
+    return await LanguageModel.availability(NANO_TEXT);
   } catch {
     return 'unavailable';
   }

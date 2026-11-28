@@ -2,7 +2,7 @@ import { getAI, getGenerativeModel, InferenceMode, InferenceSource, type Generat
 // The extension's own logic, so the hosted page reads a message exactly the way the extension does.
 import { keywordTactics } from '../../extension/src/lib/ai/keywords';
 import { pictureForGemini, toBase64 } from '../../extension/src/lib/ai/files';
-import { explainPrompt, mediaSchema, parseMedia, parseTactics, PICTURE_PROMPT, tacticInput, tacticSchema, templateExplanation, type MediaReading, type TacticHit } from '../../extension/src/lib/ai/prompts';
+import { explainPrompt, mediaSchema, NANO_IMAGE, NANO_TEXT, parseMedia, parseTactics, PICTURE_PROMPT, tacticInput, tacticSchema, templateExplanation, type MediaReading, type TacticHit } from '../../extension/src/lib/ai/prompts';
 import { cloudBackend } from '../../extension/src/lib/ai/provider';
 import { redact } from '../../extension/src/lib/redact';
 import type { Source, Verdict } from '../../extension/src/lib/types';
@@ -27,13 +27,13 @@ export interface ReadResult {
   sentToCloud?: string;
 }
 
-declare const LanguageModel: { availability(): Promise<NanoStatus> } | undefined;
+declare const LanguageModel: { availability(options?: unknown): Promise<NanoStatus> } | undefined;
 export type NanoStatus = 'available' | 'downloadable' | 'downloading' | 'unavailable';
 
 export async function nanoStatus(): Promise<NanoStatus> {
   if (typeof LanguageModel === 'undefined') return 'unavailable';
   try {
-    return await LanguageModel.availability();
+    return await LanguageModel.availability(NANO_TEXT);
   } catch {
     return 'unavailable';
   }
@@ -48,7 +48,7 @@ function getModels() {
   models = {
     onDevice: getGenerativeModel(ai, {
       mode: InferenceMode.ONLY_ON_DEVICE,
-      onDeviceParams: { promptOptions: { responseConstraint: tacticSchema } },
+      onDeviceParams: { createOptions: NANO_TEXT, promptOptions: { responseConstraint: tacticSchema } },
     }),
     inCloud: getGenerativeModel(ai, {
       mode: InferenceMode.ONLY_IN_CLOUD,
@@ -56,11 +56,12 @@ function getModels() {
     }),
     picture: getGenerativeModel(ai, {
       mode: InferenceMode.PREFER_ON_DEVICE,
-      onDeviceParams: { createOptions: { expectedInputs: [{ type: 'image' }, { type: 'text' }] }, promptOptions: { responseConstraint: mediaSchema } },
+      onDeviceParams: { createOptions: NANO_IMAGE, promptOptions: { responseConstraint: mediaSchema } },
       inCloudParams: { model: cloudModel, generationConfig: { responseMimeType: 'application/json', responseSchema: mediaSchema } },
     }),
     explain: getGenerativeModel(ai, {
       mode: InferenceMode.PREFER_ON_DEVICE,
+      onDeviceParams: { createOptions: NANO_TEXT },
       inCloudParams: { model: cloudModel, generationConfig: { maxOutputTokens: 160, temperature: 0.2 } },
     }),
   };

@@ -14,6 +14,7 @@ Each version's build also shows in the extension under **Settings → About** (v
 - Fixed: Remote Config's scam rules now add to the built-in rules instead of replacing them, so an older config can't switch the media checks off
 - The test-data switch in development builds stays hidden unless ?data= is in the address
 - When the Firebase AI Logic API is off in the project, the card says which API to turn on
+- Gemini Nano is told to answer in English, as Chrome asks, so it can check the answer's quality and safety
 
 ## 0.4.0 · 23 Nov 2026
 - New Scanner layout: one big drop zone, three big buttons (Video, Voice, Message), and a list of your checks with their scores

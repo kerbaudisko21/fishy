@@ -1,4 +1,18 @@
-import { Schema } from 'firebase/ai';
+import { Schema, type LanguageModelCreateOptions } from 'firebase/ai';
+
+/*
+ * What Gemini Nano is told when FISHY opens a session: what it will be given and the language it
+ * answers in. Chrome asks for the output language so it can check the answer's quality and safety
+ * (it supports de, en, es, fr, ja). The input's language is left open: messages may be Indonesian.
+ */
+export const NANO_TEXT: LanguageModelCreateOptions = {
+  expectedInputs: [{ type: 'text' }],
+  expectedOutputs: [{ type: 'text', languages: ['en'] }],
+};
+export const NANO_IMAGE: LanguageModelCreateOptions = {
+  expectedInputs: [{ type: 'image' }, { type: 'text' }],
+  expectedOutputs: [{ type: 'text', languages: ['en'] }],
+};
 import { redact } from '../redact';
 import type { Tactic, Verdict } from '../types';
 

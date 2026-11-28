@@ -3,7 +3,7 @@ import { FIREBASE_READY } from '../config';
 import { firebaseApp } from '../firebase';
 import type { Source } from '../types';
 import { secondOpinionReason } from './escalate';
-import { CHALLENGE_NOTE, mediaSchema, parseMedia, PICTURE_PROMPT, VIDEO_PROMPT, VOICE_PROMPT, withMeasurements, type MediaReading } from './prompts';
+import { CHALLENGE_NOTE, mediaSchema, NANO_IMAGE, parseMedia, PICTURE_PROMPT, VIDEO_PROMPT, VOICE_PROMPT, withMeasurements, type MediaReading } from './prompts';
 import { pictureForGemini, toBase64 } from './files';
 import { cloudBackend } from './provider';
 
@@ -54,7 +54,7 @@ function getModels() {
   models = {
     hybrid: getGenerativeModel(ai, {
       mode: InferenceMode.PREFER_ON_DEVICE,
-      onDeviceParams: { createOptions: { expectedInputs: [{ type: 'image' }, { type: 'text' }] }, promptOptions: { responseConstraint: mediaSchema } },
+      onDeviceParams: { createOptions: NANO_IMAGE, promptOptions: { responseConstraint: mediaSchema } },
       inCloudParams: { model: cloudModel, generationConfig: json },
     }),
     cloud: getGenerativeModel(ai, { mode: InferenceMode.ONLY_IN_CLOUD, inCloudParams: { model: cloudModel, generationConfig: json } }),
