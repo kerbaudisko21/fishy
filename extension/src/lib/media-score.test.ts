@@ -51,3 +51,21 @@ describe('why it is fishy, in one sentence', () => {
     );
   });
 });
+
+describe('the laptop’s own measurements in the score', () => {
+  const base = { id: 'x', name: 'x', at: '10:00', checks: [] };
+  it('a frozen video is fishy before Gemini answers, and says why', () => {
+    const s = scoreMedia({ ...base, kind: 'frame', gemini: null, forensics: { hints: [{ id: 'frozen', strength: 2, text: 'Nothing moved in 2.8 s.' }], rows: [] } });
+    expect(s.band).toBe('high');
+    expect(s.reasons[0]).toMatch(/Nothing moved/);
+  });
+  it('one strong pixel hint alone is worth a closer look, not a verdict', () => {
+    const s = scoreMedia({ ...base, kind: 'picture', gemini: { assessment: 'no_clear_signs', signs: [], source: 'on_device', model: 'gemini-nano' }, forensics: { hints: [{ id: 'ela', strength: 2, text: 'The centre re-saves differently.' }], rows: [] } });
+    expect(s.band).toBe('some');
+    expect(s.reasons[0]).toMatch(/re-saves/);
+  });
+  it('a face that broke up behind a hand scores at least 85', () => {
+    const s = scoreMedia({ ...base, kind: 'frame', challenge: true, gemini: { assessment: 'likely_edited', signs: [{ sign: 'The hand melts into the cheek', where: 'frames 3–5' }], source: 'cloud', model: 'gemini-cloud' } });
+    expect(s.score).toBeGreaterThanOrEqual(85);
+  });
+});

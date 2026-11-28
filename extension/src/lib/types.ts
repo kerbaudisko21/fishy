@@ -28,7 +28,19 @@ export type SignalKind =
   /** Gemini sees signs of AI or editing in a picture, a document page or a video frame. */
   | 'picture_signs'
   /** Gemini hears signs of a cloned or spliced voice. */
-  | 'voice_signs';
+  | 'voice_signs'
+  /** Gemini sees signs of a deepfake across frames of the video call. */
+  | 'video_signs'
+  /** Gemini sees signs of AI or editing on a document's page. */
+  | 'document_signs'
+  /** The laptop's pixel checks found one patch that differs from the rest of the picture. */
+  | 'tamper_trace'
+  /** The video call didn't move at all for seconds: possibly a still picture played as a camera. */
+  | 'video_frozen'
+  /** The laptop's voice measurements found something odd (flat pitch, joined recordings…). */
+  | 'voice_artifacts'
+  /** The face broke up when the caller passed a hand in front of it (the liveness check). */
+  | 'liveness_failed';
 
 export interface Signal {
   kind: SignalKind;
@@ -102,6 +114,34 @@ export type MediaKind = 'picture' | 'document' | 'voice' | 'frame';
 export type MediaAssessment = 'likely_ai' | 'likely_edited' | 'no_clear_signs' | 'unclear';
 
 /** One thing the person chose to check: a picture, a document, a voice clip or a frame of the call. */
+export interface GeminiReading {
+  assessment: MediaAssessment;
+  signs: Array<{ sign: string; where: string }>;
+  confidence?: 'low' | 'medium' | 'high';
+  source: Source;
+  model: 'gemini-nano' | 'gemini-cloud';
+}
+
+/** A hint from the laptop's own measurements, in plain words. */
+export interface ForensicHint {
+  id: string;
+  text: string;
+  /** 1 a weak hint, 2 a stronger one. */
+  strength: 1 | 2;
+}
+
+export interface MediaForensics {
+  hints: ForensicHint[];
+  /** Rows for the Details fold: what was measured and what it came to. */
+  rows: CheckItem[];
+  /** A see-through overlay of where the picture changed most when re-saved. */
+  heatmap?: string;
+  /** Voice: pitch every 32 ms (0 = not voiced), for the chart. */
+  pitch?: number[];
+  /** Video: change between frames, 0–255. */
+  motion?: number[];
+}
+
 export interface MediaCheck {
   id: string;
   kind: MediaKind;
@@ -118,7 +158,17 @@ export interface MediaCheck {
   /** The same facts as rows ("Labelled as made by AI", "No AI or editing marks in the file"). */
   checks: CheckItem[];
   /** What Gemini saw or heard. Undefined while it reads; null when it could not run (see `note`). */
-  gemini?: { assessment: MediaAssessment; signs: Array<{ sign: string; where: string }>; source: Source; model: 'gemini-nano' | 'gemini-cloud' } | null;
+  gemini?: GeminiReading | null;
+  /** Gemini Nano's first look on the laptop, when the cloud was asked for a second opinion. */
+  firstLook?: GeminiReading;
+  /** Why the cloud was asked ("Gemini Nano wasn't sure"). */
+  escalation?: string;
+  /** What the laptop measured itself, before any AI. */
+  forensics?: MediaForensics;
+  /** For a video check: the frames, in time order (object URLs). */
+  frames?: string[];
+  /** A video check made while the caller passed a hand across their face. */
+  challenge?: boolean;
   note?: string;
   /** True for the demo story's sample result. */
   demo?: boolean;

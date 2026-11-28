@@ -22,11 +22,12 @@ export interface MediaScore {
 
 export function scoreMedia(item: MediaCheck): MediaScore {
   const facts = item.facts ?? {};
-  const reasons: string[] = [];
+  // Each reason with the score it supports; the strongest reasons are told first.
+  const found: Array<{ value: number; reason: string }> = [];
   let score = 0;
   const raise = (value: number, reason: string) => {
     score = Math.max(score, value);
-    reasons.push(reason);
+    found.push({ value, reason });
   };
 
   if (facts.aiLabel) raise(95, `${facts.aiLabel}.`);
@@ -37,22 +38,36 @@ export function scoreMedia(item: MediaCheck): MediaScore {
   if (g) {
     const n = g.signs.length;
     const top = g.signs.slice(0, 3).map((s) => `Gemini ${where}: ${s.sign.replace(/\.$/, '')}${s.where ? ` (${s.where})` : ''}.`);
-    if (g.assessment === 'likely_ai') raise(Math.min(95, 70 + 5 * n), top[0] ?? `Gemini ${where} signs of AI.`);
-    else if (g.assessment === 'likely_edited') raise(Math.min(90, 65 + 5 * n), top[0] ?? `Gemini ${where} signs of editing.`);
+    // A face that breaks up behind a hand is the strongest sign a live video can give.
+    const floor = item.challenge && (g.assessment === 'likely_ai' || g.assessment === 'likely_edited') ? 85 : 0;
+    if (g.assessment === 'likely_ai') raise(Math.max(floor, Math.min(95, 70 + 5 * n)), top[0] ?? `Gemini ${where} signs of AI.`);
+    else if (g.assessment === 'likely_edited') raise(Math.max(floor, Math.min(90, 65 + 5 * n)), top[0] ?? `Gemini ${where} signs of editing.`);
     else if (g.assessment === 'unclear') raise(n ? Math.min(55, 35 + 5 * n) : 15, top[0] ?? `Gemini couldn’t tell from this ${item.kind === 'voice' ? 'clip' : 'picture'} (too small, quiet or blurry), and found nothing to point at.`);
     else raise(10, `Gemini ${where} no clear signs of AI or editing.`);
-    reasons.push(...top.slice(1));
+    top.slice(1).forEach((r, i) => found.push({ value: score - 1 - i, reason: r }));
+  }
+
+  // The laptop's own measurements: a strong hint alone is worth a closer look, two make it fishy.
+  const hints = item.forensics?.hints ?? [];
+  if (hints.length) {
+    const frozen = hints.some((h) => h.id === 'frozen');
+    const strong = hints.filter((h) => h.strength === 2).length;
+    const local = frozen ? 60 : Math.min(70, (strong ? 45 : 30) + 10 * (hints.length - 1));
+    for (const h of hints) found.push({ value: local - (h.strength === 2 ? 0 : 5), reason: h.text });
+    // They agree with Gemini: more weight; they stand alone: their own score.
+    score = g && (g.assessment === 'likely_ai' || g.assessment === 'likely_edited') ? Math.min(98, score + 3 * hints.length) : Math.max(score, local);
   }
 
   if (facts.editedWith) {
     score = Math.min(100, Math.max(score, 30) + 10);
-    reasons.push(`Edited in ${facts.editedWith}.`);
+    found.push({ value: 30, reason: `Edited in ${facts.editedWith}.` });
   }
 
+  const reasons = found.sort((x, y) => y.value - x.value).map((f) => f.reason);
   // Nothing known yet: Gemini is still reading and the file had no marks.
   if (g === undefined && !reasons.length) return { score: null, band: 'pending', reasons: [] };
   if (g === null && !reasons.length) {
-    return { score: null, band: 'pending', reasons: [item.kind === 'voice' || item.kind === 'frame' ? 'Gemini didn’t run, and a capture has no file marks to read.' : 'No AI or editing marks in the file; Gemini didn’t run.'] };
+    return { score: null, band: 'pending', reasons: [item.kind === 'voice' || item.kind === 'frame' ? 'Gemini didn’t run, and the laptop’s own checks found nothing to point at.' : 'No AI or editing marks in the file; Gemini didn’t run.'] };
   }
 
   const band: ScoreBand = score >= 60 ? 'high' : score >= 25 ? 'some' : 'low';

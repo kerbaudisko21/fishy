@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { demoData } from '../demo/dataset';
-import { readPicture, readVoice, type MediaResult } from '../lib/ai/media';
+import { readFrames, readPicture, readVoice, type HybridResult } from '../lib/ai/media';
+import { decodeMono16k, VOICE_RATE, wavFrom } from '../lib/ai/files';
+import { analysePicture } from '../lib/forensics/picture';
+import { videoLab, voiceLab } from '../lib/forensics/labs';
 import { readTactics } from '../lib/ai/tactics';
-import { DEMO, FIREBASE_READY, IN_EXTENSION } from '../lib/config';
+import { DEMO, IN_EXTENSION } from '../lib/config';
 import { domainOf, findLookalike, registrable } from '../lib/checks/domain';
 import { judgeAuth } from '../lib/checks/email';
 import { compareAccount, editTraces, findAccounts, invoiceNumber, invoiceTotal, mask } from '../lib/checks/invoice';
@@ -15,7 +18,7 @@ import { base64ToBuffer, type AttachmentReply, type PageMessage, type PanelMessa
 import { toEvidence, toRequest, toSignals, type Findings, type TranscriptLine } from '../lib/pipeline';
 import { decide, DEFAULT_RULES, type RulesConfig } from '../lib/rules/engine';
 import type { KnownBadEntry, MediaCheck } from '../lib/types';
-import { captureTabFrame, recordTabClip } from '../lib/voice';
+import { captureTabFrames, recordTabClip } from '../lib/voice';
 
 const READ_EVERY_MS = 4000;
 const MAX_LINES = 20;
@@ -24,10 +27,6 @@ const NOT_A_PERSON = /^(you|anda|kamu|speaker|pasted|email)$/i;
 const clock = (t = Date.now()) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 const EMPTY: Findings = { place: 'meet', known: [] };
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
-
-/** The video and the voice have no file marks to read: without Gemini there is nothing to check. */
-const NEEDS_GEMINI =
-  'Checking the video or the voice needs Gemini, and Gemini isn’t connected in this build. Add the Firebase settings to extension/.env.local and reload FISHY. Pictures and PDFs still show their own marks without it.';
 
 /** Gemini's errors, in words a person can act on. */
 function geminiError(e: unknown): string {
@@ -61,7 +60,18 @@ function captureError(what: 'video' | 'voice', e: unknown): string {
   }
   return `The ${what} check didn’t start: ${message}`;
 }
-const NO_GEMINI = 'Gemini is not set up in this build, so only the file’s own marks were checked.';
+const NO_GEMINI = 'Gemini is not set up in this build, so only the laptop’s own checks ran.';
+/** 40 loudness bars (0–1) for a voice file's waveform. */
+function loudness(samples: Float32Array, bars = 40): number[] {
+  const size = Math.max(1, Math.floor(samples.length / bars));
+  const out = Array.from({ length: bars }, (_, b) => {
+    let sum = 0;
+    for (let i = b * size; i < Math.min(samples.length, (b + 1) * size); i++) sum += samples[i] * samples[i];
+    return Math.sqrt(sum / size);
+  });
+  const peak = Math.max(1e-6, ...out);
+  return out.map((v) => v / peak);
+}
 const newId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now() + Math.random()));
 
 /**
@@ -250,10 +260,10 @@ export function useAnalysis() {
 
   /** Gemini's reading fills in the card once it arrives; a failure is said on the card, not hidden. */
   const askGemini = useCallback(
-    async (id: string, run: () => Promise<MediaResult | null>) => {
+    async (id: string, run: () => Promise<HybridResult | null>) => {
       try {
         const result = await run();
-        patchMedia(id, result ? { gemini: result } : { gemini: null, note: NO_GEMINI });
+        patchMedia(id, result ? { gemini: result.final, firstLook: result.firstLook, escalation: result.escalation } : { gemini: null, note: NO_GEMINI });
       } catch (e) {
         console.warn('[FISHY] Gemini media check failed', e);
         patchMedia(id, { gemini: null, note: geminiError(e) });
@@ -264,40 +274,63 @@ export function useAnalysis() {
 
   /** A picture or a frame of the call: the file's own marks on the laptop, then what Gemini sees. */
   const checkPicture = useCallback(
-    async (blob: Blob, name: string, kind: 'picture' | 'frame' = 'picture') => {
+    async (blob: Blob, name: string) => {
+      const kind = 'picture' as const;
       goLive();
       setError(null);
       const id = newId();
-      // A frame FISHY captured itself carries no marks worth reading.
-      const facts = kind === 'picture' ? scanPicture(new Uint8Array(await blob.arrayBuffer())) : undefined;
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const facts = scanPicture(bytes);
       putMedia({
         id,
         kind,
         name,
         at: clock(),
         preview: URL.createObjectURL(blob),
-        facts: facts && { aiLabel: facts.aiLabel, aiTool: facts.aiTool, editedWith: facts.editedWith },
-        checks: facts?.checks ?? [],
+        facts: { aiLabel: facts.aiLabel, aiTool: facts.aiTool, editedWith: facts.editedWith },
+        checks: facts.checks,
       });
-      setBusy(kind === 'frame' ? 'Gemini is looking at the video…' : 'Gemini is looking at the picture…');
-      await askGemini(id, () => readPicture(blob));
+      // The laptop's own pixel checks first; Gemini is told what they found.
+      setBusy('Checking the pixels on this laptop…');
+      const lab = await analysePicture(blob, bytes, facts.camera).catch((e) => {
+        console.warn('[FISHY] pixel checks failed', e);
+        return null;
+      });
+      if (lab) patchMedia(id, { forensics: { hints: lab.hints, rows: lab.rows, heatmap: lab.heatmap } });
+      setBusy('Gemini is looking at the picture…');
+      await askGemini(id, () => readPicture(blob, { measured: lab?.measured, localHint: !!lab?.hints.length }));
       setBusy(null);
     },
-    [askGemini, goLive, putMedia],
+    [askGemini, goLive, patchMedia, putMedia],
   );
 
-  /** A voice clip: what Gemini hears. Audio goes to the cloud model (Gemini Nano does not take audio through Firebase AI Logic yet). */
+  /**
+   * A voice clip: the laptop measures it first (pitch, silences, breaths, background), then Gemini
+   * listens with those numbers in hand. Audio goes to the cloud model (Gemini Nano does not take
+   * audio through Firebase AI Logic yet); the measurements are the on-device part.
+   */
   const checkVoiceClip = useCallback(
-    async (blob: Blob, mime: string, name: string, levels?: number[]) => {
+    async (blob: Blob, mime: string, name: string, levels?: number[], live = false) => {
       goLive();
       setError(null);
       const id = newId();
       putMedia({ id, kind: 'voice', name, at: clock(), levels, checks: [] });
+      setBusy('Measuring the voice on this laptop…');
+      let samples: Float32Array;
+      try {
+        samples = await decodeMono16k(new Blob([blob], { type: mime }));
+      } catch (e) {
+        patchMedia(id, { gemini: null, note: `This recording couldn’t be opened: ${(e as Error).message}` });
+        setBusy(null);
+        return;
+      }
+      const lab = voiceLab(samples, VOICE_RATE, live);
+      patchMedia(id, { forensics: { hints: lab.hints, rows: lab.rows, pitch: lab.pitch }, ...(levels ? {} : { levels: loudness(samples) }) });
       setBusy('Gemini is listening to the voice…');
-      await askGemini(id, () => readVoice(blob, mime));
+      await askGemini(id, () => readVoice(wavFrom(samples), { measured: lab.measured }));
       setBusy(null);
     },
-    [askGemini, goLive, putMedia],
+    [askGemini, goLive, patchMedia, putMedia],
   );
 
   /** A PDF: its edit traces, and Gemini's look at the first page. An invoice also gets the bank-account checks. */
@@ -313,7 +346,7 @@ export function useAnalysis() {
         putMedia({ id, kind: 'document', name, at: clock(), preview: URL.createObjectURL(page), checks: editTraces(facts) });
         if (findAccounts(text).length) await checkInvoice(data.slice(0), name);
         setBusy('Gemini is looking at the first page…');
-        await askGemini(id, () => readPicture(page));
+        await askGemini(id, () => readPicture(page, { measured: 'This is page 1 of a PDF, drawn by FISHY: judge what is on the page, not the drawing.' }));
       } catch (e) {
         setError(`Document check: ${(e as Error).message}`);
       } finally {
@@ -339,47 +372,70 @@ export function useAnalysis() {
   /** Records 10 s of the call in this tab, only on the user's click, and has Gemini listen to it. */
   const checkVoice = useCallback(async () => {
     if (!IN_EXTENSION) return setError('Open this in the extension to record the call.');
-    if (!FIREBASE_READY) return setError(NEEDS_GEMINI);
     const tab = await activeTab();
     if (tab?.id === undefined) return setError('Open the call’s tab first.');
     setError(null);
     try {
       const clip = await recordTabClip(tab.id, 10, (left) => setBusy(`Recording the voice… ${left} s`));
       const speaker = [...transcript.current].reverse().find((l) => !NOT_A_PERSON.test(l.speaker))?.speaker;
-      await checkVoiceClip(clip.blob, clip.mime, speaker ? `${clip.seconds} s of ${speaker}` : `${clip.seconds} s of the call`, clip.levels);
+      await checkVoiceClip(clip.blob, clip.mime, speaker ? `${clip.seconds} s of ${speaker}` : `${clip.seconds} s of the call`, clip.levels, true);
     } catch (e) {
       setError(captureError('voice', e));
       setBusy(null);
     }
   }, [checkVoiceClip]);
 
-  /** One frame of the video call in this tab, only on the user's click, for Gemini to look at. */
-  const checkFrame = useCallback(async () => {
-    if (!IN_EXTENSION) return setError('Open this in the extension to check the video call.');
-    if (!FIREBASE_READY) return setError(NEEDS_GEMINI);
-    const tab = await activeTab();
-    if (tab?.id === undefined) return setError('Open the call’s tab first.');
-    setError(null);
-    try {
-      setBusy('Capturing the video…');
-      // In the floating window, step out of the picture for the moment of capture.
-      const floating = window.parent !== window;
-      if (floating) {
-        window.parent.postMessage({ fishy: 'hide' }, '*');
-        await new Promise((r) => setTimeout(r, 120));
-      }
-      let frame: Blob;
+  /**
+   * Several frames of the video call in this tab, only on the user's click. The laptop checks
+   * whether the picture moves; Gemini compares the frames side by side (on the laptop first).
+   * `challenge`: the caller was asked to pass a hand slowly across their face while it captures.
+   */
+  const checkFrame = useCallback(
+    async (challenge = false) => {
+      if (!IN_EXTENSION) return setError('Open this in the extension to check the video call.');
+      const tab = await activeTab();
+      if (tab?.id === undefined) return setError('Open the call’s tab first.');
+      setError(null);
+      const count = challenge ? 8 : 5;
       try {
-        frame = await captureTabFrame(tab.id);
+        setBusy(challenge ? 'Watching the hand pass… keep it slow' : 'Watching the video for 3 seconds…');
+        // In the floating window, step out of the picture while it captures.
+        const floating = window.parent !== window;
+        if (floating) {
+          window.parent.postMessage({ fishy: 'hide' }, '*');
+          await new Promise((r) => setTimeout(r, 120));
+        }
+        let set: Awaited<ReturnType<typeof captureTabFrames>>;
+        try {
+          set = await captureTabFrames(tab.id, count, challenge ? 500 : 700);
+        } finally {
+          if (floating) window.parent.postMessage({ fishy: 'show' }, '*');
+        }
+        goLive();
+        const id = newId();
+        const lab = videoLab(set.thumbs, set.seconds);
+        const frames = set.frames.map((f) => URL.createObjectURL(f));
+        putMedia({
+          id,
+          kind: 'frame',
+          name: challenge ? `Hand check at ${clock()}` : `Video call at ${clock()}`,
+          at: clock(),
+          preview: frames[0],
+          frames,
+          challenge,
+          checks: [],
+          forensics: { hints: lab.hints, rows: lab.rows, motion: lab.motion },
+        });
+        setBusy(challenge ? 'Gemini is checking the face behind the hand…' : 'Gemini is comparing the frames…');
+        await askGemini(id, () => readFrames(set.sheet, { measured: lab.measured, localHint: !!lab.hints.length, challenge }));
+      } catch (e) {
+        setError(captureError('video', e));
       } finally {
-        if (floating) window.parent.postMessage({ fishy: 'show' }, '*');
+        setBusy(null);
       }
-      await checkPicture(frame, `Video call at ${clock()}`, 'frame');
-    } catch (e) {
-      setError(captureError('video', e));
-      setBusy(null);
-    }
-  }, [checkPicture]);
+    },
+    [askGemini, goLive, putMedia],
+  );
 
   /** Paste-text fallback (deck risk: Meet pages change). */
   const checkText = useCallback(

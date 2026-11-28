@@ -1,9 +1,9 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { BAND_LABEL, scoreMedia, whySentence } from '../../lib/media-score';
 import type { MediaAssessment, MediaCheck } from '../../lib/types';
 import { DetailHead, Icon, Note, Privacy, SourceBadge } from '../components';
 import { useFirstSeen } from '../motion';
-import { DropZone, ScoreRing, Stamp } from '../scanner';
+import { DropZone, Filmstrip, HybridTrail, PitchChart, ScamType, ScoreRing, Stamp } from '../scanner';
 
 interface Props {
   items: MediaCheck[];
@@ -12,6 +12,11 @@ interface Props {
   focusId?: string | null;
   onBack: () => void;
   onFile: (file: File) => void;
+  /** What kind of scam all the checks together point to. */
+  patterns?: string[];
+  patternInfo?: (name: string) => { signs?: string[]; action?: string } | undefined;
+  /** Check the call's video again while the caller passes a hand across their face. */
+  onChallenge?: () => void;
 }
 
 const TITLE: Record<MediaCheck['kind'], string> = { picture: 'Picture', document: 'Document', voice: 'Voice', frame: 'Video call' };
@@ -29,8 +34,11 @@ function kindIcon(kind: MediaCheck['kind'], size = 16) {
 
 function Preview({ item, stamp }: { item: MediaCheck; stamp: ReactNode }) {
   const scanning = item.gemini === undefined;
+  const [heat, setHeat] = useState(false);
+  const [picked, setPicked] = useState(0);
   if (item.kind === 'voice') {
     return (
+      <>
       <div className="media-frame voice">
         {item.levels?.length ? (
           <div className={`wave${scanning ? ' listening' : ''}`} aria-hidden="true">
@@ -43,22 +51,35 @@ function Preview({ item, stamp }: { item: MediaCheck; stamp: ReactNode }) {
         )}
         {stamp}
       </div>
+      {item.forensics?.pitch && <PitchChart pitch={item.forensics.pitch} />}
+      </>
     );
   }
+  const shown = item.frames?.[picked] ?? item.preview;
+  const heatmap = item.forensics?.heatmap;
   return (
-    <div className={`media-frame${scanning ? ' scanning' : ''}`}>
-      {item.preview ? (
-        <img className="media-preview" src={item.preview} alt={`The ${TITLE[item.kind].toLowerCase()} that was checked`} />
-      ) : (
-        <span className="voice-placeholder">{kindIcon(item.kind, 28)}</span>
+    <>
+      <div className={`media-frame${scanning ? ' scanning' : ''}`}>
+        {shown ? (
+          <img className="media-preview" src={shown} alt={`The ${TITLE[item.kind].toLowerCase()} that was checked`} />
+        ) : (
+          <span className="voice-placeholder">{kindIcon(item.kind, 28)}</span>
+        )}
+        {heatmap && heat && <img className="media-heat" src={heatmap} alt="" aria-hidden="true" />}
+        {scanning && <span className="scan-line" aria-hidden="true" />}
+        {stamp}
+      </div>
+      {item.frames && item.frames.length > 1 && <Filmstrip frames={item.frames} motion={item.forensics?.motion} picked={picked} onPick={setPicked} />}
+      {heatmap && (
+        <button className="heat-toggle" aria-pressed={heat} onClick={() => setHeat((h) => !h)}>
+          {heat ? 'Hide the heat map' : 'Show the re-save heat map'}
+        </button>
       )}
-      {scanning && <span className="scan-line" aria-hidden="true" />}
-      {stamp}
-    </div>
+    </>
   );
 }
 
-function Card({ item, focused }: { item: MediaCheck; focused: boolean }) {
+function Card({ item, focused, onChallenge }: { item: MediaCheck; focused: boolean; onChallenge?: () => void }) {
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
     if (focused) ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -103,6 +124,20 @@ function Card({ item, focused }: { item: MediaCheck; focused: boolean }) {
         )}
       </div>
 
+      <HybridTrail item={item} />
+
+      {item.kind === 'frame' && !item.challenge && !pending && onChallenge && (
+        <div className="challenge">
+          <span className="grow">
+            <span className="row-title">Make sure: the hand check</span>
+            <span className="row-detail">Ask them to pass a hand slowly across their face. A real face stays whole; a live face swap often breaks up.</span>
+          </span>
+          <button className="btn secondary small" onClick={onChallenge}>
+            {Icon.video(14)} Check with hand
+          </button>
+        </div>
+      )}
+
       {s.reasons.length > 1 && (
         <details className="fold" open>
           <summary>
@@ -119,6 +154,22 @@ function Card({ item, focused }: { item: MediaCheck; focused: boolean }) {
       <details className="fold">
         <summary>Details</summary>
         <div className="fold-body">
+          {item.forensics && item.forensics.rows.length > 0 && (
+            <>
+              <span className="row-title">Measured on this laptop</span>
+              <ul className="rows" aria-label="Measured on this laptop">
+                {item.forensics.rows.map((c) => (
+                  <li key={c.title} className="check-row">
+                    <span className={`dot ${c.ok ? 'ok' : 'flagged'}`}>{c.ok ? Icon.check() : Icon.bang()}</span>
+                    <span className="grow">
+                      <span className="row-title">{c.title}</span>
+                      <span className="row-detail">{c.detail}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           {item.checks.length > 0 && (
             <ul className="rows" aria-label={item.kind === 'document' ? 'In the document' : 'In the file'}>
               {item.checks.map((c) => (
@@ -138,6 +189,12 @@ function Card({ item, focused }: { item: MediaCheck; focused: boolean }) {
               <>
                 <span className="row-detail">{voice ? LOOKS[g.assessment].voice : LOOKS[g.assessment].picture}</span>
                 <SourceBadge source={g.source} label={g.source === 'on_device' ? 'Gemini Nano, on device' : 'Gemini, cloud'} />
+                {item.firstLook && (
+                  <span className="row-detail">
+                    First look by Gemini Nano on this laptop: {voice ? LOOKS[item.firstLook.assessment].voice : LOOKS[item.firstLook.assessment].picture}
+                    {item.escalation ? `. Asked the cloud because ${item.escalation}.` : '.'}
+                  </span>
+                )}
               </>
             ) : (
               <span className="row-detail">{pending ? 'Still reading…' : (item.note ?? 'Gemini did not run.')}</span>
@@ -150,14 +207,15 @@ function Card({ item, focused }: { item: MediaCheck; focused: boolean }) {
 }
 
 /** What the checks found: one card per picture, document, voice or video frame, newest first. */
-export function Media({ items, busy, focusId, onBack, onFile }: Props) {
+export function Media({ items, busy, focusId, onBack, onFile, patterns = [], patternInfo, onChallenge }: Props) {
   const newest = items[items.length - 1]?.id;
   return (
     <>
       <DetailHead title="What the checks found" badges={[]} onBack={onBack} />
       <main className="main">
+        {patternInfo && <ScamType names={patterns} info={patternInfo} />}
         {[...items].reverse().map((item) => (
-          <Card key={item.id} item={item} focused={item.id === (focusId ?? newest) && items.length > 1} />
+          <Card key={item.id} item={item} focused={item.id === (focusId ?? newest) && items.length > 1} onChallenge={busy ? undefined : onChallenge} />
         ))}
 
         <Note icon={Icon.phone(15)}>
@@ -166,7 +224,7 @@ export function Media({ items, busy, focusId, onBack, onFile }: Props) {
 
         <DropZone onFile={onFile} disabled={busy} compact />
 
-        <Privacy>The file’s marks are read on this laptop. A picture goes to the cloud only when Gemini Nano isn’t available; a voice clip always does. Nothing is stored.</Privacy>
+        <Privacy>The file’s marks, pixels, motion and voice are measured on this laptop. A picture or video goes to the cloud only when Gemini Nano isn’t available or isn’t sure; a voice clip always does. Nothing is stored.</Privacy>
       </main>
     </>
   );

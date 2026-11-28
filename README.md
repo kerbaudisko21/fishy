@@ -30,11 +30,27 @@ The hybrid pattern is chosen by what the model is given:
 | Task | What the model gets | Mode | Why |
 |---|---|---|---|
 | **Read** the request for pressure tactics ([tactics.ts](extension/src/lib/ai/tactics.ts)) | The message itself | FISHY checks `LanguageModel.availability()` first: `ONLY_ON_DEVICE` with the raw text when Gemini Nano is ready, otherwise `ONLY_IN_CLOUD` with a **redacted** copy (accounts, numbers, emails and links removed, [redact.ts](extension/src/lib/redact.ts)) | Private message text may only reach Gemini Nano on the laptop. The SDK's automatic fallback would send the raw text to the cloud, so FISHY chooses itself |
-| **Look** at a picture, a document's first page or a frame of the video call for signs of AI or editing ([media.ts](extension/src/lib/ai/media.ts)) | The picture the person chose to check | `PREFER_ON_DEVICE` with image input: Gemini Nano on the laptop for JPEG and PNG, the cloud model otherwise | The person chose to check it; Nano keeps it on the laptop whenever it can |
-| **Listen** to a voice clip for signs of a cloned or spliced voice ([media.ts](extension/src/lib/ai/media.ts)) | 10 seconds of the call, or a recording the person chose | `ONLY_IN_CLOUD` | Firebase AI Logic cannot send audio to Gemini Nano yet; the badge says Cloud |
+| **Look** at a picture or a document's first page for signs of AI or editing ([media.ts](extension/src/lib/ai/media.ts)) | The picture, plus what the laptop measured in it | **Escalation:** `PREFER_ON_DEVICE` first (Gemini Nano on the laptop). Only when Nano can't tell, says it isn't sure, finds a single sign, or finds nothing where the laptop's own checks found something ([escalate.ts](extension/src/lib/ai/escalate.ts)), the same request goes to `ONLY_IN_CLOUD` for a second opinion. Both readings are shown | A clear first look never leaves the laptop; the cloud is spent only where it changes the answer |
+| **Compare** frames of the video call for a deepfake face ([media.ts](extension/src/lib/ai/media.ts), [voice.ts](extension/src/lib/voice.ts)) | A numbered sheet of 5 frames over 3 s (8 frames during the hand check), plus the motion measured between them | The same escalation | One image keeps it within what Nano takes, and lets the model compare frames in one look |
+| **Listen** to a voice clip for signs of a cloned or spliced voice ([media.ts](extension/src/lib/ai/media.ts)) | 10 seconds of the call, or a recording the person chose, as 16 kHz WAV, plus the voice measurements | `ONLY_IN_CLOUD`, after the on-device measurements ([voice-math.ts](extension/src/lib/forensics/voice-math.ts)) | Firebase AI Logic cannot send audio to Gemini Nano yet; the laptop's measurements are the on-device half |
 | **Explain** the red flags in plain words ([explain.ts](extension/src/lib/ai/explain.ts)) | The red flags only (titles and one line of masked evidence), never the message | `PREFER_ON_DEVICE`: Firebase AI Logic runs Nano when it can and falls back to the cloud by itself | Nothing private is in the input, so the SDK may decide |
 
 Both answer in JSON or short text, and `inferenceSource` tells the panel which badge to show: **On device** or **Cloud** on every step. The verdict itself never comes from the model: a fixed rules engine decides it from the signals, so the same signals always give the same verdict. Firebase App Check protects every call (a debug token in the extension, reCAPTCHA Enterprise on the hosted pages), and the same prompts run in the extension and on `/try` ([prompts.ts](extension/src/lib/ai/prompts.ts)).
+
+**Before any model: the laptop's own measurements** ([extension/src/lib/forensics](extension/src/lib/forensics)). They are told to Gemini with the file, so its reading is grounded in numbers, and they count in the score on their own:
+
+| Check | What it finds | Based on |
+|---|---|---|
+| Camera preview vs picture | The small preview a camera stores no longer matches the picture: changed or cropped after it was taken | Kee & Farid, digital image authentication from thumbnails (SPIE 2010) |
+| JPEG quantization tables | A file that names a camera but was last saved with standard software tables | Kornblum, DFRWS 2008 |
+| Grid pattern in the noise (PNG, WebP) | The periodic peaks latent-diffusion generators leave at 1/4 and 1/8 of the sampling frequency | Corvi et al., 2023 |
+| Motion across frames | A frozen picture: a still photo played as a camera | |
+| Hand check | A live face swap breaking up behind a hand (GOTCHA: hand occlusion degraded real-time deepfakes most of all tested challenges) | Mittal et al., GOTCHA |
+| Voice | Flat pitch, digitally empty pauses, background jumps between pauses (joined recordings), missing breaths, even pause rhythm; call-app noise filters are allowed for | Layton et al., 2024 (breaths) |
+
+Tested honestly: a re-save heat map (ELA) and a grain check are shown for a person to look at but **not scored**. On clean and forged test pictures with text, they flagged clean pictures as often as forged ones.
+
+**What kind of scam:** the signals are matched to scam patterns from Remote Config (Deepfake executive on a video call, Executive voice clone, Real-time face swap, Fake camera feed, Doctored invoice, Forged document, AI-made picture or receipt, Doctored picture or payment screenshot…), each with what to do. A deployed config adds to the built-in rules, never removes them.
 
 Other Firebase products: **Authentication** (anonymous) for the checks a person owns, **Firestore** for the directory, known scams and call state, **Remote Config** for scam rules and the Meet and Gmail page selectors, **Cloud Functions** for the call, the approval page, the link check, domain age and the incident report, and **Hosting** for the pages.
 

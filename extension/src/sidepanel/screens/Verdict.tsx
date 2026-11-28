@@ -6,7 +6,7 @@ import { line, Reveal, useTextSwap } from '../../lib/transitions';
 import { useFirstSeen } from '../motion';
 import { waitingFor } from '../../lib/call-wait';
 import type { CallStatus, CallTarget, MediaCheck, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
-import { ActionGrid, DropZone, RecentChecks } from '../scanner';
+import { ActionGrid, DropZone, RecentChecks, ScamType } from '../scanner';
 import { FlagRow, Icon, Privacy, Section, SourceBadge, Tile } from '../components';
 import { Amount, money } from '../format';
 import type { Screen } from '../routes';
@@ -36,6 +36,8 @@ interface Props {
   /** What was checked in this session, for "Your checks". */
   media?: MediaCheck[];
   onOpenMedia: (id: string) => void;
+  /** The scam pattern behind a name, for its signs and what to do. */
+  patternInfo: (name: string) => { signs?: string[]; action?: string } | undefined;
   /** Shown in a meeting until a voice check has run. */
   onVoice?: () => void;
   /** Capture one frame of the video call in this tab. */
@@ -75,7 +77,7 @@ export function Verdict(p: Props) {
 
   // The hero: one colour per state, one sentence.
   const hero: { tone: Tone; pill: string; title: string; line: string } | null = waiting
-    ? { tone: 'navy', pill: 'Ready', title: 'Is it real?', line: 'Drop what you were sent, or check the call you are in. FISHY scores the signs of AI and says why.' }
+    ? { tone: 'navy', pill: 'Ready', title: 'Is it real?', line: 'Check it before you pay. Pick one below: FISHY tells you how fishy it is, why, and who to call.' }
     : call.state === 'ringing'
       ? { tone: 'navy', pill: wait.pill, title: wait.title, line: wait.line }
       : call.state === 'no_answer' || call.state === 'escalated'
@@ -163,39 +165,36 @@ export function Verdict(p: Props) {
 
         {waiting && (
           <>
-            <DropZone onFile={p.onFile} disabled={!!p.busy} />
-            <ActionGrid onFrame={p.onFrame} onVoice={p.onVoice} onText={p.onPaste} busy={!!p.busy} />
+            <ol className="start">
+              <li>
+                <span className="start-label">
+                  <span className="start-num">1</span> Something you were sent
+                </span>
+                <DropZone onFile={p.onFile} disabled={!!p.busy} />
+              </li>
+              <li>
+                <span className="start-label">
+                  <span className="start-num">2</span> The video call you are in
+                </span>
+                <ActionGrid onFrame={p.onFrame} onVoice={p.onVoice} busy={!!p.busy} />
+              </li>
+              <li className="start-then">
+                <span className="start-label">
+                  <span className="start-num">3</span> Then: call the real person
+                </span>
+                <span className="row-detail">On the number on record, never the one in the message. A fake can pass a check; it can’t answer the real phone.</span>
+              </li>
+            </ol>
 
-            <details className="fold how-fold">
-              <summary>How it works</summary>
-              <ol className="how">
-                <li>
-                  <span className="how-num">1</span>
-                  <span className="grow">
-                    <span className="row-title">Check</span>
-                    <span className="row-detail">Drop what you were sent, or check the call you are in.</span>
-                  </span>
-                </li>
-                <li>
-                  <span className="how-num">2</span>
-                  <span className="grow">
-                    <span className="row-title">See the score and why</span>
-                    <span className="row-detail">AI labels and editing traces in the file, and what Gemini sees or hears: on this laptop when it can.</span>
-                  </span>
-                </li>
-                <li>
-                  <span className="how-num">3</span>
-                  <span className="grow">
-                    <span className="row-title">Call the real person</span>
-                    <span className="row-detail">A fake can pass a check, but it can’t answer the real phone.</span>
-                  </span>
-                </li>
-              </ol>
-            </details>
-
-            <button className="btn secondary" onClick={p.onDemo}>
-              Try the demo case
-            </button>
+            <div className="start-links">
+              <button className="link" onClick={p.onPaste}>
+                Paste a message instead
+              </button>
+              <span aria-hidden="true">·</span>
+              <button className="link" onClick={p.onDemo}>
+                Try the demo case
+              </button>
+            </div>
           </>
         )}
 
@@ -207,6 +206,8 @@ export function Verdict(p: Props) {
             </Reveal>
           </Section>
         )}
+
+        {!waiting && <ScamType names={verdict.patterns} info={p.patternInfo} />}
 
         {p.media && p.media.length > 0 && !waiting && (
           <Section title="Your checks" aside="Tap one for the score and why">
@@ -311,7 +312,7 @@ export function Verdict(p: Props) {
           <Section title="Check more">
             <div className="tiles">
               <Tile icon={Icon.image(20)} title="A file" detail="Picture, PDF, voice" onClick={p.onPaste} disabled={!!p.busy} />
-              {p.onFrame && <Tile icon={Icon.video(20)} title="The video" detail="One frame" onClick={p.onFrame} disabled={!!p.busy} />}
+              {p.onFrame && <Tile icon={Icon.video(20)} title="The face" detail="Watches 3 s" onClick={p.onFrame} disabled={!!p.busy} />}
               {p.onVoice && <Tile icon={Icon.mic(20)} title="The voice" detail="10 seconds" onClick={p.onVoice} disabled={!!p.busy} />}
             </div>
           </Section>

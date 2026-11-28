@@ -1,3 +1,5 @@
+import { grey } from './forensics/video-math';
+
 /**
  * R8 · Records a short clip of the meeting's audio, only when the user clicks "Check this voice".
  * Uses chrome.tabCapture from the side panel; the user keeps hearing the meeting while it records.
@@ -67,11 +69,26 @@ export async function recordTabClip(tabId: number, seconds = 10, onTick?: (left:
   return { blob: new Blob(chunks, { type: mime }), mime, seconds, levels: levels.slice(0, BARS).map((l) => l / peak) };
 }
 
+export interface FrameSet {
+  /** The frames as JPEG, in time order. */
+  frames: Blob[];
+  /** The frames side by side in one picture, numbered, for Gemini to compare in one look. */
+  sheet: Blob;
+  /** Small greyscale copies (96 px wide) for the motion check. */
+  thumbs: Uint8Array[];
+  /** Seconds between the first and the last frame. */
+  seconds: number;
+}
+
+const THUMB_W = 96;
+const SHEET_COLS = 3;
+const SHEET_CELL_W = 512;
+
 /**
- * One frame of the tab the person is looking at (a video call in the browser),
- * as a PNG, only on their click. Uses the same tab capture as the voice clip; nothing is recorded.
+ * Several frames of the tab the person is looking at (a video call in the browser), a short gap
+ * apart, only on their click. Nothing is recorded: the frames stay in memory.
  */
-export async function captureTabFrame(tabId: number): Promise<Blob> {
+export async function captureTabFrames(tabId: number, count = 5, gapMs = 700, onTick?: (n: number) => void): Promise<FrameSet> {
   const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: false,
@@ -84,12 +101,54 @@ export async function captureTabFrame(tabId: number): Promise<Blob> {
     await video.play();
     // The first frames of a new capture can be black; give it a moment.
     await new Promise((r) => setTimeout(r, 300));
+    const w = video.videoWidth;
+    const h = video.videoHeight;
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d')!.drawImage(video, 0, 0);
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    const thumbH = Math.max(1, Math.round((THUMB_W * h) / w));
+    const thumbCanvas = document.createElement('canvas');
+    thumbCanvas.width = THUMB_W;
+    thumbCanvas.height = thumbH;
+    const thumbCtx = thumbCanvas.getContext('2d', { willReadFrequently: true })!;
+
+    const frames: Blob[] = [];
+    const thumbs: Uint8Array[] = [];
+    const bitmaps: ImageBitmap[] = [];
+    for (let i = 0; i < count; i++) {
+      if (i) await new Promise((r) => setTimeout(r, gapMs));
+      onTick?.(i + 1);
+      ctx.drawImage(video, 0, 0);
+      bitmaps.push(await createImageBitmap(canvas));
+      frames.push(await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('The frame could not be captured.'))), 'image/jpeg', 0.92)));
+      thumbCtx.drawImage(video, 0, 0, THUMB_W, thumbH);
+      thumbs.push(grey(thumbCtx.getImageData(0, 0, THUMB_W, thumbH).data));
+    }
     video.srcObject = null;
-    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('The frame could not be captured.'))), 'image/png'));
+
+    // One numbered sheet: Gemini sees every frame at once and can compare them.
+    const cellH = Math.round((SHEET_CELL_W * h) / w);
+    const rows = Math.ceil(count / SHEET_COLS);
+    const sheetCanvas = document.createElement('canvas');
+    sheetCanvas.width = SHEET_CELL_W * Math.min(SHEET_COLS, count);
+    sheetCanvas.height = cellH * rows;
+    const s = sheetCanvas.getContext('2d')!;
+    s.fillStyle = '#000';
+    s.fillRect(0, 0, sheetCanvas.width, sheetCanvas.height);
+    bitmaps.forEach((b, i) => {
+      const x = (i % SHEET_COLS) * SHEET_CELL_W;
+      const y = Math.floor(i / SHEET_COLS) * cellH;
+      s.drawImage(b, x, y, SHEET_CELL_W, cellH);
+      s.fillStyle = 'rgba(0,0,0,.7)';
+      s.fillRect(x + 6, y + 6, 30, 26);
+      s.fillStyle = '#fff';
+      s.font = 'bold 18px sans-serif';
+      s.fillText(String(i + 1), x + 15, y + 26);
+      b.close();
+    });
+    const sheet = await new Promise<Blob>((resolve, reject) => sheetCanvas.toBlob((b) => (b ? resolve(b) : reject(new Error('The frames could not be put together.'))), 'image/jpeg', 0.9));
+    return { frames, sheet, thumbs, seconds: ((count - 1) * gapMs) / 1000 };
   } finally {
     stream.getTracks().forEach((t) => t.stop());
   }

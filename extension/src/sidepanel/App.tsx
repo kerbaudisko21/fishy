@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { suspectsFrom } from '../lib/checks/known';
+import { patternInfo } from '../lib/rules/engine';
 import { firstName } from '../lib/names';
 import { IN_EXTENSION } from '../lib/config';
 import { isPageMessage, type BannerState, type PanelMessage } from '../lib/messages';
@@ -151,6 +152,7 @@ export function App() {
     back();
   };
   const track = useMemo(() => trackFor(a.verdict, call.state), [a.verdict, call.state]);
+  const info = useCallback((name: string) => patternInfo(name, a.rules), [a.rules]);
 
   return (
     <>
@@ -198,6 +200,7 @@ export function App() {
             setFocusMedia(id);
             setScreen('media');
           }}
+          patternInfo={info}
           onDemo={loadDemo}
           onVoice={IN_EXTENSION ? () => void a.checkVoice() : undefined}
           onFrame={IN_EXTENSION ? () => void a.checkFrame() : undefined}
@@ -211,7 +214,18 @@ export function App() {
         <Voice data={ev.voice} busy={!!a.busy} onBack={back} onRecordAgain={a.mode === 'live' && IN_EXTENSION ? () => void a.checkVoice() : undefined} />
       )}
       {screen === 'known' && ev.known && <KnownScams data={ev.known} onBack={back} />}
-      {screen === 'media' && ev.media && <Media items={ev.media} busy={!!a.busy} focusId={focusMedia} onBack={back} onFile={(f) => void a.checkFile(f)} />}
+      {screen === 'media' && ev.media && (
+        <Media
+          items={ev.media}
+          busy={!!a.busy}
+          focusId={focusMedia}
+          onBack={back}
+          onFile={(f) => void a.checkFile(f)}
+          patterns={a.verdict.patterns}
+          patternInfo={info}
+          onChallenge={IN_EXTENSION ? () => void a.checkFrame(true) : undefined}
+        />
+      )}
       {screen === 'paste' && (
         <CheckYourself
           busy={!!a.busy}

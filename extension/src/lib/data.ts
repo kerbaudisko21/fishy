@@ -7,7 +7,7 @@ import type { StartResult } from './call-wait';
 import { DATABASE, DEMO, FIREBASE_READY, IN_EXTENSION, REGION } from './config';
 import { DEFAULT_SELECTORS, SELECTORS_KEY, type PageSelectors } from './messages';
 import { ensureSignedIn, firebaseApp } from './firebase';
-import { DEFAULT_RULES, type RulesConfig } from './rules/engine';
+import { DEFAULT_RULES, mergeRules, type RulesConfig } from './rules/engine';
 import type { Suspects } from './checks/known';
 import type { CallState, CallStatus, DirectoryPerson, KnownBadEntry, SignalKind, Supplier } from './types';
 
@@ -61,13 +61,13 @@ export async function loadKnownBad(): Promise<{ list: KnownBadEntry[]; updatedAt
 
 /** Rules engine config from Remote Config `scam_rules`, so new scams are blocked without a release (R2). */
 export async function loadRules(): Promise<RulesConfig> {
-  if (!FIREBASE_READY) return { ...DEFAULT_RULES, version: 14 };
+  if (!FIREBASE_READY) return DEFAULT_RULES;
   try {
     const rc = getRemoteConfig(firebaseApp());
     rc.settings.minimumFetchIntervalMillis = 60 * 60 * 1000;
     await fetchAndActivate(rc);
     const raw = getValue(rc, 'scam_rules').asString();
-    return raw ? ({ ...DEFAULT_RULES, ...JSON.parse(raw) } as RulesConfig) : DEFAULT_RULES;
+    return raw ? mergeRules(JSON.parse(raw) as Partial<RulesConfig>) : DEFAULT_RULES;
   } catch (e) {
     console.warn('[FISHY] Remote Config unavailable, using built-in rules', e);
     return DEFAULT_RULES;

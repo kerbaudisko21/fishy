@@ -18,15 +18,35 @@ export function mediaSignals(items: MediaCheck[]): Signal[] {
     if (facts.editedWith && first('edited_with')) {
       out.push({ kind: 'edited_with', step: 'check', source: 'on_device', title: `Edited in ${facts.editedWith}`, detail: 'The editor is named in the file’s data.' });
     }
+    // The laptop's own measurements.
+    const hints = m.forensics?.hints ?? [];
+    if (hints.some((h) => h.id === 'frozen') && first('video_frozen')) {
+      out.push({ kind: 'video_frozen', step: 'check', source: 'on_device', title: 'The video didn’t move', detail: 'Possibly a still picture played as a camera, or a frozen connection. Ask them to wave.' });
+    }
+    const pixel = hints.filter((h) => ['thumbnail', 'grid', 'resaved'].includes(h.id));
+    if ((pixel.some((h) => h.strength === 2) || pixel.length >= 2) && first('tamper_trace')) {
+      out.push({ kind: 'tamper_trace', step: 'check', source: 'on_device', title: 'Signs of tampering in the pixels', detail: `${pixel[0].text} A sign, not proof.`, strength: pixel.length >= 2 ? 2 : 1 });
+    }
+    const voiceHints = m.kind === 'voice' ? hints : [];
+    if (voiceHints.length && first('voice_artifacts')) {
+      out.push({ kind: 'voice_artifacts', step: 'check', source: 'on_device', title: 'Odd measurements in the voice', detail: `${voiceHints[0].text} A sign, not proof.`, strength: voiceHints.some((h) => h.strength === 2) ? 2 : 1 });
+    }
+
     const g = m.gemini;
     if (!g || g.assessment === 'no_clear_signs' || (g.assessment === 'unclear' && !g.signs.length)) continue;
     const voice = m.kind === 'voice';
-    const kind = voice ? 'voice_signs' : 'picture_signs';
+    const likely = g.assessment === 'likely_ai' || g.assessment === 'likely_edited';
+    if (m.challenge && likely && first('liveness_failed')) {
+      const lead = g.signs[0] ? `${g.signs[0].sign}${g.signs[0].where ? ` (${g.signs[0].where})` : ''}` : 'The face changed behind the hand';
+      out.push({ kind: 'liveness_failed', step: 'check', source: g.source, title: 'The face broke up behind a hand', detail: `${lead}. Real faces don’t do this; real-time face swaps often do.`, strength: 3 });
+      continue;
+    }
+    const kind = voice ? 'voice_signs' : m.kind === 'frame' ? 'video_signs' : m.kind === 'document' ? 'document_signs' : 'picture_signs';
     if (!first(kind)) continue;
     const what = voice ? 'voice' : m.kind === 'frame' ? 'video' : m.kind === 'document' ? 'document' : 'picture';
     const title =
       g.assessment === 'likely_ai'
-        ? voice ? 'Signs of a cloned voice' : `Signs of AI in the ${what}`
+        ? voice ? 'Signs of a cloned voice' : m.kind === 'frame' ? 'Signs of a deepfake face' : `Signs of AI in the ${what}`
         : g.assessment === 'likely_edited'
           ? voice ? 'Signs the voice was spliced' : `Signs the ${what} was edited`
           : voice ? 'Something odd in the voice' : `Something odd in the ${what}`;
@@ -38,7 +58,7 @@ export function mediaSignals(items: MediaCheck[]): Signal[] {
       source: g.source,
       title,
       detail: `${lead}${more}. A sign, not proof.`,
-      strength: g.assessment === 'unclear' ? 1 : 3,
+      strength: likely ? 3 : 1,
     });
   }
   return out;
