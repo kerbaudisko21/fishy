@@ -115,6 +115,26 @@ test('the web pages get their Firebase settings, and never an App Check debug to
   assert.ok(!JSON.stringify(files({ ...ENV, VITE_APPCHECK_DEBUG_TOKEN: 'a-debug-token' })).includes('a-debug-token'));
 });
 
+test('the web pages are told which Gemini API the cloud model uses, when the repository says', () => {
+  // The hosted pages call Gemini through Firebase AI Logic too. Left unset, they use the
+  // Gemini Developer API, which a project on trial credit refuses.
+  assert.equal(webOf({ ...ENV, AI_PROVIDER: 'agent-platform' }).VITE_AI_PROVIDER, 'agent-platform');
+  assert.equal(webOf({ ...ENV, AI_PROVIDER: 'developer' }).VITE_AI_PROVIDER, 'developer');
+  assert.equal(webOf({ ...ENV, AI_PROVIDER: '  Agent-Platform ' }).VITE_AI_PROVIDER, 'agent-platform');
+});
+
+test('with no Gemini API named, the line is left out and the pages use their built-in choice', () => {
+  assert.ok(!('VITE_AI_PROVIDER' in webOf(ENV)));
+  assert.ok(!('VITE_AI_PROVIDER' in webOf({ ...ENV, AI_PROVIDER: '  ' })));
+});
+
+test('a Gemini API name that is not one of the two is refused, not quietly replaced', () => {
+  const result = ciSettings({ ...ENV, AI_PROVIDER: 'vertex' });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.ok ? [] : result.problems, ['AI_PROVIDER must be "developer" or "agent-platform", not "vertex".']);
+});
+
 for (const name of Object.keys(ENV)) {
   test(`without ${name} nothing is written, and the answer names it`, () => {
     const result = ciSettings({ ...ENV, [name]: '  ' });

@@ -84,6 +84,8 @@ jobs:
           FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
           RECAPTCHA_ENTERPRISE_KEY: ${{ vars.RECAPTCHA_ENTERPRISE_KEY }}
           FCM_VAPID_KEY: ${{ vars.FCM_VAPID_KEY }}
+          # Which Gemini API the hosted pages call: developer (the default) or agent-platform.
+          AI_PROVIDER: ${{ vars.AI_PROVIDER }}
         run: node scripts/ci-write-settings.ts
 
       # Signs in as the deploy account, after the dependencies are installed

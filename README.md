@@ -109,7 +109,7 @@ Firebase AI Logic can reach Gemini through two APIs. FISHY works with either: bo
 | `developer` (when not set) | Gemini Developer API | Nothing on a project **without** billing. On a project **with** billing it needs prepaid credit bought in Google AI Studio (smallest amount $5), and Google Cloud free trial credit cannot pay for it. With no prepaid credit every call is refused (we saw 429, "Your prepayment credits are depleted") |
 | `agent-platform` | Gemini on Agent Platform (formerly Vertex AI) | The project's own Cloud Billing account, per use. Needs the Blaze plan. Free trial credit pays for it only on a billing account opened before 16 Nov 2026 that has not been upgraded to a paid account since then |
 
-FISHY's functions need the Blaze plan, so a project that runs all of FISHY has billing: use `agent-platform` there, or buy prepaid credit and keep `developer`. Any other value stops the reader with a message that names the setting. Sources: [Firebase AI Logic pricing](https://firebase.google.com/docs/ai-logic/pricing), [its FAQ on free trial credit](https://firebase.google.com/docs/ai-logic/faq-and-troubleshooting), [Gemini API billing](https://ai.google.dev/gemini-api/docs/billing).
+FISHY's functions need the Blaze plan, so a project that runs all of FISHY has billing: use `agent-platform` there, or buy prepaid credit and keep `developer`. Any other value stops the reader with a message that names the setting. The hosted pages take the same setting: `VITE_AI_PROVIDER` in `web/.env.local` for a deploy from a laptop, and the repository variable `AI_PROVIDER` for a deploy from GitHub. A name that is not one of the two stops that deploy before anything is written. Sources: [Firebase AI Logic pricing](https://firebase.google.com/docs/ai-logic/pricing), [its FAQ on free trial credit](https://firebase.google.com/docs/ai-logic/faq-and-troubleshooting), [Gemini API billing](https://ai.google.dev/gemini-api/docs/billing).
 
 ### Deploy to Firebase (Google Cloud)
 
@@ -281,6 +281,7 @@ Then, in the repository: Settings → Secrets and variables → Actions.
 | `HOSTING_SITE` | variable | FISHY's Hosting site ID |
 | `FIREBASE_WEB_API_KEY`, `FIREBASE_WEB_APP_ID` | variable | From the web app in the Firebase console. Both are public values: they are in the pages anyone can load |
 | `FIREBASE_MESSAGING_SENDER_ID`, `RECAPTCHA_ENTERPRISE_KEY`, `FCM_VAPID_KEY` | variable, optional | The rest of `web/.env.example` |
+| `AI_PROVIDER` | variable, optional | Which Gemini API the hosted pages call: `developer` or `agent-platform` (see [Which Gemini API the cloud model uses](#which-gemini-api-the-cloud-model-uses)). Written to the web build as `VITE_AI_PROVIDER`. Not set: the pages use the Gemini Developer API |
 | `COMPANY_NAME`, `COMPANY_DOMAIN` | variable, optional | As in the settings table below |
 | `APPROVAL_PAGE_ENABLED`, `CALLS_ENABLED`, `CALLS_DAILY_CAP` | variable, optional | The switches. Anything but the word `true` is off |
 | `CALL_ALLOWLIST`, `TWILIO_FROM` | secret, optional | Phone numbers, so they are secrets |
