@@ -4,7 +4,7 @@ import { DetailHead, Icon, Privacy, Section } from '../components';
 type Data = NonNullable<Evidence['tactics']>;
 
 export function Tactics({ data, model, onBack, onPaste }: { data: Data; model?: string; onBack: () => void; onPaste: () => void }) {
-  const badge = data.source === 'on_device' ? `On device, ${model ?? 'Gemini Nano'}` : 'Cloud, redacted text';
+  const badge = data.source === 'on_device' ? `On device, ${model ?? (data.keywordsOnly ? 'keyword list' : 'Gemini Nano')}` : 'Cloud, redacted text';
   return (
     <>
       <DetailHead title="Pressure in the request" step="read" badges={[{ source: data.source, label: badge }]} onBack={onBack} />

@@ -4,6 +4,7 @@ import { candidatesFromText, matchKnown } from '../../extension/src/lib/checks/k
 import { decide } from '../../extension/src/lib/rules/engine';
 import type { Signal, Source, Tactic, Verdict } from '../../extension/src/lib/types';
 import { CONFIGURED } from './api';
+import { PARTLY_CHECKED } from '../../extension/src/lib/ai/fallback';
 import { explain, nanoStatus, readTactics, type Explanation, type NanoStatus, type ReadResult } from './hybrid';
 import { line, Reveal } from '../../extension/src/lib/transitions';
 import { PictureCheck } from './PictureCheck';
@@ -59,6 +60,7 @@ const WHERE: Record<string, string> = {
   'gemini-nano': 'Gemini Nano, on this device',
   'gemini-cloud': 'Gemini, cloud (redacted text)',
   keywords: 'Keyword reader (no Firebase config)',
+  'keywords-fallback': 'Keyword list (Gemini didn’t answer)',
   template: 'Built from the red flags',
 };
 
@@ -104,6 +106,8 @@ export function TryPage() {
   };
 
   const fishy = result?.verdict.level === 'fishy';
+  // Gemini never read the message and the keyword list found nothing: that is not "Looks normal".
+  const partly = !!result?.read.geminiFailed && !fishy;
 
   return (
     <main className="page try">
@@ -157,15 +161,17 @@ export function TryPage() {
 
       {result && (
         <Reveal as="section" key={result.read.hits.map((h) => h.quote).join('|') + result.verdict.flags.length} className="stack" aria-label="Result">
-          <div className={line(1, `verdict ${fishy ? 'fishy' : 'clear'}`)}>
-            <span className="verdict-pill">{fishy ? 'Hold the payment' : 'No red flags'}</span>
+          <div className={line(1, `verdict ${fishy ? 'fishy' : partly ? 'look' : 'clear'}`)}>
+            <span className="verdict-pill">{fishy ? 'Hold the payment' : partly ? PARTLY_CHECKED.pill : 'No red flags'}</span>
             <h2 tabIndex={-1} ref={resultRef}>
-              {fishy ? 'Something’s fishy.' : 'Looks normal.'}
+              {fishy ? 'Something’s fishy.' : partly ? PARTLY_CHECKED.title : 'Looks normal.'}
             </h2>
             <span>
               {fishy
                 ? `${result.verdict.flags.length} red flag${result.verdict.flags.length === 1 ? '' : 's'}. Don’t pay until the person confirms on the number on record.`
-                : 'For a payment, a call on the number on record is still the safe step.'}
+                : partly
+                  ? PARTLY_CHECKED.line
+                  : 'For a payment, a call on the number on record is still the safe step.'}
             </span>
           </div>
 
@@ -182,7 +188,7 @@ export function TryPage() {
           <div className={line(3, 'card')}>
             <div className="card-head">
               <strong>Pressure found</strong>
-              <Ran source={result.read.source} reader={result.read.reader} />
+              <Ran source={result.read.source} reader={result.read.geminiFailed ? 'keywords-fallback' : result.read.reader} />
             </div>
             {result.read.hits.length === 0 ? (
               <span className="muted">No pressure tactics in this text.</span>

@@ -59,6 +59,9 @@ h1[tabindex='-1']:focus { outline: none; }
 /* The same row as a link: the approval page, when no phone call was placed. */
 .hero a.escalate { color: #fff; font-weight: 600; text-decoration: none; }
 .hero a.escalate:hover, .hero a.escalate:focus-visible { text-decoration: underline; }
+/* And as a button: "Call again" when nobody answered. */
+.hero button.escalate { width: 100%; border: 0; font: inherit; font-size: 13px; font-weight: 600; color: #fff; text-align: left; cursor: pointer; }
+.hero button.escalate:hover, .hero button.escalate:focus-visible { text-decoration: underline; }
 .pulse { position: relative; width: 8px; height: 8px; border-radius: 999px; background: #6fd3b8; }
 
 /* The four steps on one line */
