@@ -44,6 +44,10 @@ export const Icon = {
   face: (s = 18) => svg(s, <><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4" /><path d="M9 10v1M15 10v1M9 15h6" /></>, 2.3),
   video: (s = 18) => svg(s, <><path d="M3 6h12v12H3z" /><path d="M15 10l6-4v12l-6-4" /></>),
   image: (s = 18) => svg(s, <><path d="M3 4h18v16H3z" /><path d="M3 16l5-5 4 4 3-3 6 6" /><path d="M15 7h2v2h-2z" fill="currentColor" /></>),
+  /** Save: out of the tray. */
+  download: (s = 16) => svg(s, <><path d="M4 14v6h16v-6" /><path d="M12 4v12M7 11l5 5 5-5" /></>, 2.4),
+  play: (s = 14) => svg(s, <path d="M7 4l13 8-13 8z" fill="currentColor" />, 2),
+  stop: (s = 14) => svg(s, <path d="M6 6h12v12H6z" fill="currentColor" />, 2),
   mic: (s = 18) => svg(s, <><path d="M9 3h6v11H9z" /><path d="M5 11c0 4 3 7 7 7s7-3 7-7M12 18v3M8 21h8" /></>),
 };
 

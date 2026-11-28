@@ -38,6 +38,8 @@ It then turns them into a score with each reason's weight. No detector catches e
 | **The website you're on** | "The website", `Alt+Shift+W`, right-click the page, or a link (address only, never opened) | Look-alike addresses, look-alike letters, abused endings, free hosting asking for passwords, forms and scripts sending elsewhere, the domain's age and Google Web Risk, then Gemini looks at a screenshot |
 | **A message** | "Paste a message instead", or right-click selected text | Pressure tactics (urgency, secrecy, authority), with Gemini Nano on the raw text, or the cloud on a redacted copy |
 
+**Seeing what's fishy:** Gemini marks each problem with a numbered box. After a check, FISHY replays it like a short video: a call's frames play back and stop on each marked frame, and pictures, PDF pages and website screenshots step through each box, zooming in with what is wrong written underneath. **Save video** records that walkthrough as an MP4 on the laptop, to send to someone who wouldn't open FISHY.
+
 Every result says **what kind of scam it looks like** (from Remote Config), with what to do. The **Scams** tab is a picture guide to the six scam types FISHY spots.
 
 ## How FISHY uses Firebase AI Logic

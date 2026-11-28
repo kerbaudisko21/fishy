@@ -2,6 +2,11 @@
 
 Each version's build also shows in the extension under **Settings → About** (version, commit, build time and what's new). The same list lives in `extension/src/lib/changes.ts`.
 
+## 1.2.0 · 29 Nov 2026
+- A replay of what's fishy: after a video call check, the frames play back and stop on each frame Gemini pointed at, zooming into the area, dimming the rest and saying what is wrong underneath; frozen frames get a caption too. It plays once by itself when the check finishes
+- Pictures, PDF pages and website screenshots get the same walkthrough ("Show me what's fishy"), and you can tap any numbered box to zoom into it
+- Save video: records the walkthrough as a short MP4 (WebM where MP4 isn't available), with the verdict on top and the advice at the end, to send to someone who wouldn't open FISHY. It is made on the laptop; nothing is uploaded
+
 ## 1.1.0 · 29 Nov 2026
 - A louder look: a deeper manila, a stronger signal red and a highlighter yellow for what to read first (the tab bar, the READY tag, the sentence that says why something is fishy)
 - New fonts: Big Shoulders for headings (drawn from Chicago street signage) and its stencil cut for the wordmark, in place of Archivo

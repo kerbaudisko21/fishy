@@ -9,6 +9,15 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '1.2.0',
+    date: '29 Nov 2026',
+    items: [
+      'A replay of what’s fishy: after a video call check, the frames play back and stop on each frame Gemini pointed at, zooming into the area, dimming the rest and saying what is wrong underneath; frozen frames get a caption too. It plays once by itself when the check finishes',
+      'Pictures, PDF pages and website screenshots get the same walkthrough (“Show me what’s fishy”), and you can tap any numbered box to zoom into it',
+      'Save video: records the walkthrough as a short MP4 (WebM where MP4 isn’t available), with the verdict on top and the advice at the end, to send to someone who wouldn’t open FISHY. It is made on the laptop; nothing is uploaded',
+    ],
+  },
+  {
     version: '1.1.0',
     date: '29 Nov 2026',
     items: [

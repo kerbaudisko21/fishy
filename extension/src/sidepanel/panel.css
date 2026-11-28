@@ -788,3 +788,32 @@ mark.marker { background: linear-gradient(transparent 45%, var(--marker) 45%, va
 .floating .brand { display: none; }
 .floating .header-row { justify-content: flex-end; }
 .hero.navy .hero-pill .pulse { background: var(--ink); }
+
+/* ---------- The replay: zoom into what's fishy, like a short video (1.2.0) ---------- */
+/* The picture and its pins sit on one stage that moves and scales together; the caption and the
+   frame counter stay put on the frame. */
+.media-frame { display: block; }
+.media-stage { position: relative; transform-origin: 0 0; transition: transform 450ms cubic-bezier(.22, 1, .36, 1); will-change: transform; }
+.media-frame.reel .media-preview, .media-frame.zoomed .media-preview { max-height: none; }
+.media-frame .voice-placeholder { display: flex; justify-content: center; padding: 34px 0; }
+/* Numbered areas are buttons now: tap one to zoom in. Borders and numbers keep their size when zoomed. */
+button.pin-box { padding: 0; background: transparent; cursor: zoom-in; pointer-events: auto; border-width: calc(2px / var(--z, 1)); }
+button.pin-box:disabled { cursor: default; }
+button.pin-box:focus-visible { outline: 3px solid var(--marker); outline-offset: 2px; }
+.pin-box .pin-num { transform: scale(calc(1 / var(--z, 1))); transform-origin: 0 0; }
+.pin-box.on { border-color: var(--marker); border-width: calc(3px / var(--z, 1)); box-shadow: 0 0 0 9999px rgba(20, 20, 20, .5); z-index: 1; cursor: zoom-out; }
+.media-frame.zoomed { cursor: zoom-out; }
+.reel-count { position: absolute; top: 8px; left: 8px; z-index: 3; padding: 3px 8px; border-radius: 3px; background: rgba(20, 20, 20, .75); color: var(--surface); font: 700 11.5px var(--font-body); font-variant-numeric: tabular-nums; }
+.media-view { position: relative; overflow: hidden; }
+.replay-caption { min-height: 58px; box-sizing: border-box; display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; background: var(--ink); color: var(--surface); font-size: 13.5px; font-weight: 600; line-height: 1.4; animation: fade 200ms ease both; }
+.replay-caption .pin-num { flex: none; }
+.replay-caption.idle { background: var(--surface-muted); color: var(--muted); font-weight: 500; align-items: center; animation: none; }
+.replay-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.replay-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 12px; border: 0; border-radius: var(--r-md); background: var(--ink); color: var(--surface); font: 800 15px var(--font-head); letter-spacing: .05em; text-transform: uppercase; cursor: pointer; touch-action: manipulation; }
+.replay-btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+.replay-btn:disabled { opacity: .7; cursor: progress; }
+.replay-btn:active:not(:disabled) { transform: scale(.97); }
+@media (hover: hover) and (pointer: fine) { .replay-btn:not(:disabled):hover { background: var(--brand); color: #fff; box-shadow: none; } }
+.replay-btn:focus-visible { outline: 3px solid var(--marker); outline-offset: 2px; }
+.replay-error { margin: 6px 0 0; color: var(--danger-text); font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .media-stage { transition: none; } .replay-caption { animation: none; } }
