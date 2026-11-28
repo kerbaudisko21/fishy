@@ -35,6 +35,7 @@ function WithoutOpening() {
   return (
     <div className="surface card-pad">
       <span className="row-title">Keyboard shortcuts</span>
+      <span className="row-detail">A shortcut works like clicking FISHY on that tab, so the face and voice checks start straight away.</span>
       {keys.length ? (
         <dl className="kv">
           {keys.map((k) => (
@@ -129,7 +130,7 @@ const NANO_TEXT: Record<NanoStatus, { title: string; detail: string }> = {
   },
 };
 
-export function Settings({ rulesVersion, knownCount, onBack, onClear }: Props) {
+export function Settings({ rulesVersion, onBack, onClear }: Props) {
   const [nano, setNano] = useState<NanoStatus | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -189,8 +190,6 @@ export function Settings({ rulesVersion, knownCount, onBack, onClear }: Props) {
             <dd>{FIREBASE_READY ? 'Gemini (hybrid)' : 'Keywords (offline)'}</dd>
             <dt>Scam rules</dt>
             <dd>v{rulesVersion}</dd>
-            <dt>Known bad details</dt>
-            <dd>{knownCount}</dd>
           </dl>
         </div>
         </Section>

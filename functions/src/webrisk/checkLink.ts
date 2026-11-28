@@ -7,7 +7,7 @@
 // Results are not stored. A match is only reported until its expiry time,
 // and must be shown with the attribution below.
 
-import { RequestError } from '../call/ports.ts';
+import { RequestError } from '../request-error.ts';
 
 export interface ThreatLookup {
   /** The kinds of threat listed for this address, and when that answer stops being valid. */

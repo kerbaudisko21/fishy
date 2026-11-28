@@ -677,3 +677,30 @@ html { scrollbar-color: #b9c6cc transparent; scrollbar-width: thin; caret-color:
 .switch.on { background: var(--ok); }
 .switch.on .switch-thumb { transform: translateX(16px); }
 .card-pad > .row-title { margin-top: 2px; }
+
+/* The scam guide */
+.guide-head { display: flex; flex-direction: column; gap: 4px; }
+.guide-head h1 { margin: 0; font-family: var(--font-head); font-size: 24px; line-height: 1.15; }
+.guide { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.guide-card { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.guide-card.hit { box-shadow: 0 0 0 2px var(--brand), 0 1px 0 var(--line); }
+.guide-top { display: flex; gap: 14px; align-items: flex-start; }
+.guide-art { flex: none; width: 64px; height: 64px; padding: 6px; border-radius: 14px; background: var(--note); color: var(--ink); }
+.guide-art svg { display: block; width: 100%; height: 100%; }
+.guide-name { margin: 0 0 4px; font-family: var(--font-head); font-size: 17px; line-height: 1.25; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.guide-hit { font: 800 11px var(--font-body); padding: 3px 8px; border-radius: 999px; background: var(--danger-bg); color: var(--danger-text); }
+.guide-how { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+.guide-signs { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; line-height: 1.4; color: var(--ink-2); }
+.guide-foot { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 13px; }
+.guide-check, .guide-act { display: flex; gap: 8px; align-items: flex-start; }
+.guide-check { color: var(--muted); }
+.guide-act { font-weight: 700; color: var(--ink); }
+.guide-check svg, .guide-act svg { flex: none; margin-top: 2px; }
+
+/* Where Gemini points: numbered boxes on the picture, the same numbers on the reasons */
+.media-frame:has(.pin-box) .media-preview { max-height: none; }
+.pin-box { position: absolute; border: 2px solid var(--brand); border-radius: 6px; box-shadow: 0 0 0 1px rgba(16, 32, 46, .55); pointer-events: none; animation: fade 200ms ease both; }
+.pin-box .pin-num { position: absolute; top: -10px; left: -10px; }
+.pin-num { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--brand); color: var(--ink); font: 800 11.5px var(--font-body); font-variant-numeric: tabular-nums; box-shadow: 0 1px 2px rgba(16, 32, 46, .3); }
+.pin-num.inline { flex: none; margin-top: 1px; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .pin-box { animation: none; } }

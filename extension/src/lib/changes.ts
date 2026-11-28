@@ -9,6 +9,28 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '0.9.0',
+    date: '29 Nov 2026',
+    items: [
+      'FISHY is now about checking, not payments: the payment card, calling a person with a PIN, “Hold the payment”, the incident report and the Meet and Gmail page scripts are gone (two fewer Chrome permissions)',
+      'Gemini points at what looks wrong: numbered boxes on the picture, the website screenshot or the video frame, with the same numbers on the reasons',
+      'The video check takes 9 frames over about 4 seconds (12 for the hand check) instead of 5',
+      '“Why this is risky” is gone from results (each card already says why); Gemini is told never to name or guess a specific AI model',
+      'Shorter advice under results: “Signs, not proof. Before money moves, call them back on the number you have.”, and a short “Already paid?”',
+      'PDF checks no longer compare bank accounts; the scam guide and scam names no longer mention executives or suppliers’ accounts',
+      'README rewritten for what FISHY is now',
+    ],
+  },
+  {
+    version: '0.8.1',
+    date: '29 Nov 2026',
+    items: [
+      'Simpler home: about half the words; the three buttons say just “Deepfake?”, “Cloned?”, “Scam site?”; the shortcut tips moved to Settings',
+      'The Directory tab is now “Scams”: a picture guide to the six scams FISHY spots (deepfake boss on a call, cloned voice, fake website, QR code scam, doctored invoice, fake payment proof), each with its signs, which check to use and what to do; a scam your checks matched is marked',
+      'No “Call … on record” bar when nobody is on record',
+    ],
+  },
+  {
     version: '0.8.0',
     date: '29 Nov 2026',
     items: [

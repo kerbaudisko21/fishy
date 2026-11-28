@@ -128,7 +128,7 @@ export type MediaAssessment = 'likely_ai' | 'likely_edited' | 'no_clear_signs' |
 /** One thing the person chose to check: a picture, a document, a voice clip or a frame of the call. */
 export interface GeminiReading {
   assessment: MediaAssessment;
-  signs: Array<{ sign: string; where: string }>;
+  signs: Array<{ sign: string; where: string; box?: { x0: number; y0: number; x1: number; y1: number }; frame?: number }>;
   confidence?: 'low' | 'medium' | 'high';
   /** Website checks: who the page claims to be. */
   claimsToBe?: string;

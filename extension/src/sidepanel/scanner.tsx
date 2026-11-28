@@ -89,8 +89,8 @@ export function DropZone({ onFile, disabled, compact, children }: { onFile: (f: 
     >
       <span className="dropzone-icon">{Icon.upload(compact ? 18 : 22)}</span>
       <span className="dropzone-text">
-        <strong>{compact ? 'Check something else' : 'Drop a picture, a PDF or a voice note'}</strong>
-        {!compact && <span>or click to choose a file. Up to 20 MB.</span>}
+        <strong>{compact ? 'Check something else' : 'Drop a picture, PDF or voice note'}</strong>
+        {!compact && <span>or click to choose</span>}
       </span>
       {children}
       <input type="file" accept={ACCEPT} className="visually-hidden" disabled={disabled} onChange={(e) => take(e.target.files?.[0] ?? undefined)} />
@@ -106,17 +106,17 @@ export function ActionGrid({ onFrame, onVoice, onSite, busy }: { onFrame?: () =>
       <button className="action" onClick={onFrame} disabled={busy || !onFrame} title={why}>
         <span className="action-icon">{Icon.video(22)}</span>
         <span className="action-title">The face</span>
-        <span className="action-detail">Real or deepfake? Watches 3 s.</span>
+        <span className="action-detail">Deepfake?</span>
       </button>
       <button className="action" onClick={onVoice} disabled={busy || !onVoice} title={why}>
         <span className="action-icon">{Icon.mic(22)}</span>
         <span className="action-title">The voice</span>
-        <span className="action-detail">Cloned? Listens 10 s.</span>
+        <span className="action-detail">Cloned?</span>
       </button>
       <button className="action" onClick={onSite} disabled={busy || !onSite} title={why}>
         <span className="action-icon">{Icon.link(22)}</span>
         <span className="action-title">The website</span>
-        <span className="action-detail">Scam or real? Reads this page.</span>
+        <span className="action-detail">Scam site?</span>
       </button>
     </div>
   );
@@ -306,7 +306,7 @@ export function WatchPanel({ watch, onStart, onStop, disabled }: { watch: { on: 
       <button className="watch-start" role="switch" aria-checked={false} onClick={onStart} disabled={disabled || !onStart} title={onStart ? undefined : 'Open FISHY from the call’s tab'}>
         <span className="grow">
           <span className="row-title">Keep watching this call</span>
-          <span className="row-detail">Checks the face every 20 s on this laptop, and alerts only when the signs add up.</span>
+          <span className="row-detail">Alerts only when it’s sure.</span>
         </span>
         <span className="switch" aria-hidden="true">
           <span className="switch-thumb" />

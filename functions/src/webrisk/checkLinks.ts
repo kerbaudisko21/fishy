@@ -4,7 +4,7 @@
 // fragment and sign-in details before it is looked up (see checkLink.ts), and
 // nothing else about the email is accepted at all.
 
-import { RequestError } from '../call/ports.ts';
+import { RequestError } from '../request-error.ts';
 import { ADVISORY, checkLink, cleanUrl } from './checkLink.ts';
 import type { ThreatLookup } from './checkLink.ts';
 

@@ -14,6 +14,7 @@ import { videoLab, voiceLab } from '../lib/forensics/labs';
 import { qrFromBlob, qrLab } from '../lib/forensics/qr';
 import { bands, hamming, SAME_PICTURE_DISTANCE } from '../lib/forensics/phash';
 import { loadStats, recordAnswer, trustFor, type StatKind } from '../lib/ai/stats';
+import { boxOnSheet } from '../lib/ai/boxes';
 import { MAX_VOICE_SECONDS, pictureTooBig, recordingSeconds, VOICE_ANALYSIS_SECONDS } from '../lib/forensics/limits';
 import { READER_FELL_BACK } from '../lib/ai/fallback';
 import { readTactics } from '../lib/ai/tactics';
@@ -25,7 +26,7 @@ import { candidatesFromText, matchKnown, type Candidate } from '../lib/checks/kn
 import { scanPicture } from '../lib/checks/media';
 import { readPdf, renderFirstPage } from '../lib/checks/pdf';
 import { mainAmount, type SaidLine } from '../lib/checks/said';
-import { checkLinks, domainAge, findReported, reportFake, loadDirectory, loadKnownBad, loadRules, syncSelectors, type Directory } from '../lib/data';
+import { checkLinks, domainAge, findReported, reportFake, loadDirectory, loadKnownBad, loadRules, type Directory } from '../lib/data';
 import { base64ToBuffer, type AttachmentReply, type PageMessage, type PanelMessage } from '../lib/messages';
 import { toEvidence, toRequest, toSignals, type Findings, type TranscriptLine } from '../lib/pipeline';
 import { decide, DEFAULT_RULES, type RulesConfig } from '../lib/rules/engine';
@@ -141,7 +142,6 @@ export function useAnalysis() {
     loadKnownBad().then(setKnown).catch((e) => console.warn('[FISHY] known list', e));
     loadRules().then(setRules);
     void loadStats();
-    void syncSelectors();
   }, []);
 
   const goLive = useCallback(() => setMode('live'), []);
@@ -442,12 +442,11 @@ export function useAnalysis() {
       setBusy('Reading the document…');
       const id = newId();
       try {
-        const { text, facts } = await readPdf(data.slice(0));
+        const { facts } = await readPdf(data.slice(0));
         const page = await renderFirstPage(data);
         putMedia({ id, kind: 'document', name, at: clock(), preview: URL.createObjectURL(page), checks: editTraces(facts) });
         const qr = await qrEvidence(page);
         if (qr) patchMedia(id, { forensics: { hints: qr.hints, rows: qr.rows } });
-        if (findAccounts(text).length) await checkInvoice(data.slice(0), name);
         setBusy('Gemini is looking at the first page…');
         await askGemini(id, () => readPicture(page, { measured: 'This is page 1 of a PDF, drawn by FISHY: judge what is on the page, not the drawing.', trust: trustFor('document') }), 'document');
       } catch (e) {
@@ -500,9 +499,10 @@ export function useAnalysis() {
       const tab = await activeTab();
       if (tab?.id === undefined) return setError('Open the call’s tab first.');
       setError(null);
-      const count = challenge ? 8 : 5;
+      // More frames show more change over time: 9 over about 4 s, 12 during the hand check.
+      const count = challenge ? 12 : 9;
       try {
-        setBusy(challenge ? 'Watching the hand pass… keep it slow' : 'Watching the video for 3 seconds…');
+        setBusy(challenge ? 'Watching the hand pass… keep it slow' : 'Watching the video for 4 seconds…');
         // In the floating window, step out of the picture while it captures.
         const floating = window.parent !== window;
         if (floating) {
@@ -511,7 +511,7 @@ export function useAnalysis() {
         }
         let set: Awaited<ReturnType<typeof captureTabFrames>>;
         try {
-          set = await captureTabFrames(tab.id, count, challenge ? 500 : 700);
+          set = await captureTabFrames(tab.id, count, challenge ? 400 : 450);
         } finally {
           if (floating) window.parent.postMessage({ fishy: 'show' }, '*');
         }
@@ -531,7 +531,21 @@ export function useAnalysis() {
           forensics: { hints: lab.hints, rows: lab.rows, motion: lab.motion },
         });
         setBusy(challenge ? 'Gemini is checking the face behind the hand…' : 'Gemini is comparing the frames…');
-        await askGemini(id, () => readFrames(set.sheet, { measured: lab.measured, localHint: !!lab.hints.length, challenge, trust: trustFor('frame') }), 'frame');
+        await askGemini(
+          id,
+          async () => {
+            const r = await readFrames(set.sheet, { measured: lab.measured, localHint: !!lab.hints.length, challenge, trust: trustFor('frame') });
+            if (!r) return r;
+            // Gemini points on the sheet; each box moves onto the frame it is in.
+            const onFrames = (signs: typeof r.final.signs) =>
+              signs.map((sg) => {
+                const at = sg.box ? boxOnSheet(sg.box, count) : null;
+                return at ? { ...sg, box: at.box, frame: at.frame } : { ...sg, box: undefined };
+              });
+            return { ...r, final: { ...r.final, signs: onFrames(r.final.signs) }, firstLook: r.firstLook && { ...r.firstLook, signs: onFrames(r.firstLook.signs) } };
+          },
+          'frame',
+        );
       } catch (e) {
         setError(captureError('video', e));
       } finally {

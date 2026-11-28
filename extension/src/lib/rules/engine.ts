@@ -69,13 +69,13 @@ export const DEFAULT_RULES: RulesConfig = {
         'Request comes from a boss or the supplier, not both',
       ],
     },
-    { name: 'Executive asks for a secret, urgent transfer', requires: ['pressure_tactics'] },
+    { name: 'Pressure scam: urgent and secret', requires: ['pressure_tactics'] },
     { name: 'Lookalike supplier invoice', requires: ['lookalike_sender', 'bank_account_changed'] },
     // What kind of scam the media points to. Names repeat where different evidence means the same scam.
     {
-      name: 'Deepfake executive on a video call',
+      name: 'Deepfake on a video call, with pressure',
       requires: ['video_signs', 'pressure_tactics'],
-      signs: ['A boss or colleague on video asks for an urgent, secret payment', 'The face shows deepfake signs across frames'],
+      signs: ['Someone you know asks, on video, for something urgent and secret', 'The face shows deepfake signs across frames'],
       action: 'Leave the call and phone them back on the number on record.',
     },
     {
@@ -97,9 +97,9 @@ export const DEFAULT_RULES: RulesConfig = {
       action: 'Ask them to wave or turn their head, then check the video again.',
     },
     {
-      name: 'Executive voice clone',
+      name: 'Cloned voice, with pressure',
       requires: ['voice_signs', 'pressure_tactics'],
-      signs: ['A familiar voice asks for an urgent payment', 'The voice shows signs of being generated'],
+      signs: ['A familiar voice asks for something urgent', 'The voice shows signs of being generated'],
       action: 'Hang up and call them back on the number on record.',
     },
     {

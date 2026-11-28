@@ -73,7 +73,7 @@ describe('what kind of scam (media)', () => {
   const sig = (kind: Signal['kind'], strength?: number): Signal => ({ kind, step: 'check', source: 'on_device', title: kind, detail: '', strength });
   it('names the most specific scam first, each name once', () => {
     const v = decide([sig('video_signs', 3), sig('pressure_tactics', 3)]);
-    expect(v.patterns[0]).toBe('Deepfake executive on a video call');
+    expect(v.patterns[0]).toBe('Deepfake on a video call, with pressure');
     expect(v.patterns).toContain('Deepfake video call');
     expect(new Set(v.patterns).size).toBe(v.patterns.length);
     expect(decide([sig('ai_label'), sig('ai_tool')]).patterns).toEqual(['AI-made picture or receipt']);

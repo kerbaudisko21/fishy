@@ -2,6 +2,20 @@
 
 Each version's build also shows in the extension under **Settings → About** (version, commit, build time and what's new). The same list lives in `extension/src/lib/changes.ts`.
 
+## 0.9.0 · 29 Nov 2026
+- FISHY is now about checking, not payments: the payment card, calling a person with a PIN, "Hold the payment", the incident report and the Meet and Gmail page scripts are gone (two fewer Chrome permissions)
+- Gemini points at what looks wrong: numbered boxes on the picture, the website screenshot or the video frame, with the same numbers on the reasons
+- The video check takes 9 frames over about 4 seconds (12 for the hand check) instead of 5
+- "Why this is risky" is gone from results (each card already says why); Gemini is told never to name or guess a specific AI model
+- Shorter advice under results: "Signs, not proof. Before money moves, call them back on the number you have.", and a short "Already paid?"
+- PDF checks no longer compare bank accounts; the scam guide and scam names no longer mention executives or suppliers' accounts
+- README rewritten for what FISHY is now
+
+## 0.8.1 · 29 Nov 2026
+- Simpler home: about half the words; the three buttons say just "Deepfake?", "Cloned?", "Scam site?"; the shortcut tips moved to Settings
+- The Directory tab is now "Scams": a picture guide to the six scams FISHY spots (deepfake boss on a call, cloned voice, fake website, QR code scam, doctored invoice, fake payment proof), each with its signs, which check to use and what to do; a scam your checks matched is marked
+- No "Call … on record" bar when nobody is on record
+
 ## 0.8.0 · 29 Nov 2026
 - Use FISHY without opening it first: keyboard shortcuts Alt+Shift+F (open FISHY), Alt+Shift+W (check this website), Alt+Shift+V (check the face on this call), Alt+Shift+A (check the voice); change them at chrome://extensions/shortcuts
 - Right-click anything to check it: a picture, a video (its face), a link (checked by its address, without opening it), selected text (pressure in a message) or the page itself
