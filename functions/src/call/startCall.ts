@@ -33,6 +33,13 @@ function dayKey(now: number): string {
   return new Date(now).toISOString().slice(0, 10);
 }
 
+/** Checks one person may get in an hour, whoever asks: stops call spam and approval-link farming. */
+export const PERSON_CHECKS_PER_HOUR = 5;
+
+function hourKey(now: number): string {
+  return new Date(now).toISOString().slice(0, 13);
+}
+
 function readRequest(data: unknown): { checkId: string; personId: string } {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     throw new RequestError('invalid-argument', 'Send checkId and personId.');
@@ -106,6 +113,9 @@ export async function startCall(deps: CheckDeps, caller: { uid: string } | null,
     createdAt: now,
     updatedAt: now,
   };
+  if (!(await deps.store.reservePersonCheck(personId, hourKey(now), PERSON_CHECKS_PER_HOUR))) {
+    throw new RequestError('resource-exhausted', 'This person was asked several times this hour. Wait, or ask someone else in the directory.');
+  }
   await deps.store.createVerification(record);
 
   let callPlaced = false;

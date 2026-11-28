@@ -1,13 +1,8 @@
+import { ESCALATE_MINUTES } from '../../lib/config';
+import { initials } from '../../lib/names';
 import type { DirectoryPerson, Supplier } from '../../lib/types';
 import { Privacy, Section } from '../components';
 
-const initials = (name: string) =>
-  name
-    .split(' ')
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
 
 const SHADES = ['#10202e', '#2f4a5f', '#4c6577'];
 
@@ -15,6 +10,8 @@ export function Directory({ people, suppliers }: { people: DirectoryPerson[]; su
   const ordered = [...people].sort((a, b) => (a.escalationOrder ?? 0) - (b.escalationOrder ?? 0));
   return (
     <main className="main">
+      {/* The screen's name for screen readers; the tab above already shows it. */}
+      <h1 className="visually-hidden">Directory</h1>
       <Section title="Approvers" aside="Called in this order">
         <ol className="rows surface">
           {ordered.length === 0 && <li className="check-row row-detail">No approvers on record yet.</li>}
@@ -29,13 +26,10 @@ export function Directory({ people, suppliers }: { people: DirectoryPerson[]; su
                   {p.role}, <span className="mono">{p.phoneMasked}</span>
                 </span>
               </span>
-              {p.escalationOrder ? (
-                <span className="pill none">After {p.escalationOrder * 10} min</span>
-              ) : (
-                <span className="pill" style={{ background: p.pinSet ? 'var(--ok-bg)' : 'var(--amber-bg)', color: p.pinSet ? 'var(--ok)' : 'var(--amber-text)' }}>
-                  {p.pinSet ? 'PIN set' : 'No PIN'}
-                </span>
-              )}
+              <span className="pills">
+                <span className={`pill ${p.pinSet ? 'ok' : 'warn'}`}>{p.pinSet ? 'PIN set' : 'No PIN'}</span>
+                {p.escalationOrder ? <span className="pill none">After {p.escalationOrder * ESCALATE_MINUTES} min</span> : null}
+              </span>
             </li>
           ))}
         </ol>
@@ -45,11 +39,9 @@ export function Directory({ people, suppliers }: { people: DirectoryPerson[]; su
         <ul className="rows surface">
           {suppliers.map((s) => (
             <li key={s.id} className="check-row" style={{ flexDirection: 'column', gap: 4 }}>
-              <span className="card-head" style={{ width: '100%' }}>
-                <span className="row-title">{s.name}</span>
-                <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>
-                  {s.account.bank} {s.account.masked}
-                </span>
+              <span className="row-title">{s.name}</span>
+              <span className="mono supplier-account">
+                {s.account.bank} {s.account.masked}
               </span>
               <span className="row-detail">
                 {s.contact.name}, <span className="mono">{s.contact.phoneMasked}</span>

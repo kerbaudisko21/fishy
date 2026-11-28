@@ -10,10 +10,15 @@ export interface SenderAuth {
 
 const FREE_MAIL = new Set(['gmail.com', 'yahoo.com', 'yahoo.co.id', 'outlook.com', 'hotmail.com', 'live.com', 'icloud.com', 'proton.me', 'protonmail.com', 'aol.com', 'mail.com', 'gmx.com', 'yandex.com', 'zoho.com']);
 
-/** Reads Authentication-Results and Reply-To from raw headers. Only the first header block is used. */
+/**
+ * Reads Authentication-Results and Reply-To from raw headers. Only the first header block is used.
+ * Only the TOPMOST Authentication-Results counts, and only when Gmail wrote it (mx.google.com):
+ * a sender can add their own "dmarc=pass" lower down, and that must never fill in a missing result.
+ */
 export function parseHeaders(raw: string): SenderAuth {
   const head = raw.split(/\r?\n\r?\n/)[0].replace(/\r?\n[ \t]+/g, ' ');
-  const results = [...head.matchAll(/^Authentication-Results:(.*)$/gim)].map((m) => m[1].toLowerCase()).join(' ');
+  const top = /^Authentication-Results:(.*)$/im.exec(head)?.[1]?.trim().toLowerCase() ?? '';
+  const results = top.startsWith('mx.google.com') ? top : '';
   const pick = <T extends string>(name: string, allowed: T[]): T | undefined => {
     const v = new RegExp(`\\b${name}=(\\w+)`).exec(results)?.[1] as T | undefined;
     return v && allowed.includes(v) ? v : v ? ('fail' as T) : undefined;

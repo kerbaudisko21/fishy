@@ -1,7 +1,8 @@
 /* Design tokens. Navy and coral come from the logo; the page sits on a cool tide grey. */
 :root {
-  --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
-  --font-head: 'Space Grotesk Variable', 'Space Grotesk', system-ui, sans-serif;
+  /* One family, made for legibility under pressure; headings use its bold weights. */
+  --font-body: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
+  --font-head: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --bg: #eaeff1; /* tide */
@@ -17,6 +18,9 @@
   --on-navy: #c8d3dc;
 
   --brand: #f26b4e; /* coral, from the logo: fills only, too light for text on white */
+  /* Coral means "hold the payment" (and the logo). Focus and selection stay in ink, so the warning keeps its weight. */
+  --focus: var(--ink);
+  --demo: #f2c14e;
   --brand-text: #b83a22;
 
   --amber-bg: #fff1d6;

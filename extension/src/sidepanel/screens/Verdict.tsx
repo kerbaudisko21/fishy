@@ -1,11 +1,17 @@
-﻿import { createPortal } from 'react-dom';
+﻿import { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { shareIncident } from '../../lib/data';
+import { firstName } from '../../lib/names';
+import { line, Reveal, useTextSwap } from '../../lib/transitions';
 import { useFirstSeen } from '../motion';
 import { waitingFor } from '../../lib/call-wait';
-import type { CallStatus, CallTarget, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
-import { FlagRow, Icon, Privacy, Section, SourceBadge, StepTrack, Tile, type StepState } from '../components';
-import { money } from '../format';
+import type { CallStatus, CallTarget, MediaCheck, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
+import { ActionGrid, DropZone, RecentChecks } from '../scanner';
+import { FlagRow, Icon, Privacy, Section, SourceBadge, Tile } from '../components';
+import { Amount, money } from '../format';
 import type { Screen } from '../routes';
 import { useNow } from '../useCall';
+import { useExplanation } from '../useExplanation';
 
 interface Props {
   request?: PaymentRequest;
@@ -19,15 +25,24 @@ interface Props {
   escalateTo?: CallTarget;
   onCall: () => void;
   onCancel: () => void;
+  /** Clears this check and starts over. */
+  onNewCheck: () => void;
   onOpenFlag: (kind: VerdictT['flags'][number]['kind']) => Screen | null;
   onOpen: (s: Screen) => void;
   onPaste: () => void;
   onDemo: () => void;
+  /** A dropped or chosen file: picture, PDF or voice recording. */
+  onFile: (file: File) => void;
+  /** What was checked in this session, for "Your checks". */
+  media?: MediaCheck[];
+  onOpenMedia: (id: string) => void;
   /** Shown in a meeting until a voice check has run. */
   onVoice?: () => void;
+  /** Capture one frame of the video call in this tab. */
+  onFrame?: () => void;
 }
 
-const first = (name?: string) => name?.split(' ')[0] ?? 'them';
+const first = (name?: string) => firstName(name);
 const mmss = (ms: number) => {
   const s = Math.max(0, Math.round(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -60,18 +75,20 @@ export function Verdict(p: Props) {
 
   // The hero: one colour per state, one sentence.
   const hero: { tone: Tone; pill: string; title: string; line: string } | null = waiting
-    ? { tone: 'navy', pill: 'Watching', title: 'Ready when money is asked for.', line: 'FISHY reads Meet captions and Gmail on this laptop, and stops you before you pay a scammer.' }
+    ? { tone: 'navy', pill: 'Ready', title: 'Is it real?', line: 'Drop what you were sent, or check the call you are in. FISHY scores the signs of AI and says why.' }
     : call.state === 'ringing'
       ? { tone: 'navy', pill: wait.pill, title: wait.title, line: wait.line }
       : call.state === 'no_answer' || call.state === 'escalated'
         ? { tone: 'navy', pill: 'No answer', title: call.escalatedTo ? `Calling ${first(call.escalatedTo)}…` : `${who} didn’t answer.`, line: 'Keep holding the payment.' }
         : call.state === 'not_me'
-          ? { tone: 'red', pill: 'Do not pay', title: 'Not verified.', line: `The real ${who} pressed 2: they did not ask for this. Your finance manager has been told.` }
+          ? { tone: 'red', pill: 'Do not pay', title: 'Not verified.', line: `The real ${who} says they did not ask for this. Stop the payment.` }
           : call.state === 'confirmed'
-            ? { tone: 'green', pill: 'Confirmed by phone', title: `${who} confirmed.`, line: 'Pressed 1 and entered the PIN. Pay through the normal approval.' }
+            ? { tone: 'green', pill: 'Confirmed', title: `${who} confirmed.`, line: 'They said yes and entered their PIN. Pay through the normal approval.' }
             : verdict.level === 'fishy'
               ? { tone: 'coral', pill: 'Hold the payment', title: 'Something’s fishy.', line: `${n} red flag${n === 1 ? '' : 's'}. Don’t pay until ${who} confirms on the number on record.` }
-              : { tone: 'green', pill: 'No red flags', title: 'Looks normal.', line: 'For a payment, a call on the number on record is still the safe step.' };
+              : n > 0
+                ? { tone: 'navy', pill: n === 1 ? 'A sign to look at' : `${n} signs to look at`, title: 'Take a closer look.', line: 'Not enough to call it fake. Look at the signs below, and call before money moves.' }
+                : { tone: 'green', pill: 'No red flags', title: 'Looks normal.', line: 'For a payment, a call on the number on record is still the safe step.' };
 
   // Motion: the result plays in once per new result; the hero text replays on every state change.
   const sig = waiting ? 'waiting' : `${verdict.level}:${verdict.flags.map((f) => f.kind).join(',')}:${request?.amount.value ?? 0}`;
@@ -80,13 +97,36 @@ export function Verdict(p: Props) {
   const heroIntro = useFirstSeen(`hero:${sig}:${heroKey}`);
   let flagIndex = 0;
 
-  const flagged = (s: Exclude<Step, 'call'>) => verdict.flags.some((f) => f.step === s);
-  const track: Record<Step, StepState> = {
-    read: flagged('read') ? 'flagged' : 'done',
-    check: flagged('check') ? 'flagged' : 'done',
-    match: flagged('match') ? 'flagged' : 'done',
-    call: call.state === 'confirmed' ? 'done' : call.state === 'not_me' ? 'flagged' : 'now',
+  // The incident report link, copied for the finance manager.
+  const [shared, setShared] = useState<{ checkId: string; text: string } | null>(null);
+  const copyReport = async () => {
+    if (!call.checkId) return;
+    const url = await shareIncident(call.checkId);
+    if (!url) return setShared({ checkId: call.checkId, text: 'The report link could not be made. Try again in a moment.' });
+    try {
+      await navigator.clipboard.writeText(url);
+      setShared({ checkId: call.checkId, text: 'Link copied. Send it to your finance manager; it works for 7 days.' });
+    } catch {
+      setShared({ checkId: call.checkId, text: url });
+    }
   };
+  const sharedLine = shared && shared.checkId === call.checkId ? shared.text : null;
+  // Entrances play once per result, not on every return from an evidence screen.
+  const scriptIntro = useFirstSeen(`script:${call.checkId ?? sig}`);
+  const hint = useTextSwap(sharedLine ?? 'This result stays on the check’s record.');
+  const ended = call.state === 'not_me' || call.state === 'confirmed';
+  const calling = call.state === 'ringing' || call.state === 'escalated';
+
+  // "Why this is risky": Gemini on the red flags only, never the message.
+  const { explanation, writing } = useExplanation(
+    verdict,
+    {
+      askedBy: request?.askedBy.name ? `${request.askedBy.name}${request.askedBy.role ? ` (${request.askedBy.role})` : ''}` : undefined,
+      amount: request && request.amount.value > 0 ? money(request.amount.value, request.amount.currency) : undefined,
+    },
+    p.hasInput,
+  );
+  const whyIntro = useFirstSeen(`why:${explanation?.text ?? ''}`);
 
   return (
     <>
@@ -110,11 +150,10 @@ export function Verdict(p: Props) {
               {Icon.clock()} No answer in {mmss(call.escalateAt - now)}: FISHY calls {p.escalateTo.name}, {p.escalateTo.role}
             </p>
           )}
-          {!waiting && <StepTrack states={track} intro={intro} live={call.state === 'ringing' ? 'call' : undefined} />}
         </section>
       )}
 
-      <main className={`main${p.hasInput && (idle || call.state === 'ringing') ? ' with-bar' : ''}${intro ? ' intro' : ''}`}>
+      <main className={`main${p.hasInput && (idle || calling || ended) ? ' with-bar' : ''}${intro ? ' intro' : ''}`}>
         {p.busy && (
           <p className="status-line" role="status">
             <span className="spinner" aria-hidden="true" />
@@ -124,70 +163,55 @@ export function Verdict(p: Props) {
 
         {waiting && (
           <>
-            <Section title="Start a check">
-              <div className="surface">
-                <div className="start-row">
-                  <span className="start-icon">{Icon.video()}</span>
-                  <span className="grow">
-                    <span className="row-title">In Google Meet</span>
-                    <span className="row-detail">Turn on captions (CC). FISHY listens from there.</span>
-                  </span>
-                </div>
-                <div className="start-row">
-                  <span className="start-icon">{Icon.mail(18)}</span>
-                  <span className="grow">
-                    <span className="row-title">In Gmail</span>
-                    <span className="row-detail">Open the email that asks for a payment.</span>
-                  </span>
-                </div>
-                <button className="start-row action" onClick={p.onPaste}>
-                  <span className="start-icon">{Icon.clipboard(18)}</span>
-                  <span className="grow">
-                    <span className="row-title">Paste or drop it here</span>
-                    <span className="row-detail">A message, or an invoice PDF.</span>
-                  </span>
-                  <span className="flag-chevron">{Icon.chevron(16)}</span>
-                </button>
-              </div>
-            </Section>
+            <DropZone onFile={p.onFile} disabled={!!p.busy} />
+            <ActionGrid onFrame={p.onFrame} onVoice={p.onVoice} onText={p.onPaste} busy={!!p.busy} />
 
-            <Section title="How it works">
-              <ol className="how surface">
+            <details className="fold how-fold">
+              <summary>How it works</summary>
+              <ol className="how">
                 <li>
                   <span className="how-num">1</span>
                   <span className="grow">
-                    <span className="row-title">Read</span>
-                    <span className="row-detail">Spots pressure: a rush, a secret, a boss skipping approval.</span>
+                    <span className="row-title">Check</span>
+                    <span className="row-detail">Drop what you were sent, or check the call you are in.</span>
                   </span>
                 </li>
                 <li>
                   <span className="how-num">2</span>
                   <span className="grow">
-                    <span className="row-title">Check</span>
-                    <span className="row-detail">The sender, the links and the invoice’s bank account.</span>
+                    <span className="row-title">See the score and why</span>
+                    <span className="row-detail">AI labels and editing traces in the file, and what Gemini sees or hears: on this laptop when it can.</span>
                   </span>
                 </li>
                 <li>
                   <span className="how-num">3</span>
                   <span className="grow">
-                    <span className="row-title">Match</span>
-                    <span className="row-detail">Accounts and domains already used in scams.</span>
-                  </span>
-                </li>
-                <li>
-                  <span className="how-num">4</span>
-                  <span className="grow">
-                    <span className="row-title">Call</span>
-                    <span className="row-detail">Phones the real person on a number on record.</span>
+                    <span className="row-title">Call the real person</span>
+                    <span className="row-detail">A fake can pass a check, but it can’t answer the real phone.</span>
                   </span>
                 </li>
               </ol>
-            </Section>
+            </details>
 
             <button className="btn secondary" onClick={p.onDemo}>
               Try the demo case
             </button>
           </>
+        )}
+
+        {call.state === 'not_me' && (
+          <Section title="What to say now">
+            <Reveal className="surface card-pad script" play={scriptIntro}>
+              <p className={line(1, 'script-line')}>“I have to verify payment requests through our approval policy. I’ll call you back on the number we have on file.”</p>
+              <span className={line(2, 'row-detail')}>Then leave the call. Don’t repeat the account details or send anything while you’re still on it.</span>
+            </Reveal>
+          </Section>
+        )}
+
+        {p.media && p.media.length > 0 && !waiting && (
+          <Section title="Your checks" aside="Tap one for the score and why">
+            <RecentChecks items={p.media} onOpen={p.onOpenMedia} />
+          </Section>
         )}
 
         {request && (
@@ -206,7 +230,7 @@ export function Verdict(p: Props) {
                 <div>
                   <dt>Amount</dt>
                   <dd>
-                    <span className="amount">{money(request.amount.value, request.amount.currency)}</span>
+                    <Amount value={request.amount.value} currency={request.amount.currency} />
                     {request.dueText && <span className="request-sub">{request.dueText}</span>}
                   </dd>
                 </div>
@@ -227,6 +251,28 @@ export function Verdict(p: Props) {
                 </dd>
               </div>
             </dl>
+          </Section>
+        )}
+
+        {/* Once the person has answered, the call decided it; the advice to call would be stale. */}
+        {(explanation || writing) && !ended && (
+          <Section
+            title="Why this is risky"
+            aside={explanation ? explanation.model === 'template' ? 'Built from the red flags' : <SourceBadge source={explanation.source} label={explanation.source === 'on_device' ? 'Gemini Nano, on device' : 'Gemini, cloud'} /> : undefined}
+          >
+            <div className="surface card-pad" aria-live="polite" aria-busy={writing}>
+              {explanation ? (
+                <Reveal key={explanation.text} play={whyIntro}>
+                  <p className={line(1, 'explain')}>{explanation.text}</p>
+                </Reveal>
+              ) : (
+                <p className="explain">
+                  <span className="t-shimmer" data-text="Gemini is reading the red flags…">
+                    Gemini is reading the red flags…
+                  </span>
+                </p>
+              )}
+            </div>
           </Section>
         )}
 
@@ -257,21 +303,21 @@ export function Verdict(p: Props) {
         {call.state === 'not_me' && (
           <p className="note">
             <span className="note-icon" style={{ color: 'var(--ok)' }}>{Icon.check(15)}</span>
-            The account, domain and number in this request went on the known-scam list.
+            Once {who} confirms with their PIN, the account, domain and number in this request join the known-scam list.
           </p>
         )}
 
         {p.hasInput && idle && (
           <Section title="Check more">
             <div className="tiles">
-              {p.onVoice && <Tile icon={Icon.wave(20)} title="Voice" detail="10 s clip" onClick={p.onVoice} disabled={!!p.busy} />}
-              <Tile icon={Icon.clipboard(20)} title="Paste text" detail="A message" onClick={p.onPaste} />
-              <Tile icon={Icon.file(20)} title="Invoice" detail="PDF file" onClick={p.onPaste} />
+              <Tile icon={Icon.image(20)} title="A file" detail="Picture, PDF, voice" onClick={p.onPaste} disabled={!!p.busy} />
+              {p.onFrame && <Tile icon={Icon.video(20)} title="The video" detail="One frame" onClick={p.onFrame} disabled={!!p.busy} />}
+              {p.onVoice && <Tile icon={Icon.mic(20)} title="The voice" detail="10 seconds" onClick={p.onVoice} disabled={!!p.busy} />}
             </div>
           </Section>
         )}
 
-        <Privacy>Message text stays on this laptop. Without Gemini Nano, only redacted text goes to the cloud.</Privacy>
+        <Privacy>Everything is checked on this laptop first. The cloud gets only what you chose to check, and only when Gemini Nano can’t do it (a voice clip always goes; message text is redacted first).</Privacy>
       </main>
 
       {/* In <body>, so the screen's slide-in transform doesn't move a fixed bar. */}
@@ -293,16 +339,35 @@ export function Verdict(p: Props) {
             {Icon.phone()}
             Call {first(target?.name)} on record
           </button>
-          <span className="bar-hint">Number from Directory, never from the message.</span>
+          <span className="bar-hint">{target ? 'Number from Directory, never from the message.' : 'No one on record to call yet. Add approvers in the Firebase console.'}</span>
         </div>,
         document.body,
       )}
-      {call.state === 'ringing' &&
+      {calling &&
         createPortal(
           <div className="action-bar">
             <button className="btn secondary" onClick={p.onCancel}>
               Cancel call
             </button>
+          </div>,
+          document.body,
+        )}
+      {p.hasInput && ended &&
+        createPortal(
+          <div className="action-bar intro">
+            <button className="btn primary" onClick={p.onNewCheck}>
+              {call.state === 'confirmed' ? 'Done, start a new check' : 'Start a new check'}
+            </button>
+            {call.checkId && (
+              <button className="btn secondary" onClick={() => void copyReport()}>
+                Copy the incident report link
+              </button>
+            )}
+            <span className="bar-hint" role="status">
+              <span ref={hint.ref} className="t-text-swap">
+                {hint.shown}
+              </span>
+            </span>
           </div>,
           document.body,
         )}

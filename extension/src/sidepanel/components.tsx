@@ -1,5 +1,6 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import type { CheckItem, Signal, SignalKind, Source, Step } from '../lib/types';
+import { createContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { versionLine } from '../lib/version';
+import type { CallState, CheckItem, Signal, SignalKind, Source, Step, Verdict } from '../lib/types';
 
 /* ---------- Icons (inline stroke SVG, decorative) ---------- */
 
@@ -33,6 +34,8 @@ export const Icon = {
   link: (s = 18) => svg(s, <><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></>),
   face: (s = 18) => svg(s, <><circle cx="12" cy="12" r="9" /><path d="M9 10v.01M15 10v.01M9 15c1.7 1.3 4.3 1.3 6 0" /></>),
   video: (s = 18) => svg(s, <><rect x="3" y="6" width="13" height="12" rx="2" /><path d="M16 10l5-3v10l-5-3" /></>),
+  image: (s = 18) => svg(s, <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="M21 16l-5-5-9 9" /></>),
+  mic: (s = 18) => svg(s, <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>),
 };
 
 /** One icon per kind of red flag, so a list of flags can be scanned without reading. */
@@ -53,7 +56,13 @@ export function flagIcon(kind: SignalKind, size = 18) {
     case 'unsafe_link':
       return Icon.link(size);
     case 'voice_score':
+    case 'voice_signs':
       return Icon.wave(size);
+    case 'ai_label':
+    case 'ai_tool':
+    case 'edited_with':
+    case 'picture_signs':
+      return Icon.image(size);
     case 'face_score':
       return Icon.face(size);
     default:
@@ -84,16 +93,16 @@ export function Header({
   return (
     <header className="header">
       <div className="header-row">
-        <span className="brand">
+        <span className="brand" title={`FISHY ${versionLine()}`}>
           <img src="/icons/icon-48.png" alt="" />
-          FISHY
+          <span className="brand-word">FISHY</span>
         </span>
         <span className="header-tools">
           {demo && <span className="demo-tag">Demo</span>}
           {where && (
             <span className="live">
               {where === 'meet' ? <span className="live-dot" /> : where === 'gmail' ? Icon.mail(12) : Icon.clipboard(12)}
-              {label}
+              <span className="live-label">{label}</span>
             </span>
           )}
           <button className="icon-btn" aria-label="Settings" onClick={onSettings}>
@@ -106,7 +115,7 @@ export function Header({
   );
 }
 
-/** Check / Directory, with one underline that slides between them. */
+/** Verdict / Directory, with one underline that slides between them. */
 function Tabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const refs = useRef<Record<Tab, HTMLButtonElement | null>>({ verdict: null, directory: null });
   const [bar, setBar] = useState<{ x: number; w: number } | null>(null);
@@ -135,7 +144,7 @@ function Tabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
           aria-current={tab === t ? 'page' : undefined}
           onClick={() => onTab(t)}
         >
-          {t === 'verdict' ? 'Check' : 'Directory'}
+          {t === 'verdict' ? 'Verdict' : 'Directory'}
         </button>
       ))}
       {bar && <span className={`tab-bar${ready ? ' ready' : ''}`} aria-hidden="true" style={{ transform: `translateX(${bar.x}px) scaleX(${bar.w / 100})` }} />}
@@ -143,21 +152,39 @@ function Tabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   );
 }
 
-export const STEPS: Array<{ id: Step; label: string }> = [
-  { id: 'read', label: 'Read' },
-  { id: 'check', label: 'Check' },
-  { id: 'match', label: 'Match' },
-  { id: 'call', label: 'Call' },
+/**
+ * The three steps a person sees, the same as "How it works": Check what you were sent, See the
+ * signs, Call the real person. (Internally each red flag still records where it came from:
+ * read, check or match. All of those are signs.)
+ */
+export type TrackStep = 'checked' | 'signs' | 'call';
+
+export const STEPS: Array<{ id: TrackStep; label: string; long: string }> = [
+  { id: 'checked', label: 'Check', long: 'Check' },
+  { id: 'signs', label: 'Signs', long: 'See the signs' },
+  { id: 'call', label: 'Call', long: 'Call the real person' },
 ];
 
 export type StepState = 'done' | 'now' | 'todo' | 'flagged';
 
-/** The four steps on one line. Used in the verdict and, small, on every evidence screen. */
-export function StepTrack({ states, small, intro, live }: { states: Record<Step, StepState>; small?: boolean; intro?: boolean; live?: Step }) {
+/** What each step found for the current check: the same states on the verdict and on every evidence screen. */
+export function trackFor(verdict: Verdict, call: CallState): Record<TrackStep, StepState> {
+  return {
+    checked: 'done',
+    signs: verdict.flags.length ? 'flagged' : 'done',
+    call: call === 'confirmed' ? 'done' : call === 'not_me' ? 'flagged' : 'now',
+  };
+}
+
+/** The current check's step states, for the small track on evidence screens. */
+export const TrackContext = createContext<Record<TrackStep, StepState> | null>(null);
+
+/** The three steps on one line. Used in the verdict and, small, on every evidence screen. */
+export function StepTrack({ states, small, intro, live, current }: { states: Record<TrackStep, StepState>; small?: boolean; intro?: boolean; live?: TrackStep; current?: TrackStep }) {
   return (
     <ol className={`track${small ? ' small' : ''}${intro ? ' intro' : ''}`} aria-label="Steps">
       {STEPS.map((s, i) => (
-        <li key={s.id} className={`track-step ${states[s.id]}${live === s.id ? ' live' : ''}`} style={{ '--i': i } as CSSProperties}>
+        <li key={s.id} className={`track-step ${states[s.id]}${live === s.id ? ' live' : ''}${current === s.id ? ' current' : ''}`} aria-current={current === s.id ? 'step' : undefined} style={{ '--i': i } as CSSProperties}>
           <span className="track-node" aria-hidden="true">
             {states[s.id] === 'done' ? Icon.check(small ? 9 : 11) : states[s.id] === 'flagged' ? Icon.bang(small ? 9 : 11) : small ? null : i + 1}
           </span>
@@ -230,18 +257,16 @@ export function Tile({ icon, title, detail, onClick, disabled }: { icon: ReactNo
 
 /* ---------- Detail screens ---------- */
 
-const NUMBER: Record<Step, number> = { read: 1, check: 2, match: 3, call: 4 };
 
 export function DetailHead({
   title,
-  step,
   kicker,
   badges,
   onBack,
-  backLabel = 'Back to the check',
+  backLabel = 'Back to the verdict',
 }: {
   title: string;
-  /** The step this evidence belongs to; draws the small step track. */
+  /** Where this evidence came from (read, check, match). Kept for reference; no step track is drawn any more. */
   step?: Step;
   /** A short line above the title on screens that are not a step. */
   kicker?: string;
@@ -249,26 +274,14 @@ export function DetailHead({
   onBack: () => void;
   backLabel?: string;
 }) {
-  const states = step
-    ? (Object.fromEntries(Object.entries(NUMBER).map(([k, n]) => [k, n < NUMBER[step] ? 'done' : n === NUMBER[step] ? 'now' : 'todo'])) as Record<Step, StepState>)
-    : undefined;
   return (
     <div className="detail-head">
       <button className="back" onClick={onBack}>
         {Icon.back()}
         {backLabel}
       </button>
-      {states ? (
-        <div className="detail-step">
-          <span>
-            Step {NUMBER[step!]} of 4 · {step![0].toUpperCase() + step!.slice(1)}
-          </span>
-          <StepTrack states={states} small />
-        </div>
-      ) : (
-        kicker && <span className="detail-kicker">{kicker}</span>
-      )}
-      <h1>{title}</h1>
+      {kicker && <span className="detail-kicker">{kicker}</span>}
+      <h1 tabIndex={-1}>{title}</h1>
       {badges.length > 0 && (
         <div className="meta wrap">
           {badges.map((b, i) => (

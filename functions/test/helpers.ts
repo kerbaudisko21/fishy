@@ -84,6 +84,27 @@ export class MemoryStore implements Store {
     return true;
   }
 
+  personChecks = new Map<string, number>();
+  pinFailures = new Map<string, number[]>();
+
+  async reservePersonCheck(personId: string, hour: string, limit: number): Promise<boolean> {
+    const key = `${personId}_${hour}`;
+    const used = this.personChecks.get(key) ?? 0;
+    if (used >= limit) {
+      return false;
+    }
+    this.personChecks.set(key, used + 1);
+    return true;
+  }
+
+  async pinFailuresSince(personId: string, since: number): Promise<number> {
+    return (this.pinFailures.get(personId) ?? []).filter((t) => t >= since).length;
+  }
+
+  async recordPinFailure(personId: string, at: number): Promise<void> {
+    this.pinFailures.set(personId, [...(this.pinFailures.get(personId) ?? []), at]);
+  }
+
   async saveSuspects(verificationId: string, suspects: Suspects): Promise<void> {
     this.suspects.set(verificationId, structuredClone(suspects));
   }

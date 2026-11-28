@@ -92,6 +92,15 @@ export interface Store {
   updateVerification(id: string, change: (current: Verification) => Verification | null): Promise<Verification | null>;
   /** Counts one call against the day's cap. False when the cap is already reached. */
   reserveCall(dayKey: string, dailyCap: number): Promise<boolean>;
+  /**
+   * Counts one check against a person in the current hour. False when they already had `limit`
+   * checks this hour: nobody can ring the same person, or open approval links for them, without end.
+   */
+  reservePersonCheck(personId: string, hourKey: string, limit: number): Promise<boolean>;
+  /** Wrong PINs for this person since `since` (ms), over all checks. */
+  pinFailuresSince(personId: string, since: number): Promise<number>;
+  /** Records one wrong PIN for this person. */
+  recordPinFailure(personId: string, at: number): Promise<void>;
   /** Keeps the details of the request a check is about. Clients cannot read them back. */
   saveSuspects(verificationId: string, suspects: Suspects): Promise<void>;
   getSuspects(verificationId: string): Promise<Suspects | null>;
@@ -148,7 +157,8 @@ export type RequestErrorCode =
   | 'invalid-argument'
   | 'not-found'
   | 'permission-denied'
-  | 'failed-precondition';
+  | 'failed-precondition'
+  | 'resource-exhausted';
 
 /** A request the caller got wrong. Safe to show to the caller. */
 export class RequestError extends Error {

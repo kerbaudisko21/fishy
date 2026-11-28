@@ -17,6 +17,8 @@
 // - checkCalls/{id}       the full record of the phone check for checks/{id}.
 // - checkSuspects/{id}    the details of the request a check is about.
 // - callCounters/{day}    how many calls were placed that day.
+// - personCounters/{person_hour}  how many checks a person got in that hour.
+// - pinFailures/{person}  when wrong PINs were entered for that person, over all checks.
 
 import { getFirestore } from 'firebase-admin/firestore';
 
@@ -96,6 +98,34 @@ export function firestoreStore(settings: { companyDomain: string }): Store {
         }
         transaction.set(ref, { count: used + 1 });
         return true;
+      });
+    },
+
+    async reservePersonCheck(personId, hour, limit) {
+      const ref = db.collection('personCounters').doc(`${personId}_${hour}`);
+      return db.runTransaction(async (transaction) => {
+        const used = Number((await transaction.get(ref)).data()?.count ?? 0);
+        if (used >= limit) {
+          return false;
+        }
+        transaction.set(ref, { count: used + 1 });
+        return true;
+      });
+    },
+
+    async pinFailuresSince(personId, since) {
+      const data = (await db.collection('pinFailures').doc(personId).get()).data();
+      const times = Array.isArray(data?.at) ? (data.at as unknown[]).filter((t): t is number => typeof t === 'number') : [];
+      return times.filter((t) => t >= since).length;
+    },
+
+    async recordPinFailure(personId, at) {
+      const ref = db.collection('pinFailures').doc(personId);
+      await db.runTransaction(async (transaction) => {
+        const data = (await transaction.get(ref)).data();
+        const times = Array.isArray(data?.at) ? (data.at as unknown[]).filter((t): t is number => typeof t === 'number') : [];
+        // Keep the last 50: enough for any window the lock uses.
+        transaction.set(ref, { at: [...times, at].slice(-50) });
       });
     },
 

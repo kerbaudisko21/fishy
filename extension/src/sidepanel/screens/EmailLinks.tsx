@@ -33,7 +33,7 @@ export function EmailLinks({ data, onBack, onOpenInvoice }: { data: Data; onBack
             </div>
             {data.onRecord && (
               <div className="compare ok">
-                <span className="eyebrow ok">On record, paid {data.onRecord.paidTimes} times</span>
+                <span className="eyebrow ok">On record, {data.onRecord.paidTimes === 1 ? 'paid once' : `paid ${data.onRecord.paidTimes} times`}</span>
                 <span className="row-title">{data.onRecord.name}</span>
                 <span className="mono">{data.onRecord.address}</span>
               </div>

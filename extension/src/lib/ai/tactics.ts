@@ -1,10 +1,13 @@
-import { getAI, getGenerativeModel, InferenceMode, InferenceSource, Schema, type GenerativeModel } from 'firebase/ai';
+import { getAI, getGenerativeModel, InferenceMode, InferenceSource, type GenerativeModel } from 'firebase/ai';
 import { FIREBASE_READY } from '../config';
 import { firebaseApp } from '../firebase';
 import { redact } from '../redact';
-import type { Source, Tactic } from '../types';
+import type { Source } from '../types';
 import { keywordTactics } from './keywords';
 import { cloudBackend } from './provider';
+import { parseTactics, tacticInput, tacticSchema, type TacticHit } from './prompts';
+
+export { TACTICS, type TacticHit } from './prompts';
 
 /**
  * Step 1 · Read: tag pressure tactics with Firebase AI Logic hybrid inference.
@@ -16,21 +19,6 @@ import { cloudBackend } from './provider';
  * result.response.inferenceSource tells the panel which badge to show.
  * Without a Firebase config (offline dev), a keyword matcher stands in and says so.
  */
-
-export const TACTICS: Tactic[] = ['urgency', 'secrecy', 'authority', 'skips_process', 'new_payment_details'];
-
-const tacticSchema = Schema.object({
-  properties: {
-    tactics: Schema.array({
-      items: Schema.object({
-        properties: {
-          tactic: Schema.enumString({ enum: TACTICS }),
-          quote: Schema.string(),
-        },
-      }),
-    }),
-  },
-});
 
 let models: { onDevice: GenerativeModel; inCloud: GenerativeModel } | undefined;
 
@@ -53,18 +41,6 @@ function getModels() {
   return models;
 }
 
-const PROMPT = `You read workplace messages for social-engineering pressure.
-Return every phrase that uses one of these tactics:
-- urgency: a tight deadline or rush
-- secrecy: asks to keep it quiet or skip telling others
-- authority: leans on a senior title or "I approve it myself"
-- skips_process: asks to bypass the usual approval or checks
-- new_payment_details: asks to pay a new or changed account
-Quote the exact words. Return an empty list if there are none.
-
-Message:
-`;
-
 /** Prompt API global (Chrome 139+). Typed loosely because @types/chrome does not cover it yet. */
 declare const LanguageModel: { availability(): Promise<NanoStatus> } | undefined;
 
@@ -84,11 +60,6 @@ export function prepareNano(onProgress?: (fraction: number) => void) {
   return getModels().onDevice.initializeDeviceModel((p: number) => onProgress?.(p));
 }
 
-export interface TacticHit {
-  tactic: Tactic;
-  quote: string;
-}
-
 export type ReaderModel = 'gemini-nano' | 'gemini-cloud' | 'keywords';
 
 export interface TacticResult {
@@ -97,16 +68,23 @@ export interface TacticResult {
   model: ReaderModel;
 }
 
+/** The model's hits plus any keyword hit for a tactic the model did not report. */
+export function unionHits(model: TacticHit[], keywords: TacticHit[]): TacticHit[] {
+  const seen = new Set(model.map((h) => h.tactic));
+  return [...model, ...keywords.filter((h) => !seen.has(h.tactic))];
+}
+
 export async function readTactics(text: string): Promise<TacticResult> {
   if (!FIREBASE_READY) return { hits: keywordTactics(text), source: 'on_device', model: 'keywords' };
 
   const local = (await nanoStatus()) === 'available';
   const { onDevice, inCloud } = getModels();
-  const result = await (local ? onDevice : inCloud).generateContent(PROMPT + (local ? text : redact(text)));
-  const parsed = JSON.parse(result.response.text()) as { tactics?: TacticHit[] };
+  const result = await (local ? onDevice : inCloud).generateContent(tacticInput(local ? text : redact(text)));
   const onDeviceRan = result.response.inferenceSource === InferenceSource.ON_DEVICE;
   return {
-    hits: (parsed.tactics ?? []).filter((h) => TACTICS.includes(h.tactic) && h.quote?.trim()),
+    // The fixed keyword reader always runs too: a message that talks the model out of seeing
+    // pressure still trips the keywords (security review M5).
+    hits: unionHits(parseTactics(result.response.text()), keywordTactics(text)),
     source: onDeviceRan ? 'on_device' : 'cloud',
     model: onDeviceRan ? 'gemini-nano' : 'gemini-cloud',
   };

@@ -2,6 +2,13 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { parsePdfDate, type PdfFacts } from './invoice';
 
 /**
+ * PDFs come from strangers, so pdf.js runs locked down: no compiled code from the file
+ * (isEvalSupported: false, the hardening for CVE-2024-4367-style font bugs) and no XFA forms,
+ * which pdf.js would turn into HTML.
+ */
+const LOCKED = { isEvalSupported: false, enableXfa: false } as const;
+
+/**
  * Reads an invoice PDF on the laptop with pdf.js: its text, edit dates, producer,
  * and which font the account number is set in. Nothing is uploaded.
  */
@@ -9,7 +16,9 @@ export async function readPdf(data: ArrayBuffer, accountDigits?: (text: string) 
   const pdfjs = await import('pdfjs-dist');
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(data) }).promise;
+  // pdf.js 6 closes a document through its loading task.
+  const task = pdfjs.getDocument({ data: new Uint8Array(data), ...LOCKED });
+  const doc = await task.promise;
   const { info } = (await doc.getMetadata()) as unknown as { info: Record<string, string | undefined> };
 
   const lines: string[] = [];
@@ -30,7 +39,7 @@ export async function readPdf(data: ArrayBuffer, accountDigits?: (text: string) 
     }
     if (line.trim()) lines.push(line);
   }
-  await doc.destroy();
+  await task.destroy();
 
   const text = lines.map((l) => l.replace(/\s+/g, ' ').trim()).join('\n');
   const mainFont = [...fontCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
@@ -47,4 +56,27 @@ export async function readPdf(data: ArrayBuffer, accountDigits?: (text: string) 
       mainFont,
     },
   };
+}
+
+/**
+ * The first page as a PNG, drawn on the laptop, so Gemini can look at the document the way a person
+ * does (a pasted logo, one line in another font). Takes a copy of the bytes: pdf.js may detach them.
+ */
+export async function renderFirstPage(data: ArrayBuffer, maxSide = 1400): Promise<Blob> {
+  const pdfjs = await import('pdfjs-dist');
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+  const task = pdfjs.getDocument({ data: new Uint8Array(data.slice(0)), ...LOCKED });
+  const doc = await task.promise;
+  try {
+    const page = await doc.getPage(1);
+    const base = page.getViewport({ scale: 1 });
+    const viewport = page.getViewport({ scale: Math.min(3, maxSide / Math.max(base.width, base.height)) });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    await page.render({ canvas, canvasContext: canvas.getContext('2d')!, viewport }).promise;
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('The page could not be drawn.'))), 'image/png'));
+  } finally {
+    await task.destroy();
+  }
 }

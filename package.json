@@ -19,12 +19,18 @@
     "seed": "node scripts/seed.ts",
     "deploy:check": "node scripts/predeploy.ts",
     "deploy": "node scripts/predeploy.ts && node scripts/deploy.ts",
-    "remoteconfig": "node scripts/remote-config.ts"
+    "remoteconfig": "node scripts/remote-config.ts",
+    "package": "node scripts/package-extension.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2"
   },
   "engines": {
     "node": ">=22.18"
+  },
+  "overrides": {
+    "@firebase/firestore": {
+      "@grpc/grpc-js": "^1.14.7"
+    }
   }
 }

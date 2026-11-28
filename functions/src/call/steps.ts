@@ -13,6 +13,13 @@ import { verifyPin } from './pin.ts';
 import type { CheckDeps, Verification } from './ports.ts';
 
 export const MAX_PIN_ATTEMPTS = 3;
+/**
+ * Wrong PINs a person may collect over all checks in PIN_LOCK_WINDOW_MS. Past it, every PIN is
+ * treated as wrong until the window moves on, so guessing across many checks gets nowhere.
+ * It fails closed: a locked person can still say "not me", and nothing is confirmed.
+ */
+export const PERSON_PIN_FAILURES = 5;
+export const PIN_LOCK_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export type ChoiceOutcome = 'ask_pin' | 'denied' | 'invalid' | 'closed';
 
@@ -30,7 +37,8 @@ export function withChoice(current: Verification, digit: string, now: number): C
   }
   if (digit === '2') {
     if (current.status === 'waiting' || current.status === 'awaiting_pin') {
-      return { next: { ...current, status: 'denied', choice: 2, pinAttempts: 0, updatedAt: now }, outcome: 'denied' };
+      // The attempts already used stay used: switching from "1" to "2" buys no new guesses.
+      return { next: { ...current, status: 'denied', choice: 2, updatedAt: now }, outcome: 'denied' };
     }
     if (current.status === 'denied' && !current.pinVerified && current.pinAttempts < MAX_PIN_ATTEMPTS) {
       return { next: null, outcome: 'denied' };
@@ -108,7 +116,9 @@ export async function answerPin(deps: CheckDeps, id: string, pin: string): Promi
     return { outcome: 'closed', verification: null };
   }
   const person = await deps.store.getPerson(before.personId);
-  const pinIsRight = person ? verifyPin(pin, person.pin) : false;
+  const now = deps.now();
+  const locked = (await deps.store.pinFailuresSince(before.personId, now - PIN_LOCK_WINDOW_MS)) >= PERSON_PIN_FAILURES;
+  const pinIsRight = !locked && person ? verifyPin(pin, person.pin) : false;
 
   const seen: { outcome: PinOutcome } = { outcome: 'closed' };
   const verification = await deps.store.updateVerification(id, (current) => {
@@ -116,6 +126,10 @@ export async function answerPin(deps: CheckDeps, id: string, pin: string): Promi
     seen.outcome = change.outcome;
     return change.next;
   });
+  // Count a wrong PIN against the person, not only the check (a locked person's tries count too).
+  if (!pinIsRight && seen.outcome !== 'closed') {
+    await deps.store.recordPinFailure(before.personId, now);
+  }
   if (seen.outcome === 'denied_verified' && verification) {
     // "Not me", confirmed with the PIN: the details of this request join the
     // known-bad list. This outcome happens once per check, so nothing is

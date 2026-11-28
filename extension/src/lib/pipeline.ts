@@ -5,7 +5,11 @@ import type { KnownMatch } from './checks/known';
 import type { AuthVerdict } from './checks/email';
 import type { Amount } from './checks/said';
 import type { RulesConfig } from './rules/engine';
-import type { CaptionLine, CheckItem, Evidence, PaymentRequest, Signal, Supplier, Tactic } from './types';
+import type { CaptionLine, CheckItem, Evidence, MediaCheck, PaymentRequest, Signal, Supplier, Tactic } from './types';
+import { mediaSignals } from './media-signals';
+import { plural } from './names';
+
+export { mediaSignals } from './media-signals';
 
 /*
  * Turns raw check results ("findings") into the three things the panel shows:
@@ -50,6 +54,8 @@ export interface Findings {
     traces: CheckItem[];
   };
   known: KnownMatch[];
+  /** Pictures, documents, voice clips and video frames the person chose to check. */
+  media?: MediaCheck[];
 }
 
 export const TACTIC_LABEL: Record<Tactic, string> = {
@@ -66,7 +72,7 @@ export const YOUNG_DOMAIN_DAYS = 30;
 export const VOICE_FLAG_AT = 0.6;
 
 const listWords = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
-const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
+// Counts with separators and the right plural ("1 payment", "1,284 confirmed scams").
 
 export function toSignals(f: Findings): Signal[] {
   const out: Signal[] = [];
@@ -91,7 +97,7 @@ export function toSignals(f: Findings): Signal[] {
       step: 'check',
       source: 'on_device',
       title: 'Bank account changed',
-      detail: `The invoice account differs from the last ${inv.supplier.paidMonths.length} payments to ${inv.supplier.name.replace(/^PT\s+/, '')}.`,
+      detail: `The invoice account differs from the last ${plural(inv.supplier.paidMonths.length, 'payment')} to ${inv.supplier.name.replace(/^PT\s+/, '')}.`,
     });
   }
   if (inv?.traces.some((t) => !t.ok)) {
@@ -129,6 +135,8 @@ export function toSignals(f: Findings): Signal[] {
       score: v.score,
     });
   }
+
+  out.push(...mediaSignals(f.media ?? []));
 
   for (const m of f.known) {
     if (!m.entry) continue;
@@ -168,6 +176,7 @@ export function highlight(text: string, hits: TacticHit[]): CaptionLine['parts']
 
 export function toEvidence(f: Findings, rules: RulesConfig, patterns: string[], knownUpdatedAt: number): Evidence {
   const ev: Evidence = {};
+  if (f.media?.length) ev.media = f.media;
 
   if (f.tactics?.hits.length) {
     const counts = new Map<Tactic, TacticHit[]>();

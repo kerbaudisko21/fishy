@@ -1,14 +1,19 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { suspectsFrom } from '../lib/checks/known';
+import { firstName } from '../lib/names';
 import { IN_EXTENSION } from '../lib/config';
 import { isPageMessage, type BannerState, type PanelMessage } from '../lib/messages';
 import type { CallTarget, Evidence, SignalKind } from '../lib/types';
-import { Header } from './components';
+import { Header, TrackContext, trackFor } from './components';
+import { DataToggle } from './DataToggle';
+import { useWindowDrop } from './scanner';
 import { placeFor, screenFor, type Screen } from './routes';
 import { CheckYourself } from './screens/CheckYourself';
 import { Directory } from './screens/Directory';
 import { EmailLinks } from './screens/EmailLinks';
 import { Invoice } from './screens/Invoice';
 import { KnownScams } from './screens/KnownScams';
+import { Media } from './screens/Media';
 import { Settings } from './screens/Settings';
 import { Tactics } from './screens/Tactics';
 import { Verdict } from './screens/Verdict';
@@ -28,11 +33,11 @@ async function sendBanner(state: BannerState, title: string, line: string) {
 
 /** A screen opens only when its evidence exists. */
 function hasEvidence(screen: Screen, ev: Evidence) {
-  const key = ({ tactics: 'tactics', email: 'email', invoice: 'invoice', voice: 'voice', known: 'known' } as const)[screen as 'tactics'];
+  const key = ({ tactics: 'tactics', email: 'email', invoice: 'invoice', voice: 'voice', media: 'media', known: 'known' } as const)[screen as 'tactics'];
   return !key || !!ev[key];
 }
 
-const first = (name?: string) => name?.split(' ')[0] ?? '';
+const first = (name?: string) => firstName(name, '');
 
 /** Check is home, Directory sits beside it, everything else opens on top. */
 const DEPTH = (s: Screen) => (s === 'verdict' ? 0 : s === 'directory' ? 1 : 2);
@@ -80,16 +85,37 @@ export function App() {
   // Keep the in-page banner in step with the panel.
   const who = first(call.target?.name);
   useEffect(() => {
-    if (call.state === 'not_me') void sendBanner('red', 'Not verified. Do not pay.', `The real ${who} pressed 2.`);
-    else if (call.state === 'confirmed') void sendBanner('confirmed', `${who} confirmed by phone.`, 'Pay through the normal approval.');
+    if (call.state === 'not_me') void sendBanner('red', 'Not verified. Do not pay.', `The real ${who} says they did not ask for this.`);
+    else if (call.state === 'confirmed') void sendBanner('confirmed', `${who} confirmed with their PIN.`, 'Pay through the normal approval.');
     else if (a.hasInput && a.verdict.level === 'fishy') void sendBanner('amber', `Something’s fishy: ${a.verdict.flags.length} red flags`, 'Hold the payment.');
     else void sendBanner('hidden', '', '');
   }, [call.state, who, a.hasInput, a.verdict]);
 
-  // A new screen starts at the top.
+  // A file dragged anywhere over FISHY can be dropped to check it.
+  const { checkFile } = a;
+  const dropping = useWindowDrop(useCallback((file: File) => void checkFile(file), [checkFile]));
+  const [focusMedia, setFocusMedia] = useState<string | null>(null);
+
+  // A new picture, document, voice or frame being checked: show its card straight away.
+  useEffect(() => setFocusMedia(null), [a.evidence.media?.length]);
+  const mediaCount = a.evidence.media?.length ?? 0;
+  const seenMedia = useRef(mediaCount);
+  useEffect(() => {
+    if (mediaCount > seenMedia.current && (screen === 'verdict' || screen === 'paste')) setScreen('media');
+    seenMedia.current = mediaCount;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaCount]);
+
+  // A new screen starts at the top, and a screen reader hears its heading.
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [screen]);
+    if (nav.dir === 'none') return;
+    const heading = document.querySelector<HTMLElement>('.screen h1');
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    }
+  }, [screen, nav.dir]);
 
   const startCall = () => {
     if (!target) return;
@@ -99,7 +125,7 @@ export function App() {
       place: a.place,
       amount: a.request?.amount.value ? a.request.amount : undefined,
       payee: a.request?.payee ? `${a.request.payee.name} · ${a.request.payee.bank} ${a.request.payee.accountMasked}` : undefined,
-    });
+    }, { suspects: suspectsFrom(a.candidates), escalateTo });
   };
 
   const back = () => setScreen('verdict');
@@ -112,16 +138,28 @@ export function App() {
   const ev = a.evidence;
   const tab = screen === 'verdict' || screen === 'directory' ? screen : undefined;
   const detail = tab ? null : placeFor(screen);
-  const where = !a.hasInput ? null : screen === 'verdict' || screen === 'directory' || screen === 'paste' || screen === 'settings' ? a.place : detail;
+  const where = !a.hasInput ? null : screen === 'verdict' || screen === 'directory' || screen === 'paste' || screen === 'settings' || screen === 'media' ? a.place : detail;
   const error = a.error ?? callError;
   const loadDemo = () => {
     cancel();
     a.loadDemo();
     back();
   };
+  const newCheck = () => {
+    cancel();
+    a.clear();
+    back();
+  };
+  const track = useMemo(() => trackFor(a.verdict, call.state), [a.verdict, call.state]);
 
   return (
     <>
+      <DataToggle />
+      {dropping && (
+        <div className="drop-veil" aria-hidden="true">
+          <span>Drop to check it</span>
+        </div>
+      )}
       <Header where={where} demo={a.mode === 'demo'} tab={tab} onTab={setScreen} onSettings={() => setScreen('settings')} />
 
       {error && (
@@ -135,6 +173,7 @@ export function App() {
         </div>
       )}
 
+      <TrackContext.Provider value={a.hasInput ? track : null}>
       <div key={screen} className={`screen nav-${nav.dir}`}>
       {screen === 'verdict' && (
         <Verdict
@@ -149,11 +188,19 @@ export function App() {
           escalateTo={escalateTo}
           onCall={startCall}
           onCancel={cancel}
+          onNewCheck={newCheck}
           onOpenFlag={flagScreen}
           onOpen={open}
           onPaste={() => setScreen('paste')}
+          onFile={(f) => void a.checkFile(f)}
+          media={ev.media}
+          onOpenMedia={(id) => {
+            setFocusMedia(id);
+            setScreen('media');
+          }}
           onDemo={loadDemo}
-          onVoice={a.place === 'meet' && !a.hasVoice ? () => void a.checkVoice() : undefined}
+          onVoice={IN_EXTENSION ? () => void a.checkVoice() : undefined}
+          onFrame={IN_EXTENSION ? () => void a.checkFrame() : undefined}
         />
       )}
       {screen === 'directory' && <Directory people={a.directory.people} suppliers={a.directory.suppliers} />}
@@ -164,14 +211,18 @@ export function App() {
         <Voice data={ev.voice} busy={!!a.busy} onBack={back} onRecordAgain={a.mode === 'live' && IN_EXTENSION ? () => void a.checkVoice() : undefined} />
       )}
       {screen === 'known' && ev.known && <KnownScams data={ev.known} onBack={back} />}
+      {screen === 'media' && ev.media && <Media items={ev.media} busy={!!a.busy} focusId={focusMedia} onBack={back} onFile={(f) => void a.checkFile(f)} />}
       {screen === 'paste' && (
         <CheckYourself
           busy={!!a.busy}
           emailOpen={a.emailOpen}
           onBack={back}
           onText={a.checkText}
-          onFile={a.checkInvoice}
+          onFile={a.checkFile}
           onAttached={a.checkAttachedInvoice}
+          onVoice={a.checkVoice}
+          onFrame={a.checkFrame}
+          onDone={back}
         />
       )}
       {screen === 'settings' && (
@@ -181,14 +232,11 @@ export function App() {
           knownCount={a.knownCount}
           onBack={back}
           onDemo={loadDemo}
-          onClear={() => {
-            cancel();
-            a.clear();
-            back();
-          }}
+          onClear={newCheck}
         />
       )}
       </div>
+      </TrackContext.Provider>
     </>
   );
 }

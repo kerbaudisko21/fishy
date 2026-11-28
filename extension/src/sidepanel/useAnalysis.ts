@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { DEMO_EVIDENCE, DEMO_REQUEST, DEMO_SIGNALS } from '../demo/fixtures';
+import { demoData } from '../demo/dataset';
+import { readPicture, readVoice, type MediaResult } from '../lib/ai/media';
 import { readTactics } from '../lib/ai/tactics';
-import { DEMO, IN_EXTENSION } from '../lib/config';
+import { DEMO, FIREBASE_READY, IN_EXTENSION } from '../lib/config';
 import { domainOf, findLookalike, registrable } from '../lib/checks/domain';
 import { judgeAuth } from '../lib/checks/email';
 import { compareAccount, editTraces, findAccounts, invoiceNumber, invoiceTotal, mask } from '../lib/checks/invoice';
 import { candidatesFromText, matchKnown, type Candidate } from '../lib/checks/known';
-import { readPdf } from '../lib/checks/pdf';
+import { scanPicture } from '../lib/checks/media';
+import { readPdf, renderFirstPage } from '../lib/checks/pdf';
 import { mainAmount, type SaidLine } from '../lib/checks/said';
-import { checkLinks, domainAge, loadDirectory, loadKnownBad, loadRules, scoreVoice, syncSelectors, type Directory } from '../lib/data';
-import { base64ToBuffer, bufferToBase64, type AttachmentReply, type PageMessage, type PanelMessage } from '../lib/messages';
+import { checkLinks, domainAge, loadDirectory, loadKnownBad, loadRules, syncSelectors, type Directory } from '../lib/data';
+import { base64ToBuffer, type AttachmentReply, type PageMessage, type PanelMessage } from '../lib/messages';
 import { toEvidence, toRequest, toSignals, type Findings, type TranscriptLine } from '../lib/pipeline';
 import { decide, DEFAULT_RULES, type RulesConfig } from '../lib/rules/engine';
-import type { KnownBadEntry } from '../lib/types';
-import { recordTabClip } from '../lib/voice';
+import type { KnownBadEntry, MediaCheck } from '../lib/types';
+import { captureTabFrame, recordTabClip } from '../lib/voice';
 
 const READ_EVERY_MS = 4000;
 const MAX_LINES = 20;
@@ -21,6 +23,46 @@ const NOT_A_PERSON = /^(you|anda|kamu|speaker|pasted|email)$/i;
 
 const clock = (t = Date.now()) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 const EMPTY: Findings = { place: 'meet', known: [] };
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
+
+/** The video and the voice have no file marks to read: without Gemini there is nothing to check. */
+const NEEDS_GEMINI =
+  'Checking the video or the voice needs Gemini, and Gemini isn’t connected in this build. Add the Firebase settings to extension/.env.local and reload FISHY. Pictures and PDFs still show their own marks without it.';
+
+/** Gemini's errors, in words a person can act on. */
+function geminiError(e: unknown): string {
+  const message = (e as Error)?.message ?? String(e);
+  if (/403|ACCESS_DENIED|Permission denied|SERVICE_DISABLED|has not been used/i.test(message)) {
+    return 'Gemini is switched off in this Firebase project. In the Firebase console open AI Logic → Get started → Gemini Developer API, wait a minute, then check again.';
+  }
+  if (/401|app.?check|unauthenticated/i.test(message)) {
+    return 'Firebase refused this build (App Check). Check that the debug token in extension/.env.local is added under App Check → Manage debug tokens.';
+  }
+  if (/429|quota|RESOURCE_EXHAUSTED|prepayment/i.test(message)) {
+    return 'Gemini is busy or out of free quota for now. Wait a minute, then check again.';
+  }
+  if (/failed to fetch|network|offline/i.test(message)) {
+    return 'Gemini couldn’t be reached. Check the internet connection, then check again.';
+  }
+  return `Gemini could not read it: ${message.slice(0, 160)}`;
+}
+
+/** Chrome's capture errors, in words a person can act on. */
+function captureError(what: 'video' | 'voice', e: unknown): string {
+  const message = (e as Error)?.message ?? String(e);
+  if (/not been invoked|activeTab|invoked for the current page/i.test(message)) {
+    return `Chrome lets FISHY capture a tab only after you click the FISHY icon on that tab. Go to the call’s tab, click the FISHY icon in the toolbar, then check the ${what} again.`;
+  }
+  if (/chrome:\/\/|cannot be captured|Chrome pages/i.test(message)) {
+    return `This tab can’t be captured. Open the call (Meet, Zoom or Teams in Chrome) and check the ${what} there.`;
+  }
+  if (/active stream|already being captured|another capture/i.test(message)) {
+    return `The tab is already being captured (screen sharing or another extension). Stop that, then check the ${what} again.`;
+  }
+  return `The ${what} check didn’t start: ${message}`;
+}
+const NO_GEMINI = 'Gemini is not set up in this build, so only the file’s own marks were checked.';
+const newId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now() + Math.random()));
 
 /**
  * Holds everything one check knows: page input → Steps 1–3 → signals, evidence and verdict.
@@ -198,26 +240,146 @@ export function useAnalysis() {
     }
   }, [checkInvoice]);
 
-  /** R8 · Records 10 s of the meeting and sends that clip, and only that, for a voice-clone score. */
+  /* ---------- Check something: pictures, documents, voices and the video call ---------- */
+
+  const putMedia = useCallback((item: MediaCheck) => setFindings((f) => ({ ...f, media: [...(f.media ?? []).filter((m) => m.id !== item.id), item] })), []);
+  const patchMedia = useCallback(
+    (id: string, patch: Partial<MediaCheck>) => setFindings((f) => ({ ...f, media: (f.media ?? []).map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
+    [],
+  );
+
+  /** Gemini's reading fills in the card once it arrives; a failure is said on the card, not hidden. */
+  const askGemini = useCallback(
+    async (id: string, run: () => Promise<MediaResult | null>) => {
+      try {
+        const result = await run();
+        patchMedia(id, result ? { gemini: result } : { gemini: null, note: NO_GEMINI });
+      } catch (e) {
+        console.warn('[FISHY] Gemini media check failed', e);
+        patchMedia(id, { gemini: null, note: geminiError(e) });
+      }
+    },
+    [patchMedia],
+  );
+
+  /** A picture or a frame of the call: the file's own marks on the laptop, then what Gemini sees. */
+  const checkPicture = useCallback(
+    async (blob: Blob, name: string, kind: 'picture' | 'frame' = 'picture') => {
+      goLive();
+      setError(null);
+      const id = newId();
+      // A frame FISHY captured itself carries no marks worth reading.
+      const facts = kind === 'picture' ? scanPicture(new Uint8Array(await blob.arrayBuffer())) : undefined;
+      putMedia({
+        id,
+        kind,
+        name,
+        at: clock(),
+        preview: URL.createObjectURL(blob),
+        facts: facts && { aiLabel: facts.aiLabel, aiTool: facts.aiTool, editedWith: facts.editedWith },
+        checks: facts?.checks ?? [],
+      });
+      setBusy(kind === 'frame' ? 'Gemini is looking at the video…' : 'Gemini is looking at the picture…');
+      await askGemini(id, () => readPicture(blob));
+      setBusy(null);
+    },
+    [askGemini, goLive, putMedia],
+  );
+
+  /** A voice clip: what Gemini hears. Audio goes to the cloud model (Gemini Nano does not take audio through Firebase AI Logic yet). */
+  const checkVoiceClip = useCallback(
+    async (blob: Blob, mime: string, name: string, levels?: number[]) => {
+      goLive();
+      setError(null);
+      const id = newId();
+      putMedia({ id, kind: 'voice', name, at: clock(), levels, checks: [] });
+      setBusy('Gemini is listening to the voice…');
+      await askGemini(id, () => readVoice(blob, mime));
+      setBusy(null);
+    },
+    [askGemini, goLive, putMedia],
+  );
+
+  /** A PDF: its edit traces, and Gemini's look at the first page. An invoice also gets the bank-account checks. */
+  const checkDocument = useCallback(
+    async (data: ArrayBuffer, name: string) => {
+      goLive();
+      setError(null);
+      setBusy('Reading the document…');
+      const id = newId();
+      try {
+        const { text, facts } = await readPdf(data.slice(0));
+        const page = await renderFirstPage(data);
+        putMedia({ id, kind: 'document', name, at: clock(), preview: URL.createObjectURL(page), checks: editTraces(facts) });
+        if (findAccounts(text).length) await checkInvoice(data.slice(0), name);
+        setBusy('Gemini is looking at the first page…');
+        await askGemini(id, () => readPicture(page));
+      } catch (e) {
+        setError(`Document check: ${(e as Error).message}`);
+      } finally {
+        setBusy(null);
+      }
+    },
+    [askGemini, checkInvoice, goLive, putMedia],
+  );
+
+  /** Whatever the person dropped or chose: a picture, a PDF or a voice recording. */
+  const checkFile = useCallback(
+    async (file: File) => {
+      // Checked before reading: a huge file would freeze the panel and is too big for Gemini anyway.
+      if (file.size > MAX_FILE_BYTES) return setError(`That file is ${Math.round(file.size / 1048576)} MB. FISHY checks files up to 20 MB.`);
+      if (file.type.startsWith('image/')) return checkPicture(file, file.name);
+      if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return checkDocument(await file.arrayBuffer(), file.name);
+      if (file.type.startsWith('audio/') || /\.(m4a|mp3|wav|ogg|webm|opus)$/i.test(file.name)) return checkVoiceClip(file, file.type || 'audio/webm', file.name);
+      setError('FISHY checks pictures, PDF documents and voice recordings.');
+    },
+    [checkDocument, checkPicture, checkVoiceClip],
+  );
+
+  /** Records 10 s of the call in this tab, only on the user's click, and has Gemini listen to it. */
   const checkVoice = useCallback(async () => {
-    if (!IN_EXTENSION) return setError('Open this in the extension to record the meeting audio.');
+    if (!IN_EXTENSION) return setError('Open this in the extension to record the call.');
+    if (!FIREBASE_READY) return setError(NEEDS_GEMINI);
     const tab = await activeTab();
-    if (tab?.id === undefined || !tab.url?.startsWith('https://meet.google.com/')) return setError('Open the Google Meet tab first.');
+    if (tab?.id === undefined) return setError('Open the call’s tab first.');
     setError(null);
     try {
       const clip = await recordTabClip(tab.id, 10, (left) => setBusy(`Recording the voice… ${left} s`));
-      setBusy('Scoring the clip…');
-      const result = await scoreVoice(bufferToBase64(await clip.blob.arrayBuffer()), clip.mime);
-      if (!result) throw new Error('The voice check is not available yet.');
-      const speaker = [...transcript.current].reverse().find((l) => !NOT_A_PERSON.test(l.speaker))?.speaker ?? 'Speaker';
-      goLive();
-      setFindings((f) => ({ ...f, voice: { speaker, seconds: clip.seconds, sentAt: clock(), score: result.score, levels: clip.levels, demo: result.demo } }));
+      const speaker = [...transcript.current].reverse().find((l) => !NOT_A_PERSON.test(l.speaker))?.speaker;
+      await checkVoiceClip(clip.blob, clip.mime, speaker ? `${clip.seconds} s of ${speaker}` : `${clip.seconds} s of the call`, clip.levels);
     } catch (e) {
-      setError(`Voice check: ${(e as Error).message}`);
-    } finally {
+      setError(captureError('voice', e));
       setBusy(null);
     }
-  }, [goLive]);
+  }, [checkVoiceClip]);
+
+  /** One frame of the video call in this tab, only on the user's click, for Gemini to look at. */
+  const checkFrame = useCallback(async () => {
+    if (!IN_EXTENSION) return setError('Open this in the extension to check the video call.');
+    if (!FIREBASE_READY) return setError(NEEDS_GEMINI);
+    const tab = await activeTab();
+    if (tab?.id === undefined) return setError('Open the call’s tab first.');
+    setError(null);
+    try {
+      setBusy('Capturing the video…');
+      // In the floating window, step out of the picture for the moment of capture.
+      const floating = window.parent !== window;
+      if (floating) {
+        window.parent.postMessage({ fishy: 'hide' }, '*');
+        await new Promise((r) => setTimeout(r, 120));
+      }
+      let frame: Blob;
+      try {
+        frame = await captureTabFrame(tab.id);
+      } finally {
+        if (floating) window.parent.postMessage({ fishy: 'show' }, '*');
+      }
+      await checkPicture(frame, `Video call at ${clock()}`, 'frame');
+    } catch (e) {
+      setError(captureError('video', e));
+      setBusy(null);
+    }
+  }, [checkPicture]);
 
   /** Paste-text fallback (deck risk: Meet pages change). */
   const checkText = useCallback(
@@ -248,7 +410,8 @@ export function useAnalysis() {
 
   const out = useMemo(() => {
     if (mode === 'demo') {
-      return { signals: DEMO_SIGNALS, evidence: DEMO_EVIDENCE, request: DEMO_REQUEST, verdict: decide(DEMO_SIGNALS, rules), place: 'meet' as const };
+      const demo = demoData();
+      return { signals: demo.signals, evidence: demo.evidence, request: demo.request, verdict: decide(demo.signals, rules), place: demo.request?.place ?? ('meet' as const) };
     }
     const signals = toSignals(full);
     const verdict = decide(signals, rules);
@@ -258,12 +421,14 @@ export function useAnalysis() {
   const onPage = useCallback((m: PageMessage) => (m.type === 'captions' ? onCaptions(m.lines) : void onEmail(m)), [onCaptions, onEmail]);
 
   /** Did anything get checked yet? (live mode starts empty) */
-  const hasInput = mode === 'demo' || !!(findings.tactics || findings.email || findings.invoice || findings.voice || candidates.length);
+  const hasInput = mode === 'demo' || !!(findings.tactics || findings.email || findings.invoice || findings.voice || findings.media?.length || candidates.length);
 
   return {
     mode,
     ...out,
     hasInput,
+    /** Accounts, domains and numbers seen in the request, for shared learning on a call. */
+    candidates,
     directory,
     rules,
     knownCount: known.list.length,
@@ -275,6 +440,8 @@ export function useAnalysis() {
     checkInvoice,
     checkAttachedInvoice,
     checkVoice,
+    checkFrame,
+    checkFile,
     clear,
     loadDemo,
     emailOpen: !!findings.email,

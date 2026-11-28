@@ -1,12 +1,14 @@
 import { addDoc, collection, doc, getDocs, getFirestore, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
-import { DEMO_DIRECTORY, DEMO_KNOWN_BAD, DEMO_SUPPLIERS } from '../demo/fixtures';
+import { demoData } from '../demo/dataset';
+import { DEMO_KNOWN_BAD } from '../demo/fixtures';
 import type { StartResult } from './call-wait';
 import { DATABASE, DEMO, FIREBASE_READY, IN_EXTENSION, REGION } from './config';
 import { DEFAULT_SELECTORS, SELECTORS_KEY, type PageSelectors } from './messages';
 import { ensureSignedIn, firebaseApp } from './firebase';
 import { DEFAULT_RULES, type RulesConfig } from './rules/engine';
+import type { Suspects } from './checks/known';
 import type { CallState, CallStatus, DirectoryPerson, KnownBadEntry, SignalKind, Supplier } from './types';
 
 /*
@@ -24,7 +26,10 @@ export interface Directory {
 
 /** People and suppliers on record, masked (Firestore `directoryPublic`). */
 export async function loadDirectory(): Promise<Directory> {
-  if (!FIREBASE_READY) return { people: DEMO_DIRECTORY, suppliers: DEMO_SUPPLIERS };
+  if (!FIREBASE_READY) {
+    const { people, suppliers } = demoData();
+    return { people, suppliers };
+  }
   await ensureSignedIn();
   const snap = await getDocs(collection(db(), 'directoryPublic'));
   const people: DirectoryPerson[] = [];
@@ -80,7 +85,9 @@ export interface CheckSummary {
 
 export async function createCheck(summary: CheckSummary): Promise<string> {
   const user = await ensureSignedIn();
-  const ref = await addDoc(collection(db(), 'checks'), { ownerUid: user.uid, createdAt: serverTimestamp(), summary });
+  // Firestore refuses undefined values, and the rules accept only known fields: leave empty ones out.
+  const clean = Object.fromEntries(Object.entries(summary).filter(([, v]) => v !== undefined));
+  const ref = await addDoc(collection(db(), 'checks'), { ownerUid: user.uid, createdAt: serverTimestamp(), summary: clean });
   return ref.id;
 }
 
@@ -89,6 +96,31 @@ export async function startVerificationCall(checkId: string, targetId: string): 
   const { data } = await fn<{ checkId: string; personId: string }, Partial<StartResult>>('startVerificationCall')({ checkId, personId: targetId });
   // The answer says whether a phone call was really placed, and gives the approval page when there is one.
   return { call: data.call === 'placed' ? 'placed' : 'not_placed', reason: data.reason ?? null, approvalUrl: data.approvalUrl ?? null };
+}
+
+/**
+ * Shared learning: the accounts, domains and numbers in the request, kept beside the check.
+ * They join the known-scam list only if the real person says "not me" and enters their PIN.
+ * Best effort: a failure here never stops the call.
+ */
+export async function reportSuspects(checkId: string, suspects: Suspects): Promise<void> {
+  if (!suspects.accounts.length && !suspects.domains.length && !suspects.numbers.length) return;
+  try {
+    await fn<{ checkId: string; suspects: Suspects }, { kept: number }>('reportSuspects')({ checkId, suspects });
+  } catch (e) {
+    console.warn('[FISHY] reporting the request details failed', e);
+  }
+}
+
+/** A link to this check's incident report, for the finance manager. Null when it cannot be made. */
+export async function shareIncident(checkId: string): Promise<string | null> {
+  if (!FIREBASE_READY) return null;
+  try {
+    return (await fn<{ checkId: string }, { url: string }>('shareIncident')({ checkId })).data.url;
+  } catch (e) {
+    console.warn('[FISHY] sharing the incident report failed', e);
+    return null;
+  }
 }
 
 const CALL_STATES: CallState[] = ['idle', 'ringing', 'confirmed', 'not_me', 'no_answer', 'escalated'];

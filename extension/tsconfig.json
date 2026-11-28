@@ -13,7 +13,7 @@
     "noEmit": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "types": ["chrome", "vite/client"]
+    "types": ["chrome", "vite/client", "@crxjs/vite-plugin/client"]
   },
-  "include": ["src", "vite.config.ts", "manifest.config.ts"]
+  "include": ["src", "vite.config.ts", "manifest.config.ts", "build-info.ts"]
 }

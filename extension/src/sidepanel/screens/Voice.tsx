@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { Evidence } from '../../lib/types';
-import { DetailHead, Icon, Privacy, Section } from '../components';
+import { DetailHead, Icon, Privacy } from '../components';
 
 // Shape for the demo story, which has no real recording.
 const DEMO_BARS = [30, 52, 40, 68, 84, 60, 44, 72, 90, 64, 38, 56, 80, 96, 70, 48, 34, 58, 76, 88, 62, 42, 66, 82, 94, 74, 50, 36, 54, 70, 86, 60, 40, 64, 78, 52, 32, 46, 30, 22].map((h) => h / 100);
@@ -10,10 +10,9 @@ interface Props {
   busy?: boolean;
   onBack: () => void;
   onRecordAgain?: () => void;
-  onCheckFace?: () => void;
 }
 
-export function Voice({ data, busy, onBack, onRecordAgain, onCheckFace }: Props) {
+export function Voice({ data, busy, onBack, onRecordAgain }: Props) {
   const pct = Math.round(data.score * 100);
   const bars = data.levels?.length ? data.levels : DEMO_BARS;
   const verdict = pct >= 60 ? 'Likely synthetic' : pct >= 35 ? 'Unclear' : 'Likely real';
@@ -64,16 +63,6 @@ export function Voice({ data, busy, onBack, onRecordAgain, onCheckFace }: Props)
             A score supports the case but never decides it. <strong>The call on the number on record decides.</strong>
           </span>
         </p>
-
-        <Section title="Face check" aside="Coming next">
-          <div className="surface card-pad">
-            <span className="row-detail">Scores {data.faceFrames} video frames of this speaker in the cloud.</span>
-            <button className="btn secondary small" onClick={onCheckFace} disabled={!onCheckFace}>
-              {Icon.face(16)}
-              Check video frames
-            </button>
-          </div>
-        </Section>
 
         <Privacy>The clip is deleted after scoring. No caption text goes with it.</Privacy>
       </main>
