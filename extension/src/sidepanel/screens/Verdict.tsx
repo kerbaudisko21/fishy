@@ -1,6 +1,7 @@
 ﻿import type { MediaCheck, Signal, Step, Verdict as VerdictT } from '../../lib/types';
 import { ActionGrid, DropZone, RecentChecks, ScamType, WatchPanel } from '../scanner';
 import { scoreMedia } from '../../lib/media-score';
+import { PARTLY_CHECKED } from '../../lib/ai/fallback';
 import type { WatchState } from '../useAnalysis';
 import { FlagRow, Icon, Privacy, Section, SourceBadge, Tile } from '../components';
 import { useFirstSeen } from '../motion';
@@ -15,6 +16,8 @@ import type { Screen } from '../routes';
 interface Props {
   verdict: VerdictT;
   hasInput: boolean;
+  /** Gemini never read the pasted message: only the keyword list did. */
+  readerFailed?: boolean;
   busy: string | null;
   /** Clears this check and starts over. */
   onNewCheck: () => void;
@@ -74,7 +77,10 @@ export function Verdict(p: Props) {
         }
       : n > 0
         ? { tone: 'navy', pill: n === 1 ? 'A sign to look at' : `${n} signs to look at`, title: 'Take a closer look.', line: 'Not enough to call it fake. Look at the signs below.' }
-        : { tone: 'green', pill: 'No clear signs', title: 'No clear signs.', line: 'A good fake can pass every check: if it matters, check with them another way.' };
+        : p.readerFailed
+          ? // Nothing found, but Gemini never read it: not a clean result.
+            { tone: 'navy', ...PARTLY_CHECKED }
+          : { tone: 'green', pill: 'No clear signs', title: 'No clear signs.', line: 'A good fake can pass every check: if it matters, check with them another way.' };
 
   // Motion: the result plays in once per new result; the hero text replays on every change.
   const sig = waiting ? 'waiting' : `${verdict.level}:${verdict.flags.map((f) => f.kind).join(',')}:${strongest?.s.score ?? ''}`;
