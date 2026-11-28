@@ -157,14 +157,17 @@ export function Settings({ rulesVersion, knownCount, onBack, onClear }: Props) {
         </Section>
 
         <Section title="What’s new" aside={CHANGES[0].version === VERSION ? `in v${VERSION}` : `latest notes: v${CHANGES[0].version}`}>
-          <div className="surface card-pad">
+          <details className="surface card-pad changes-fold">
+            <summary>
+              {CHANGES[0].items.length} changes in this version
+            </summary>
             <ul className="changes">
               {CHANGES[0].items.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
             <span className="row-detail">Every version is listed in CHANGELOG.md.</span>
-          </div>
+          </details>
         </Section>
       </main>
     </>

@@ -9,6 +9,18 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '0.7.1',
+    date: '29 Nov 2026',
+    items: [
+      'Fixed: the home screen now follows the strongest check, so it never says “not enough to call it fake” above a red score',
+      'Fixed: “Don’t pay until them confirms” now reads “until the real person confirms” (the 0.6.0 fix had not landed)',
+      '“Looks like” is one heading with a small coral mark; watch mode is a switch instead of a dashed box that looked like a drop zone',
+      '“Fishy because…” keeps to the core of each reason; “How is this scored?” opens the explanation only when asked',
+      'Frames that didn’t change are greyed out in the filmstrip; drawn chevrons between the steps of how a check ran; What’s new in Settings is folded',
+      'Accessibility: the watch switch’s track now meets the 3:1 contrast rule for controls; themed scrollbar and caret',
+    ],
+  },
+  {
     version: '0.7.0',
     date: '29 Nov 2026',
     items: [

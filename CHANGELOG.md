@@ -2,6 +2,14 @@
 
 Each version's build also shows in the extension under **Settings → About** (version, commit, build time and what's new). The same list lives in `extension/src/lib/changes.ts`.
 
+## 0.7.1 · 29 Nov 2026
+- Fixed: the home screen now follows the strongest check, so it never says "not enough to call it fake" above a red score
+- Fixed: "Don't pay until them confirms" now reads "until the real person confirms" (the 0.6.0 fix had not landed)
+- "Looks like" is one heading with a small coral mark; watch mode is a switch instead of a dashed box that looked like a drop zone
+- "Fishy because…" keeps to the core of each reason; "How is this scored?" opens the explanation only when asked
+- Frames that didn't change are greyed out in the filmstrip; drawn chevrons between the steps of how a check ran; What's new in Settings is folded
+- Accessibility: the watch switch's track now meets the 3:1 contrast rule for controls; themed scrollbar and caret
+
 ## 0.7.0 · 29 Nov 2026
 - Score by evidence fusion: odds × each sign's likelihood ratio, shown on every reason ("×8", "÷1.4"), with the weights grounded in published figures (Jia 2024, GOTCHA, Interisle 2025, APWG, Layton 2024) and the rest marked as estimates
 - Gemini Nano status in the header: Nano + cloud, cloud only, Nano getting ready, offline, or laptop checks only

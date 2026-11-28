@@ -7,6 +7,7 @@ import { useFirstSeen } from '../motion';
 import { waitingFor } from '../../lib/call-wait';
 import type { CallStatus, CallTarget, MediaCheck, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
 import { ActionGrid, DropZone, RecentChecks, ScamType, WatchPanel } from '../scanner';
+import { scoreMedia } from '../../lib/media-score';
 import type { WatchState } from '../useAnalysis';
 import { FlagRow, Icon, Privacy, Section, SourceBadge, Tile } from '../components';
 import { Amount, money } from '../format';
@@ -74,6 +75,16 @@ export function Verdict(p: Props) {
   const { request, verdict, call } = p;
   const target = p.targets.find((t) => t.id === p.targetId);
   const who = first(call.target?.name ?? target?.name);
+  // Without anyone on record yet there is no name: say "the real person", never "them confirms".
+  const named = firstName(call.target?.name ?? target?.name, '');
+  const until = named ? `${named} confirms` : 'the real person confirms';
+  // The strongest checked file, picture, voice, video or website: the hero must never say "not
+  // enough" while a card below says "strong signs".
+  const strongest = (p.media ?? [])
+    .map((m) => ({ m, s: scoreMedia(m) }))
+    .filter((x) => x.s.score !== null)
+    .sort((a, b) => b.s.score! - a.s.score!)[0];
+  const mediaHigh = strongest?.s.band === 'high' ? strongest : undefined;
   const n = verdict.flags.length;
   const now = useNow(call.state === 'ringing');
   const idle = call.state === 'idle';
@@ -93,7 +104,9 @@ export function Verdict(p: Props) {
           : call.state === 'confirmed'
             ? { tone: 'green', pill: 'Confirmed', title: `${who} confirmed.`, line: 'They said yes and entered their PIN. Pay through the normal approval.' }
             : verdict.level === 'fishy'
-              ? { tone: 'coral', pill: 'Hold the payment', title: 'Something’s fishy.', line: `${n} red flag${n === 1 ? '' : 's'}. Don’t pay until ${who} confirms on the number on record.` }
+              ? { tone: 'coral', pill: 'Hold the payment', title: 'Something’s fishy.', line: `${n} red flag${n === 1 ? '' : 's'}. Don’t pay until ${until} on the number on record.` }
+              : mediaHigh
+                ? { tone: 'coral', pill: 'Hold the payment', title: 'Something’s fishy.', line: `${mediaHigh.m.name} scored ${mediaHigh.s.score}. Don’t pay or act on it until ${until} on the number on record.` }
               : n > 0
                 ? { tone: 'navy', pill: n === 1 ? 'A sign to look at' : `${n} signs to look at`, title: 'Take a closer look.', line: 'Not enough to call it fake. Look at the signs below, and call before money moves.' }
                 : { tone: 'green', pill: 'No red flags', title: 'Looks normal.', line: 'For a payment, a call on the number on record is still the safe step.' };

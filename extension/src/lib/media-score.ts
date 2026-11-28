@@ -180,7 +180,12 @@ export const STAMP: Record<Exclude<ScoreBand, 'pending'>, string> = { high: 'Fis
 export function whySentence(s: MediaScore): string {
   if (s.score === null || !s.reasons.length) return '';
   const clean = (r: string) => {
-    const text = r.replace(/^Gemini (saw|heard):?\s*/i, '').replace(/\.$/, '');
+    // The core clause only: "…, as when separate recordings are joined" and second sentences stay in Why.
+    const text = r
+      .replace(/^Gemini (saw|heard):?\s*/i, '')
+      .split(/(?<=[a-z0-9)”"])\.\s|;\s/)[0]
+      .replace(/,\s+(as when|as happens when|which|so)\b.*$/i, '')
+      .replace(/\.$/, '');
     // Lower-case the first word to run on in the sentence, but not a name ("Content Credentials").
     const [first, second = ''] = text.split(' ');
     const isName = /^[A-Z]/.test(second) || /^[A-Z]{2,}/.test(first);
