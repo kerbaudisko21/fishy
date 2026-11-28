@@ -11,7 +11,7 @@ import { DataToggle } from './DataToggle';
 import { useWindowDrop } from './scanner';
 import { placeFor, screenFor, type Screen } from './routes';
 import { CheckYourself } from './screens/CheckYourself';
-import { Directory } from './screens/Directory';
+import { ScamGuide } from './screens/ScamGuide';
 import { EmailLinks } from './screens/EmailLinks';
 import { Invoice } from './screens/Invoice';
 import { KnownScams } from './screens/KnownScams';
@@ -41,7 +41,7 @@ function hasEvidence(screen: Screen, ev: Evidence) {
 
 const first = (name?: string) => firstName(name, '');
 
-/** Check is home, Directory sits beside it, everything else opens on top. */
+/** Check is home, the scam guide sits beside it, everything else opens on top. */
 const DEPTH = (s: Screen) => (s === 'verdict' ? 0 : s === 'directory' ? 1 : 2);
 
 export function App() {
@@ -232,7 +232,7 @@ export function App() {
           onStopWatch={a.stopWatch}
         />
       )}
-      {screen === 'directory' && <Directory people={a.directory.people} suppliers={a.directory.suppliers} />}
+      {screen === 'directory' && <ScamGuide seen={a.verdict.patterns} />}
       {screen === 'tactics' && ev.tactics && <Tactics data={ev.tactics} onBack={back} onPaste={() => setScreen('paste')} />}
       {screen === 'email' && ev.email && <EmailLinks data={ev.email} onBack={back} onOpenInvoice={ev.invoice ? () => open('invoice') : a.emailOpen ? () => setScreen('paste') : undefined} />}
       {screen === 'invoice' && ev.invoice && <Invoice data={ev.invoice} onBack={back} onOpenKnown={ev.known ? () => open('known') : undefined} />}

@@ -94,7 +94,7 @@ export function Verdict(p: Props) {
 
   // The hero: one colour per state, one sentence.
   const hero: { tone: Tone; pill: string; title: string; line: string } | null = waiting
-    ? { tone: 'navy', pill: 'Ready', title: 'Is it real?', line: 'Check it before you pay or type anything in. FISHY tells you how fishy it is, why, and who to call.' }
+    ? { tone: 'navy', pill: 'Ready', title: 'Is it real?', line: 'Check it before you pay.' }
     : call.state === 'ringing'
       ? { tone: 'navy', pill: wait.pill, title: wait.title, line: wait.line }
       : call.state === 'no_answer' || call.state === 'escalated'
@@ -174,7 +174,7 @@ export function Verdict(p: Props) {
         </section>
       )}
 
-      <main className={`main${p.hasInput && (idle || calling || ended) ? ' with-bar' : ''}${intro ? ' intro' : ''}`}>
+      <main className={`main${p.hasInput && ((idle && p.targets.length > 0) || calling || ended) ? ' with-bar' : ''}${intro ? ' intro' : ''}`}>
         {p.busy && (
           <p className="status-line" role="status">
             <span className="spinner" aria-hidden="true" />
@@ -200,15 +200,11 @@ export function Verdict(p: Props) {
               </li>
               <li className="start-then">
                 <span className="start-label">
-                  <span className="start-num">3</span> Then: call the real person
+                  <span className="start-num">3</span> Then call them back
                 </span>
-                <span className="row-detail">On the number on record, never the one in the message, and ask your agreed code word (FBI and CISA advice). A fake can pass a check; it can’t answer the real phone.</span>
+                <span className="row-detail">On the number you already have, and ask your code word.</span>
               </li>
             </ol>
-
-            <p className="start-hint">
-              Faster next time: <kbd className="key">Alt</kbd>+<kbd className="key">Shift</kbd>+<kbd className="key">F</kbd> opens FISHY, or right-click a picture, a link or the page and choose “Check … with FISHY”.
-            </p>
 
             <div className="start-links">
               <button className="link" onClick={p.onPaste}>
@@ -340,11 +336,15 @@ export function Verdict(p: Props) {
           </Section>
         )}
 
-        <Privacy>Everything is checked on this laptop first. The cloud gets only what you chose to check, and only when Gemini Nano can’t do it (a voice clip always goes; message text is redacted first).</Privacy>
+        {waiting ? (
+          <Privacy>Checked on this laptop first.</Privacy>
+        ) : (
+          <Privacy>Everything is checked on this laptop first. The cloud gets only what you chose to check, and only when Gemini Nano can’t do it (a voice clip always goes; message text is redacted first).</Privacy>
+        )}
       </main>
 
       {/* In <body>, so the screen's slide-in transform doesn't move a fixed bar. */}
-      {p.hasInput && idle && createPortal(
+      {p.hasInput && idle && p.targets.length > 0 && createPortal(
         <div className={`action-bar${intro ? ' intro' : ''}`}>
           {p.targets.length > 1 && (
             <label className="target">

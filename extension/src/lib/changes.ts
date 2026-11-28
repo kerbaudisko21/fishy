@@ -9,6 +9,15 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '0.8.1',
+    date: '29 Nov 2026',
+    items: [
+      'Simpler home: about half the words; the three buttons say just “Deepfake?”, “Cloned?”, “Scam site?”; the shortcut tips moved to Settings',
+      'The Directory tab is now “Scams”: a picture guide to the six scams FISHY spots (deepfake boss on a call, cloned voice, fake website, QR code scam, doctored invoice, fake payment proof), each with its signs, which check to use and what to do; a scam your checks matched is marked',
+      'No “Call … on record” bar when nobody is on record',
+    ],
+  },
+  {
     version: '0.8.0',
     date: '29 Nov 2026',
     items: [

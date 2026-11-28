@@ -35,6 +35,7 @@ function WithoutOpening() {
   return (
     <div className="surface card-pad">
       <span className="row-title">Keyboard shortcuts</span>
+      <span className="row-detail">A shortcut works like clicking FISHY on that tab, so the face and voice checks start straight away.</span>
       {keys.length ? (
         <dl className="kv">
           {keys.map((k) => (

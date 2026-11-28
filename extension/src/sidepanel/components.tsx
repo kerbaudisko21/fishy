@@ -117,7 +117,7 @@ export function Header({
   );
 }
 
-/** Verdict / Directory, with one underline that slides between them. */
+/** Check / Scams, with one underline that slides between them. */
 function Tabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
   const refs = useRef<Record<Tab, HTMLButtonElement | null>>({ verdict: null, directory: null });
   const [bar, setBar] = useState<{ x: number; w: number } | null>(null);
@@ -146,7 +146,7 @@ function Tabs({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
           aria-current={tab === t ? 'page' : undefined}
           onClick={() => onTab(t)}
         >
-          {t === 'verdict' ? 'Verdict' : 'Directory'}
+          {t === 'verdict' ? 'Check' : 'Scams'}
         </button>
       ))}
       {bar && <span className={`tab-bar${ready ? ' ready' : ''}`} aria-hidden="true" style={{ transform: `translateX(${bar.x}px) scaleX(${bar.w / 100})` }} />}

@@ -2,6 +2,11 @@
 
 Each version's build also shows in the extension under **Settings → About** (version, commit, build time and what's new). The same list lives in `extension/src/lib/changes.ts`.
 
+## 0.8.1 · 29 Nov 2026
+- Simpler home: about half the words; the three buttons say just "Deepfake?", "Cloned?", "Scam site?"; the shortcut tips moved to Settings
+- The Directory tab is now "Scams": a picture guide to the six scams FISHY spots (deepfake boss on a call, cloned voice, fake website, QR code scam, doctored invoice, fake payment proof), each with its signs, which check to use and what to do; a scam your checks matched is marked
+- No "Call … on record" bar when nobody is on record
+
 ## 0.8.0 · 29 Nov 2026
 - Use FISHY without opening it first: keyboard shortcuts Alt+Shift+F (open FISHY), Alt+Shift+W (check this website), Alt+Shift+V (check the face on this call), Alt+Shift+A (check the voice); change them at chrome://extensions/shortcuts
 - Right-click anything to check it: a picture, a video (its face), a link (checked by its address, without opening it), selected text (pressure in a message) or the page itself
