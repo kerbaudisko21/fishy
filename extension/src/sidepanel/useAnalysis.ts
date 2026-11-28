@@ -31,6 +31,9 @@ const MAX_FILE_BYTES = 20 * 1024 * 1024;
 /** Gemini's errors, in words a person can act on. */
 function geminiError(e: unknown): string {
   const message = (e as Error)?.message ?? String(e);
+  if (/firebasevertexai|Firebase AI API/i.test(message)) {
+    return 'The Firebase AI Logic API is off in this Firebase project. Turn on “Firebase AI Logic API” (firebasevertexai.googleapis.com) in the Google Cloud console for the project, or open AI Logic → Get started in the Firebase console, wait a minute, then check again.';
+  }
   if (/403|ACCESS_DENIED|Permission denied|SERVICE_DISABLED|has not been used/i.test(message)) {
     return 'Gemini is switched off in this Firebase project. In the Firebase console open AI Logic → Get started → Gemini Developer API, wait a minute, then check again.';
   }

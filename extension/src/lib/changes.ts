@@ -22,6 +22,7 @@ export const CHANGES: Change[] = [
       '“Looks like”: what kind of scam the checks point to (deepfake executive on a video call, cloned voice, real-time face swap, fake camera feed, doctored picture or payment screenshot, forged document…), with what to do',
       'Fixed: Remote Config’s scam rules now add to the built-in rules instead of replacing them, so an older config can’t switch the media checks off',
       'The test-data switch in development builds stays hidden unless ?data= is in the address',
+      'When the Firebase AI Logic API is off in the project, the card says which API to turn on',
     ],
   },
   {
