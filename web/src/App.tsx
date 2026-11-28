@@ -1,14 +1,16 @@
 import { Approval } from './Approval';
 import { IncidentPage } from './Incident';
+import { pageFor } from './route';
 import { TryPage } from './Try';
 
 /**
- * Three pages on Firebase Hosting: the web approval (default), the incident report (/incident?id=…)
- * and "Try FISHY" (/try), where anyone can run the tactic reader without installing the extension.
+ * Three pages on Firebase Hosting: "Try FISHY" (/try and the bare address), where anyone can run
+ * the checks without installing the extension; the web approval (/?t=… from a one-time link, or
+ * /?demo); and the incident report (/incident?id=…).
  */
 export function App() {
-  const path = location.pathname;
-  if (path.startsWith('/incident')) return <IncidentPage />;
-  if (path.startsWith('/try')) return <TryPage />;
+  const page = pageFor(location.pathname, location.search);
+  if (page === 'incident') return <IncidentPage />;
+  if (page === 'try') return <TryPage />;
   return <Approval />;
 }

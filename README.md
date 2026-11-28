@@ -16,8 +16,8 @@ A deepfaked boss on a video call, a cloned voice note, an AI-made receipt or an 
 
 | What | How | Needs |
 |---|---|---|
-| **Try FISHY in a browser** | Open `/try` on the hosted pages and drop a picture (a photo, an ID, a receipt, a transfer screenshot), or press **Use the sample** for a message. It shows the file's own marks, what Gemini saw, and where each step ran (Gemini Nano on your device, or the cloud) | Nothing to install. App Check runs through reCAPTCHA Enterprise, with no debug token |
-| **The approver's page** | Open `/?demo` on the hosted pages: what the real person sees when a phone call can't reach them (yes or no, then a PIN) | Nothing |
+| **Try FISHY in a browser** | Open <https://fishy-check.web.app> (the bare address and `/try` are the same page) and drop a picture (a photo, an ID, a receipt, a transfer screenshot), or press **Use the sample** for a message. It shows the file's own marks, what Gemini saw, and where each step ran (Gemini Nano on your device, or the cloud) | Nothing to install. App Check runs through reCAPTCHA Enterprise, with no debug token |
+| **The approver's page** | Open <https://fishy-check.web.app/?demo>: what the real person sees when a phone call can't reach them (yes or no, then a PIN) | Nothing |
 | **The extension, demo mode** | Download `fishy-extension-demo.zip` from the release, unzip it, then `chrome://extensions` → Developer mode → **Load unpacked**. It runs on a fictional company; the keyword reader stands in for Gemini and says so | Chrome 139+ |
 | **The extension, live** | Build it with your own Firebase project (see [Run it](#run-it)) | A Firebase project with AI Logic and an App Check debug token |
 
