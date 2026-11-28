@@ -9,6 +9,17 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '1.0.0',
+    date: '29 Nov 2026',
+    items: [
+      'A new look, the evidence tag: manila paper, black ink and one evidence red; condensed heavy Archivo for headings, labels and the stamp; square-ish paper tags instead of soft rounded cards',
+      'A new logo: a red evidence tag with a fish hook bent into a question mark',
+      'The home is just what FISHY can check: drop a picture, PDF or voice note, then four tiles (Face on a call, Voice on a call, This website, A message) and the watch switch. No numbered steps',
+      'Fixed: “Directory: Missing or insufficient permissions”. The database rules are published to the project the extension uses, and the supplier list now loads quietly in the background (every check works without it)',
+      'The calling, approval, incident and alert functions are removed from the backend and the live project; only the website check’s two lookups remain',
+    ],
+  },
+  {
     version: '0.9.0',
     date: '29 Nov 2026',
     items: [

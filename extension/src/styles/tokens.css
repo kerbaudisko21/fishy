@@ -1,46 +1,49 @@
 /* Design tokens. Navy and coral come from the logo; the page sits on a cool tide grey. */
 :root {
-  /* One family, made for legibility under pressure; headings use its bold weights. */
+  /* Evidence tag: manila paper, black ink, one evidence red. Headings in condensed Archivo,
+     the way case files and warning labels are set; text in Atkinson Hyperlegible, made to stay
+     readable under pressure. */
   --font-body: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
-  --font-head: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
+  --font-head: 'Archivo Variable', 'Arial Narrow', system-ui, sans-serif;
+  --head-stretch: 72%;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  --bg: #eaeff1; /* tide */
-  --surface: #ffffff;
-  --surface-muted: #f2f5f6;
-  --note: #e1e8eb;
-  --line: #d9e1e4;
-  --line-soft: #e8eef0;
-  --ink: #10202e; /* navy, from the logo */
-  --ink-2: #34434f;
-  --muted: #5a6874;
-  --navy-2: #1b3042;
-  --on-navy: #c8d3dc;
+  --bg: #ede3cc; /* manila */
+  --surface: #fbf8f1; /* paper */
+  --surface-muted: #f4eddf;
+  --note: #e6dcc6;
+  --line: #d6c9ad;
+  --line-soft: #e4d9c1;
+  --ink: #141414; /* black ink */
+  --ink-2: #3a352d;
+  --muted: #6a6253; /* 5.7:1 on paper, 4.7:1 on manila */
+  --navy-2: #2a2824; /* raised surfaces on ink */
+  --on-navy: #d8cfbc;
 
-  --brand: #f26b4e; /* coral, from the logo: fills only, too light for text on white */
-  /* Coral means "hold the payment" (and the logo). Focus and selection stay in ink, so the warning keeps its weight. */
+  --brand: #c8221a; /* evidence red: the stamp, the logo, "fishy". White on it is 5.7:1 */
   --focus: var(--ink);
-  --demo: #f2c14e;
-  --brand-text: #b83a22;
+  --demo: #e9b949;
+  --brand-text: #a51b14;
 
-  --amber-bg: #fff1d6;
-  --amber-line: #f0c26a;
-  --amber-text: #8a4b00;
+  --amber-bg: #f6e3b0;
+  --amber-line: #d9b45c;
+  --amber-text: #7a4a00;
 
-  --danger: #b42a14;
-  --danger-bg: #fde1d9;
-  --danger-text: #a3260f;
+  --danger: #c8221a;
+  --danger-bg: #f6dcd6;
+  --danger-text: #a51b14;
 
-  --ok: #0e5a50;
-  --ok-bg: #d6eee7;
-  --ok-line: #9fd3c7;
+  --ok: #1f5c3a;
+  --ok-bg: #dde8d2;
+  --ok-line: #a9c59a;
 
-  --cloud-bg: #e3ecf7;
-  --cloud-text: #1d4a80;
+  --cloud-bg: #e3e6ee;
+  --cloud-text: #2a3a66;
 
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 18px;
+  /* Tags and labels, not soft app cards. */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
 
   /* Motion */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* entrances, press feedback */

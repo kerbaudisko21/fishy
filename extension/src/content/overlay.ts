@@ -9,21 +9,21 @@ const WIDTH = 400;
 const STYLE = `
 :host { all: initial; }
 .win { position: fixed; z-index: 2147483647; width: ${WIDTH}px; display: flex; flex-direction: column;
-  border-radius: 18px; overflow: hidden; background: #eaeff1;
-  box-shadow: 0 18px 48px rgba(16, 32, 46, .28), 0 2px 6px rgba(16, 32, 46, .18);
+  border-radius: 18px; overflow: hidden; background: #ede3cc;
+  box-shadow: 0 18px 48px rgba(20, 20, 20, .28), 0 2px 6px rgba(20, 20, 20, .18);
   animation: pop .22s cubic-bezier(.23, 1, .32, 1) both; }
 .win.hidden { visibility: hidden; }
 .bar { height: 30px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px;
-  background: #10202e; color: #c8d3dc; cursor: grab; user-select: none; touch-action: none;
+  background: #141414; color: #d8cfbc; cursor: grab; user-select: none; touch-action: none;
   font: 700 12px system-ui, sans-serif; letter-spacing: .06em; }
 .bar:active { cursor: grabbing; }
 .grip { flex: 1; display: flex; align-items: center; gap: 8px; }
-.dots { width: 14px; height: 10px; background: radial-gradient(circle, #5d7385 1.2px, transparent 1.4px) 0 0 / 5px 5px; }
-button { width: 26px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: #c8d3dc;
+.dots { width: 14px; height: 10px; background: radial-gradient(circle, #6a6253 1.2px, transparent 1.4px) 0 0 / 5px 5px; }
+button { width: 26px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: #d8cfbc;
   display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
-button:hover { background: #1b3042; color: #fff; }
+button:hover { background: #2a2824; color: #fff; }
 button:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
-iframe { border: 0; width: 100%; flex: 1; background: #eaeff1; }
+iframe { border: 0; width: 100%; flex: 1; background: #ede3cc; }
 .win.min iframe { display: none; }
 @keyframes pop { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
 @media (prefers-reduced-motion: reduce) { .win { animation: none; } }

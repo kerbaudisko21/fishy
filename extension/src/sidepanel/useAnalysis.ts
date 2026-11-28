@@ -138,7 +138,8 @@ export function useAnalysis() {
         // For the automatic website warnings: supplier names and domains only, kept on this laptop.
         if (IN_EXTENSION) void chrome.storage.local.set({ fishySuppliers: d.suppliers.map((s) => ({ name: s.name, domain: s.domain })) });
       })
-      .catch((e) => setError(`Directory: ${String(e.message ?? e)}`));
+      // Suppliers only sharpen the look-alike checks: without them every check still runs.
+      .catch((e) => console.warn('[FISHY] suppliers on record unavailable', e));
     loadKnownBad().then(setKnown).catch((e) => console.warn('[FISHY] known list', e));
     loadRules().then(setRules);
     void loadStats();

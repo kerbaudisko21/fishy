@@ -99,25 +99,28 @@ export function DropZone({ onFile, disabled, compact, children }: { onFile: (f: 
 }
 
 /** What's open in this tab: the face and the voice on a call, or the website itself. */
-export function ActionGrid({ onFrame, onVoice, onSite, busy }: { onFrame?: () => void; onVoice?: () => void; onSite?: () => void; busy?: boolean }) {
+export function ActionGrid({ onFrame, onVoice, onSite, onText, busy }: { onFrame?: () => void; onVoice?: () => void; onSite?: () => void; onText?: () => void; busy?: boolean }) {
   const why = onFrame ? undefined : 'Open FISHY from the tab you want to check';
   return (
     <div className="actions">
       <button className="action" onClick={onFrame} disabled={busy || !onFrame} title={why}>
         <span className="action-icon">{Icon.video(22)}</span>
-        <span className="action-title">The face</span>
-        <span className="action-detail">Deepfake?</span>
+        <span className="action-title">Face on a call</span>
       </button>
       <button className="action" onClick={onVoice} disabled={busy || !onVoice} title={why}>
         <span className="action-icon">{Icon.mic(22)}</span>
-        <span className="action-title">The voice</span>
-        <span className="action-detail">Cloned?</span>
+        <span className="action-title">Voice on a call</span>
       </button>
       <button className="action" onClick={onSite} disabled={busy || !onSite} title={why}>
         <span className="action-icon">{Icon.link(22)}</span>
-        <span className="action-title">The website</span>
-        <span className="action-detail">Scam site?</span>
+        <span className="action-title">This website</span>
       </button>
+      {onText && (
+        <button className="action" onClick={onText} disabled={busy}>
+          <span className="action-icon">{Icon.clipboard(22)}</span>
+          <span className="action-title">A message</span>
+        </button>
+      )}
     </div>
   );
 }

@@ -35,13 +35,13 @@ h1[tabindex='-1']:focus { outline: none; }
   --hero-bg: var(--ink); --hero-fg: #fff; --hero-sub: var(--on-navy); --pill-bg: var(--navy-2); --pill-fg: #fff;
   --node-done-bg: #fff; --node-done-fg: var(--ink); --node-flag-bg: var(--brand); --node-flag-fg: var(--ink); --track-line: #3a5266;
   background: var(--hero-bg); color: var(--hero-fg);
-  padding: 22px 20px 20px; border-radius: 0 0 26px 26px;
+  padding: 22px 20px 20px; border-radius: 0;
   display: flex; flex-direction: column; gap: 10px;
 }
 .header + .hero, .header + div + .hero { margin-top: -1px; }
 .hero.navy { padding-top: 10px; }
 .hero.coral {
-  --hero-bg: var(--brand); --hero-fg: var(--ink); --hero-sub: #3b160b; --pill-bg: var(--ink); --pill-fg: #fff;
+  --hero-bg: var(--brand); --hero-fg: #fff; --hero-sub: #fde4df; --pill-bg: var(--ink); --pill-fg: #fff;
   --node-done-bg: rgba(16, 32, 46, .14); --node-done-fg: var(--ink); --node-flag-bg: var(--ink); --node-flag-fg: #fff; --track-line: rgba(16, 32, 46, .3);
 }
 .hero.red {
@@ -49,7 +49,7 @@ h1[tabindex='-1']:focus { outline: none; }
   --node-done-bg: rgba(255, 255, 255, .22); --node-done-fg: #fff; --node-flag-bg: #fff; --node-flag-fg: var(--danger); --track-line: rgba(255, 255, 255, .35);
 }
 .hero.green {
-  --hero-bg: #cdeae1; --hero-fg: #073a33; --hero-sub: #1d5148; --pill-bg: var(--ok); --pill-fg: #fff;
+  --hero-bg: var(--ok-bg); --hero-fg: #0f2e1d; --hero-sub: #24452f; --pill-bg: var(--ok); --pill-fg: #fff;
   --node-done-bg: var(--ok); --node-done-fg: #fff; --node-flag-bg: var(--brand); --node-flag-fg: var(--ink); --track-line: #8cc5b7;
 }
 .hero-pill { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 999px; background: var(--pill-bg); color: var(--pill-fg); font-size: 12.5px; font-weight: 700; }
@@ -227,7 +227,7 @@ h1[tabindex='-1']:focus { outline: none; }
 .progress span { display: block; height: 100%; background: var(--ink); transition: width .3s ease; }
 
 /* ---------- Evidence screens ---------- */
-.detail-head { display: flex; flex-direction: column; gap: 10px; padding: 12px 20px 20px; background: var(--surface); border-radius: 0 0 26px 26px; }
+.detail-head { display: flex; flex-direction: column; gap: 10px; padding: 12px 20px 20px; background: var(--surface); border-radius: 0; box-shadow: 0 1px 0 var(--line); }
 .detail-head h1 { font-size: 26px; line-height: 1.12; letter-spacing: -.01em; }
 .detail-step { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 .detail-kicker { font-size: 12.5px; font-weight: 600; color: var(--muted); }
@@ -704,3 +704,50 @@ html { scrollbar-color: #b9c6cc transparent; scrollbar-width: thin; caret-color:
 .pin-num { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--brand); color: var(--ink); font: 800 11.5px var(--font-body); font-variant-numeric: tabular-nums; box-shadow: 0 1px 2px rgba(16, 32, 46, .3); }
 .pin-num.inline { flex: none; margin-top: 1px; box-shadow: none; }
 @media (prefers-reduced-motion: reduce) { .pin-box { animation: none; } }
+
+/* The home: just what FISHY can check. Four tiles, two by two. */
+.home { display: flex; flex-direction: column; gap: 10px; }
+.home .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.home .action { min-height: 0; flex-direction: row; align-items: center; gap: 10px; padding: 14px 12px; }
+.home .action-icon { flex: none; margin: 0; width: 36px; height: 36px; }
+.home .action-title { font-size: 14.5px; line-height: 1.25; }
+
+/* ---------- Evidence tag ---------- */
+/* Headings, the stamp, the score and the wordmark: condensed Archivo, heavy, in capitals where
+   it labels (like a case file), in sentence case where it speaks. */
+h1, h2, .hero h1, .section-title, .guide-name, .scam-name, .stamp, .ring-num, .brand-word, .action-title, .start-label, .result-band {
+  font-family: var(--font-head);
+  font-stretch: var(--head-stretch);
+}
+.hero h1 { font-weight: 850; font-size: clamp(30px, 11vw, 44px); line-height: .98; letter-spacing: -.005em; }
+.hero.navy h1 { font-size: clamp(34px, 12.5vw, 52px); text-transform: uppercase; letter-spacing: .005em; }
+.brand-word { font-weight: 900; font-size: 22px; letter-spacing: .04em; }
+.section-title { font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: 15px; }
+.action-title { font-weight: 800; font-size: 16px; letter-spacing: .01em; }
+.result-band { font-weight: 850; letter-spacing: .06em; }
+.ring-num { font-weight: 900; }
+/* The stamp is the loudest thing on screen: bigger, inked, condensed. */
+.stamp { font-weight: 900; font-size: 26px; letter-spacing: .08em; border-width: 3.5px; border-radius: 4px; background: rgba(251, 248, 241, .82); }
+.hero-pill { border-radius: 3px; text-transform: uppercase; letter-spacing: .06em; font-size: 11.5px; }
+/* Surfaces are paper tags with a hairline edge, not floating cards. */
+.surface, .action, .dropzone, .recent-row, .watch-start { border-radius: var(--r-md); }
+.surface { box-shadow: 0 0 0 1px var(--line); }
+.action { box-shadow: 0 0 0 1px var(--line); }
+.dropzone { border: 2px dashed var(--ink); background: var(--surface); }
+.dropzone-icon { background: var(--brand); color: #fff; border-radius: var(--r-sm); }
+.action-icon { background: var(--ink); color: var(--surface); border-radius: var(--r-sm); }
+@media (hover: hover) and (pointer: fine) {
+  .action:not(:disabled):hover .action-icon { background: var(--brand); color: #fff; transform: rotate(-4deg); }
+  .dropzone:hover { border-color: var(--brand); }
+}
+.btn { border-radius: var(--r-md); }
+.btn.primary { background: var(--ink); }
+.chip, .odds, .ai-chip, .trail-step, .guide-hit, .key { border-radius: 3px; }
+.pin-num { border-radius: 3px; color: #fff; }
+.pin-box { border-color: var(--brand); border-radius: 2px; }
+.scam-icon { background: var(--brand); color: #fff; border-radius: 3px; }
+.guide-art { border-radius: var(--r-sm); background: var(--surface-muted); box-shadow: inset 0 0 0 1px var(--line); }
+.start-then .start-num { background: var(--brand); color: #fff; }
+.header { background: var(--ink); }
+.section-head h2 { font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: 15px; }
+.detail-head h1 { font-weight: 850; font-size: 30px; line-height: 1; }

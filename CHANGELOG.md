@@ -2,6 +2,13 @@
 
 Each version's build also shows in the extension under **Settings → About** (version, commit, build time and what's new). The same list lives in `extension/src/lib/changes.ts`.
 
+## 1.0.0 · 29 Nov 2026
+- A new look, the evidence tag: manila paper, black ink and one evidence red; condensed heavy Archivo for headings, labels and the stamp; square-ish paper tags instead of soft rounded cards
+- A new logo: a red evidence tag with a fish hook bent into a question mark
+- The home is just what FISHY can check: drop a picture, PDF or voice note, then four tiles (Face on a call, Voice on a call, This website, A message) and the watch switch. No numbered steps
+- Fixed: "Directory: Missing or insufficient permissions". The database rules are published to the project the extension uses, and the supplier list now loads quietly in the background (every check works without it)
+- The calling, approval, incident and alert functions are removed from the backend and the live project; only the website check's two lookups remain
+
 ## 0.9.0 · 29 Nov 2026
 - FISHY is now about checking, not payments: the payment card, calling a person with a PIN, "Hold the payment", the incident report and the Meet and Gmail page scripts are gone (two fewer Chrome permissions)
 - Gemini points at what looks wrong: numbered boxes on the picture, the website screenshot or the video frame, with the same numbers on the reasons

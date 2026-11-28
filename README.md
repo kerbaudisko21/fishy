@@ -499,7 +499,7 @@ The first version (21–23 Nov) also phoned an approver to confirm payments. Tha
 
 ## What we did not write
 
-- **Open-source libraries,** under their own licenses: React, Vite, `@crxjs/vite-plugin`, the Firebase JS SDK and Admin SDK, `firebase-functions`, pdf.js (`pdfjs-dist`), jsQR (`jsqr`), `@google-cloud/web-risk`, `@resvg/resvg-js`, Vitest, and the Atkinson Hyperlegible Next and JetBrains Mono fonts (Fontsource)
+- **Open-source libraries,** under their own licenses: React, Vite, `@crxjs/vite-plugin`, the Firebase JS SDK and Admin SDK, `firebase-functions`, pdf.js (`pdfjs-dist`), jsQR (`jsqr`), `@google-cloud/web-risk`, `@resvg/resvg-js`, Vitest, and the Archivo, Atkinson Hyperlegible Next and JetBrains Mono fonts (Fontsource, OFL)
 - **Services:** Gemini through Firebase AI Logic, Google Web Risk, and rdap.org for domain registration dates
 - **The code** was written with an AI coding assistant (Claude Code), with Firebase Agent Skills installed
 - **Demo data:** all people, companies, accounts and numbers in it are made up
