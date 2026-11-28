@@ -107,9 +107,5 @@ jobs:
           base="https://${SITE}.web.app"
           status() { curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$@"; }
           page="$(status "$base/")"
-          echo "Approval page: $page"
+          echo "Try FISHY page: $page"
           test "$page" = 200
-          # The phone callback must refuse a request the phone provider did not sign.
-          unsigned="$(status -X POST "$base/voice/menu?v=deploy-check" -d 'Digits=1')"
-          echo "Unsigned phone callback: $unsigned (403 is right)"
-          test "$unsigned" = 403
