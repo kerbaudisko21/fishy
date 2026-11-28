@@ -206,6 +206,10 @@ export function Verdict(p: Props) {
               </li>
             </ol>
 
+            <p className="start-hint">
+              Faster next time: <kbd className="key">Alt</kbd>+<kbd className="key">Shift</kbd>+<kbd className="key">F</kbd> opens FISHY, or right-click a picture, a link or the page and choose “Check … with FISHY”.
+            </p>
+
             <div className="start-links">
               <button className="link" onClick={p.onPaste}>
                 Paste a message instead

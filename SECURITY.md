@@ -57,6 +57,14 @@ Reviewed against the OWASP Top 10 (2021) and the OWASP Top 10 for LLM applicatio
 | Self-tuning escalation keeps counts | Counts only, in `chrome.storage.local`: no file, sign or text |
 | QR library `jsqr` 1.4.0 | Apache-2.0; `npm audit` clean; decoding errors are caught |
 
+## New in 0.8.0, and how it is guarded
+
+| Surface | Guard |
+|---|---|
+| Keyboard shortcuts and more right-click items (video, link, selection, page) | Each is the person's own action and grants `activeTab` for that tab only; the job waits in `storage.session` for at most 60 s and is checked for shape before it runs (`validJob`). A link is checked by its address only and is never opened |
+| "Warn me about risky websites" needs access to all sites | `optional_host_permissions`: never asked at install, only when the person switches it on in Settings, and given back to Chrome when they switch it off. Each page is read on the laptop with the website check's page reader; nothing is sent anywhere automatically. A banner appears only for a clearly risky site, and "Not now" silences it for that site for the session |
+| Supplier list for the automatic warnings | Names and domains only, in `chrome.storage.local` |
+
 ## Still open (known)
 
 - **Reported pictures can be abused.** Anyone signed in (anonymously) can report a picture, so an attacker could make many accounts and flag a real picture, or flood the collection. The card says "reported before by N people", and the call to the real person still decides. A company release should require a confirmed scam (a "not me" with the PIN) before a report counts, and rate-limit reports per person.

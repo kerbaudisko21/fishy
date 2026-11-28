@@ -9,6 +9,16 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '0.8.0',
+    date: '29 Nov 2026',
+    items: [
+      'Use FISHY without opening it first: keyboard shortcuts Alt+Shift+F (open FISHY), Alt+Shift+W (check this website), Alt+Shift+V (check the face on this call), Alt+Shift+A (check the voice); change them at chrome://extensions/shortcuts',
+      'Right-click anything to check it: a picture, a video (its face), a link (checked by its address, without opening it), selected text (pressure in a message) or the page itself',
+      'Warn me about risky websites (off until you switch it on in Settings): each site you open is checked on this laptop, nothing is sent; the FISHY icon shows “!” or “?”, and a clearly risky site gets a banner with “See why” and “Not now”',
+      'Settings → Without opening FISHY lists your shortcuts and the switch for automatic warnings',
+    ],
+  },
+  {
     version: '0.7.1',
     date: '29 Nov 2026',
     items: [

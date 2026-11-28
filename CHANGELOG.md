@@ -2,6 +2,12 @@
 
 Each version's build also shows in the extension under **Settings → About** (version, commit, build time and what's new). The same list lives in `extension/src/lib/changes.ts`.
 
+## 0.8.0 · 29 Nov 2026
+- Use FISHY without opening it first: keyboard shortcuts Alt+Shift+F (open FISHY), Alt+Shift+W (check this website), Alt+Shift+V (check the face on this call), Alt+Shift+A (check the voice); change them at chrome://extensions/shortcuts
+- Right-click anything to check it: a picture, a video (its face), a link (checked by its address, without opening it), selected text (pressure in a message) or the page itself
+- Warn me about risky websites (off until you switch it on in Settings): each site you open is checked on this laptop, nothing is sent; the FISHY icon shows "!" or "?", and a clearly risky site gets a banner with "See why" and "Not now"
+- Settings → Without opening FISHY lists your shortcuts and the switch for automatic warnings
+
 ## 0.7.1 · 29 Nov 2026
 - Fixed: the home screen now follows the strongest check, so it never says "not enough to call it fake" above a red score
 - Fixed: "Don't pay until them confirms" now reads "until the real person confirms" (the 0.6.0 fix had not landed)

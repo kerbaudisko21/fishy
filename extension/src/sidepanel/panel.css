@@ -667,3 +667,10 @@ html { scrollbar-color: #b9c6cc transparent; scrollbar-width: thin; caret-color:
 .changes-fold summary::after { content: ''; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform 200ms var(--ease-out); }
 .changes-fold[open] summary::after { transform: rotate(225deg); }
 @media (prefers-reduced-motion: reduce) { .changes-fold summary::after { transition: none; } }
+
+/* Keys, and the switch when on */
+.key { display: inline-block; min-width: 22px; padding: 1px 6px; border-radius: 6px; background: var(--surface); box-shadow: inset 0 -1.5px 0 var(--line), 0 0 0 1px var(--line); font: 700 11.5px var(--font-body); color: var(--ink); text-align: center; white-space: nowrap; }
+.start-hint { margin: 0; font-size: 12.5px; line-height: 1.7; color: var(--muted); text-align: center; }
+.switch.on { background: var(--ok); }
+.switch.on .switch-thumb { transform: translateX(16px); }
+.card-pad > .row-title { margin-top: 2px; }
