@@ -5,6 +5,7 @@ import { listenForBanner } from './banner';
 /*
  * Reads the email the user has OPEN (never the inbox list) and sends it to the side panel,
  * with the sender authentication from that email's own headers.
+ * An email that was open before FISHY was opened is read again when the panel asks ("read_page").
  * PDF attachments are fetched only when the panel asks, after the user clicks.
  * TODO(day 1): confirm the selectors on the demo Gmail account (they can be changed in Remote Config).
  */
@@ -84,6 +85,12 @@ new MutationObserver(() => {
 }).observe(document.body, { childList: true, subtree: true });
 
 chrome.runtime.onMessage.addListener((msg: PanelMessage, _sender, reply: (r: AttachmentReply) => void) => {
+  if (msg?.type === 'read_page') {
+    // FISHY was opened after this email: forget that it was sent, and send it again.
+    lastKey = '';
+    void readOpenEmail();
+    return;
+  }
   if (msg?.type !== 'fetch_attachment') return;
   const pdf = attachments().find((a) => a.type === 'application/pdf' || /\.pdf$/i.test(a.name));
   if (!pdf) {

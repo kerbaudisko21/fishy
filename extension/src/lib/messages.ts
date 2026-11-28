@@ -45,7 +45,9 @@ export function watchSelectors(onChange: (s: PageSelectors) => void) {
 export type PanelMessage =
   | { type: 'banner'; state: BannerState; title: string; line: string }
   /** Asks the Gmail tab for the open email's first PDF attachment (only when the user clicks). */
-  | { type: 'fetch_attachment' };
+  | { type: 'fetch_attachment' }
+  /** FISHY was just opened: read what is open on the page now, even if it was open before. */
+  | { type: 'read_page' };
 
 export type AttachmentReply = { ok: true; name: string; base64: string } | { ok: false; error: string };
 
