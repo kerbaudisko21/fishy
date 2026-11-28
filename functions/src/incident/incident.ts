@@ -57,7 +57,11 @@ export interface Incident {
   handled: boolean;
 }
 
-const FLAG_LABEL: Record<string, string> = {
+/**
+ * Words for every kind of red flag the side panel can raise (SignalKind in
+ * extension/src/lib/types.ts). A test reads that list and fails when a kind has no words here.
+ */
+export const FLAG_LABEL: Record<string, string> = {
   pressure_tactics: 'Pressure',
   bank_account_changed: 'Bank changed',
   pdf_edited: 'Invoice edited',
@@ -69,6 +73,23 @@ const FLAG_LABEL: Record<string, string> = {
   known_bad_domain: 'Known scam domain',
   voice_score: 'Voice score',
   face_score: 'Face score',
+  ai_label: 'Labelled as made by AI',
+  ai_tool: 'Made with an AI tool',
+  edited_with: 'Edited in a photo editor',
+  picture_signs: 'Signs of AI or editing in a picture',
+  voice_signs: 'Signs of a cloned voice',
+  video_signs: 'Signs of a deepfake on the video call',
+  document_signs: 'Signs of AI or editing in a document',
+  tamper_trace: 'Signs of tampering in the pixels',
+  video_frozen: 'Video did not move',
+  voice_artifacts: 'Odd measurements in the voice',
+  liveness_failed: 'Face broke up in the liveness check',
+  site_signs: 'Signs of a scam website',
+  lookalike_site: 'Website copies a supplier',
+  site_risk: 'Risky website',
+  qr_risky: 'Risky QR code',
+  lipsync_off: 'Mouth and voice out of step',
+  reported_before: 'Reported as a scam before',
 };
 
 /** The check's flags as words. A client wrote them, so anything not on the list is left out. */

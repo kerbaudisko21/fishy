@@ -189,6 +189,7 @@ export function toEvidence(f: Findings, rules: RulesConfig, patterns: string[], 
       pattern: patterns.find((p) => rules.patterns.find((x) => x.name === p)?.requires.includes('pressure_tactics')),
       rulesVersion: rules.version,
       source: f.tactics.source,
+      ...(f.tactics.model === 'keywords' ? { keywordsOnly: true } : {}),
     };
   }
 

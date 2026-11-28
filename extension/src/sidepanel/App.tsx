@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { callTargets, defaultTarget as pickTarget } from '../lib/call-targets';
 import { suspectsFrom } from '../lib/checks/known';
 import { patternInfo } from '../lib/rules/engine';
 import { validJob } from '../lib/jobs';
@@ -23,15 +24,16 @@ import { Voice } from './screens/Voice';
 import { useAnalysis } from './useAnalysis';
 import { useCall } from './useCall';
 
-async function sendBanner(state: BannerState, title: string, line: string) {
+async function toPage(msg: PanelMessage) {
   if (!IN_EXTENSION) return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.id === undefined) return;
-  const msg: PanelMessage = { type: 'banner', state, title, line };
   chrome.tabs.sendMessage(tab.id, msg).catch(() => {
     /* not a Meet or Gmail tab */
   });
 }
+
+const sendBanner = (state: BannerState, title: string, line: string) => toPage({ type: 'banner', state, title, line });
 
 /** A screen opens only when its evidence exists. */
 function hasEvidence(screen: Screen, ev: Evidence) {
@@ -56,15 +58,10 @@ export function App() {
   // Who FISHY may call: the supplier contact on record (for a supplier email), then the approvers.
   const supplierName = a.mode === 'live' ? (a.evidence.email?.onRecord?.name ?? (a.evidence.invoice?.usual ? a.evidence.invoice.supplier : undefined)) : undefined;
   const supplier = supplierName ? a.directory.suppliers.find((s) => s.name === supplierName) : undefined;
-  const targets: CallTarget[] = useMemo(() => {
-    const people = [...a.directory.people].sort((x, y) => (x.escalationOrder ?? 0) - (y.escalationOrder ?? 0));
-    const list: CallTarget[] = people.map((p) => ({ id: p.id, name: p.name, role: p.role, phoneMasked: p.phoneMasked }));
-    if (supplier) list.unshift({ id: supplier.id, name: supplier.contact.name, role: `${supplier.contact.role}, ${supplier.name}`, phoneMasked: supplier.contact.phoneMasked });
-    return list;
-  }, [a.directory.people, supplier]);
+  // Only people with a number on record: a supplier contact without one is not offered.
+  const targets: CallTarget[] = useMemo(() => callTargets(a.directory.people, supplier), [a.directory.people, supplier]);
 
-  const askedName = a.request?.askedBy.name;
-  const defaultTarget = targets.find((t) => t.name === askedName)?.id ?? targets[0]?.id ?? '';
+  const defaultTarget = pickTarget(targets, a.request?.askedBy.name);
   const [targetId, setTargetId] = useState('');
   useEffect(() => setTargetId(defaultTarget), [defaultTarget]);
   const target = targets.find((t) => t.id === targetId);
@@ -83,6 +80,22 @@ export function App() {
     chrome.runtime.onMessage.addListener(onMessage);
     return () => chrome.runtime.onMessage.removeListener(onMessage);
   }, [onPage]);
+
+  // An email that was already open when FISHY was opened: ask the page to send it now.
+  // After the directory has loaded, so the sender is compared with the suppliers on record.
+  // If the directory never loads, ask anyway after a few seconds: the message can still be read.
+  const directoryLoaded = a.directory.people.length + a.directory.suppliers.length > 0;
+  const askedPage = useRef(false);
+  useEffect(() => {
+    const ask = () => {
+      if (askedPage.current) return;
+      askedPage.current = true;
+      void toPage({ type: 'read_page' });
+    };
+    if (directoryLoaded) return ask();
+    const t = window.setTimeout(ask, 4000);
+    return () => window.clearTimeout(t);
+  }, [directoryLoaded]);
 
   // Keep the in-page banner in step with the panel.
   const who = first(call.target?.name);
@@ -205,6 +218,7 @@ export function App() {
           request={a.request}
           verdict={a.verdict}
           hasInput={a.hasInput}
+          readerFailed={a.readerFailed}
           busy={a.busy}
           call={call}
           targets={targets}

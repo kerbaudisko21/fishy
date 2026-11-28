@@ -3,6 +3,7 @@ import { FIREBASE_READY } from '../config';
 import { firebaseApp } from '../firebase';
 import { redact } from '../redact';
 import type { Source } from '../types';
+import { firstThatWorks, geminiOrKeywords } from './fallback';
 import { keywordTactics } from './keywords';
 import { cloudBackend } from './provider';
 import { NANO_TEXT, parseTactics, tacticInput, tacticSchema, type TacticHit } from './prompts';
@@ -17,7 +18,9 @@ export { TACTICS, type TacticHit } from './prompts';
  *  - ready   → ONLY_ON_DEVICE model, raw text, nothing leaves the laptop
  *  - not yet → ONLY_IN_CLOUD model, redacted text only
  * result.response.inferenceSource tells the panel which badge to show.
- * Without a Firebase config (offline dev), a keyword matcher stands in and says so.
+ * If Nano fails, the cloud model reads the redacted text. If Gemini fails altogether (offline,
+ * over quota, refused), the fixed keyword list reads the message and the result says so.
+ * Without a Firebase config (offline dev), the keyword list stands in and says so.
  */
 
 let models: { onDevice: GenerativeModel; inCloud: GenerativeModel } | undefined;
@@ -66,6 +69,8 @@ export interface TacticResult {
   hits: TacticHit[];
   source: Source;
   model: ReaderModel;
+  /** Gemini was asked and did not answer, so only the keyword list read the message. */
+  geminiFailed?: boolean;
 }
 
 /** The model's hits plus any keyword hit for a tactic the model did not report. */
@@ -77,15 +82,23 @@ export function unionHits(model: TacticHit[], keywords: TacticHit[]): TacticHit[
 export async function readTactics(text: string): Promise<TacticResult> {
   if (!FIREBASE_READY) return { hits: keywordTactics(text), source: 'on_device', model: 'keywords' };
 
-  const local = (await nanoStatus()) === 'available';
-  const { onDevice, inCloud } = getModels();
-  const result = await (local ? onDevice : inCloud).generateContent(tacticInput(local ? text : redact(text)));
-  const onDeviceRan = result.response.inferenceSource === InferenceSource.ON_DEVICE;
-  return {
-    // The fixed keyword reader always runs too: a message that talks the model out of seeing
-    // pressure still trips the keywords (security review M5).
-    hits: unionHits(parseTactics(result.response.text()), keywordTactics(text)),
-    source: onDeviceRan ? 'on_device' : 'cloud',
-    model: onDeviceRan ? 'gemini-nano' : 'gemini-cloud',
-  };
+  return geminiOrKeywords<TacticResult>(
+    text,
+    async () => {
+      const local = (await nanoStatus()) === 'available';
+      const { onDevice, inCloud } = getModels();
+      const cloud = () => inCloud.generateContent(tacticInput(redact(text)));
+      // Raw text goes to Nano only. The cloud model, first choice or fallback, gets redacted text.
+      const result = await firstThatWorks(local ? [() => onDevice.generateContent(tacticInput(text)), cloud] : [cloud]);
+      const onDeviceRan = result.response.inferenceSource === InferenceSource.ON_DEVICE;
+      return {
+        // The fixed keyword reader always runs too: a message that talks the model out of seeing
+        // pressure still trips the keywords (security review M5).
+        hits: unionHits(parseTactics(result.response.text()), keywordTactics(text)),
+        source: onDeviceRan ? 'on_device' : 'cloud',
+        model: onDeviceRan ? 'gemini-nano' : 'gemini-cloud',
+      };
+    },
+    (hits) => ({ hits, source: 'on_device', model: 'keywords', geminiFailed: true }),
+  );
 }

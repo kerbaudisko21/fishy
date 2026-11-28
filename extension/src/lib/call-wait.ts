@@ -54,3 +54,36 @@ export function waitingFor(target: { who: string; phoneMasked: string }, started
     ? { pill: 'Waiting', title: `Waiting for the real ${target.who}…`, line: `${notPlaced} They answer on the approval page, with their PIN.`, approvalUrl }
     : { pill: 'Not called', title: `${target.who} was not called.`, line: `${notPlaced} Keep holding the payment.`, approvalUrl: null };
 }
+
+/**
+ * What the panel says when a check ended with no answer. `reason` is what the server wrote:
+ * why no call was placed, "pin_failed", or "no_answer". Only a call that really rang out is
+ * called "didn't answer".
+ */
+export function unanswered(who: string, reason: string | null | undefined): { pill: string; title: string; line: string } {
+  if (reason === 'pin_failed') {
+    return { pill: 'Not confirmed', title: `${who} didn’t confirm.`, line: 'They said yes, but the right PIN never came, so nothing is confirmed. Keep holding the payment.' };
+  }
+  const why = reason ? WHY_NOT[reason] : undefined;
+  if (why) {
+    return { pill: 'Not called', title: `${who} was not called.`, line: `No phone call was placed: ${why}. Keep holding the payment.` };
+  }
+  return { pill: 'No answer', title: `${who} didn’t answer.`, line: 'Keep holding the payment. Call again, or ask someone else on record.' };
+}
+
+const CALL_STATES = ['idle', 'ringing', 'confirmed', 'not_me', 'no_answer', 'escalated'] as const;
+type KnownState = (typeof CALL_STATES)[number];
+
+/**
+ * The `call` field Cloud Functions writes on a check, as an update for the panel. Only what the
+ * server wrote is passed on, so an update never erases what the panel set itself (the countdown
+ * to the next approver). Null when there is nothing usable.
+ */
+export function callUpdate(call: unknown): { state: KnownState; reason?: string } | null {
+  if (typeof call !== 'object' || call === null) return null;
+  const { state, reason } = call as Record<string, unknown>;
+  if (typeof state !== 'string' || !(CALL_STATES as readonly string[]).includes(state)) return null;
+  const update: { state: KnownState; reason?: string } = { state: state as KnownState };
+  if (typeof reason === 'string' && /^[a-z_]{1,40}$/.test(reason)) update.reason = reason;
+  return update;
+}

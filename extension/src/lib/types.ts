@@ -208,6 +208,8 @@ export interface Evidence {
     pattern?: string;
     rulesVersion: number;
     source: Source;
+    /** Gemini did not read this: only the fixed keyword list did. */
+    keywordsOnly?: boolean;
   };
   email?: {
     sender: { name: string; address: Array<{ text: string; changed?: boolean }> };
@@ -297,6 +299,8 @@ export interface CallStatus {
   /** When the call escalates to the next approver (ms since epoch). */
   escalateAt?: number;
   escalatedTo?: string;
+  /** Why a check ended with no answer, from Cloud Functions: "no_answer", "pin_failed", or why no call was placed. */
+  reason?: string;
   /** What Cloud Functions answered: whether a phone call was placed, or the approval page to use instead. */
   started?: { call: 'placed' | 'not_placed'; reason: string | null; approvalUrl: string | null };
 }

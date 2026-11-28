@@ -2,11 +2,12 @@
 // a summary only. Never the text of a message.
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { RequestError } from '../src/call/ports.ts';
 import type { Verification } from '../src/call/ports.ts';
-import { getAuditLog, getIncident, markIncidentHandled, shareIncident } from '../src/incident/incident.ts';
+import { FLAG_LABEL, getAuditLog, getIncident, markIncidentHandled, shareIncident } from '../src/incident/incident.ts';
 import type { CheckSummary, IncidentDeps, IncidentLink, IncidentStore } from '../src/incident/incident.ts';
 import { NOW } from './helpers.ts';
 
@@ -103,6 +104,31 @@ test('flags a client made up are left out of the report', async () => {
   const { deps } = setup({ flags: ['pressure_tactics', 'Pay now to account 123'] });
   await shareIncident(deps, OWNER, { checkId: 'check-1' });
   assert.deepEqual((await getIncident(deps, { id: TOKEN })).flags, ['Pressure']);
+});
+
+test('the report names the red flags from picture, voice, video and website checks too', async () => {
+  const { deps } = setup({ flags: ['ai_label', 'voice_signs', 'liveness_failed', 'lookalike_site', 'qr_risky'] });
+  await shareIncident(deps, OWNER, { checkId: 'check-1' });
+  assert.deepEqual((await getIncident(deps, { id: TOKEN })).flags, [
+    'Labelled as made by AI',
+    'Signs of a cloned voice',
+    'Face broke up in the liveness check',
+    'Website copies a supplier',
+    'Risky QR code',
+  ]);
+});
+
+test('every kind of red flag the side panel can raise has words in the report', () => {
+  // The panel's list of kinds lives in the extension. Read it as text: a kind added there
+  // without words here would silently vanish from the report ("0 red flags").
+  const types = readFileSync(new URL('../../extension/src/lib/types.ts', import.meta.url), 'utf8');
+  const union = /export type SignalKind =([\s\S]*?);/.exec(types)?.[1] ?? '';
+  const kinds = [...union.matchAll(/\|\s*'([a-z_]+)'/g)].map((m) => m[1]!);
+  assert.ok(kinds.length >= 20, `expected the panel's kinds, found ${kinds.length}`);
+  assert.deepEqual(
+    kinds.filter((kind) => !Object.hasOwn(FLAG_LABEL, kind)),
+    [],
+  );
 });
 
 test('marking it handled shows in the report and the audit log', async () => {

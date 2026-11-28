@@ -4,7 +4,8 @@ import { shareIncident } from '../../lib/data';
 import { firstName } from '../../lib/names';
 import { line, Reveal, useTextSwap } from '../../lib/transitions';
 import { useFirstSeen } from '../motion';
-import { waitingFor } from '../../lib/call-wait';
+import { unanswered, waitingFor } from '../../lib/call-wait';
+import { PARTLY_CHECKED } from '../../lib/ai/fallback';
 import type { CallStatus, CallTarget, MediaCheck, PaymentRequest, Signal, Step, Verdict as VerdictT } from '../../lib/types';
 import { ActionGrid, DropZone, RecentChecks, ScamType, WatchPanel } from '../scanner';
 import { scoreMedia } from '../../lib/media-score';
@@ -19,6 +20,8 @@ interface Props {
   request?: PaymentRequest;
   verdict: VerdictT;
   hasInput: boolean;
+  /** Gemini did not read the message, so only the keyword list did. */
+  readerFailed?: boolean;
   busy: string | null;
   call: CallStatus;
   targets: CallTarget[];
@@ -97,8 +100,11 @@ export function Verdict(p: Props) {
     ? { tone: 'navy', pill: 'Ready', title: 'Is it real?', line: 'Check it before you pay or type anything in. FISHY tells you how fishy it is, why, and who to call.' }
     : call.state === 'ringing'
       ? { tone: 'navy', pill: wait.pill, title: wait.title, line: wait.line }
-      : call.state === 'no_answer' || call.state === 'escalated'
-        ? { tone: 'navy', pill: 'No answer', title: call.escalatedTo ? `Calling ${first(call.escalatedTo)}…` : `${who} didn’t answer.`, line: 'Keep holding the payment.' }
+      : call.state === 'escalated'
+        ? { tone: 'navy', pill: 'No answer', title: `Calling ${first(call.escalatedTo ?? call.target?.name)}…`, line: 'Keep holding the payment.' }
+        : call.state === 'no_answer'
+          ? // Not called, the PIN never came, or it rang out: the panel says which.
+            { tone: 'navy', ...unanswered(who, call.reason) }
         : call.state === 'not_me'
           ? { tone: 'red', pill: 'Do not pay', title: 'Not verified.', line: `The real ${who} says they did not ask for this. Stop the payment.` }
           : call.state === 'confirmed'
@@ -109,7 +115,9 @@ export function Verdict(p: Props) {
                 ? { tone: 'coral', pill: 'Hold the payment', title: 'Something’s fishy.', line: `${mediaHigh.m.name} scored ${mediaHigh.s.score}. Don’t pay or act on it until ${until} on the number on record.` }
               : n > 0
                 ? { tone: 'navy', pill: n === 1 ? 'A sign to look at' : `${n} signs to look at`, title: 'Take a closer look.', line: 'Not enough to call it fake. Look at the signs below, and call before money moves.' }
-                : { tone: 'green', pill: 'No red flags', title: 'Looks normal.', line: 'For a payment, a call on the number on record is still the safe step.' };
+                : p.readerFailed
+                  ? { tone: 'navy', ...PARTLY_CHECKED }
+                  : { tone: 'green', pill: 'No red flags', title: 'Looks normal.', line: 'For a payment, a call on the number on record is still the safe step.' };
 
   // Motion: the result plays in once per new result; the hero text replays on every state change.
   const sig = waiting ? 'waiting' : `${verdict.level}:${verdict.flags.map((f) => f.kind).join(',')}:${request?.amount.value ?? 0}`;
@@ -165,6 +173,12 @@ export function Verdict(p: Props) {
             <a className="escalate" href={wait.approvalUrl} target="_blank" rel="noreferrer">
               {Icon.phone(14)} Open the approval page
             </a>
+          )}
+          {/* No answer is not a dead end: back to the person picker, to call again or ask someone else. */}
+          {call.state === 'no_answer' && (
+            <button className="escalate" onClick={p.onCancel}>
+              {Icon.phone(14)} {p.targets.length > 1 ? 'Call again, or ask someone else' : 'Call again'}
+            </button>
           )}
           {call.state === 'ringing' && !wait.approvalUrl && call.escalateAt && p.escalateTo && (
             <p className="escalate">

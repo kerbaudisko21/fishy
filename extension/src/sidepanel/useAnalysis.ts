@@ -15,6 +15,7 @@ import { qrFromBlob, qrLab } from '../lib/forensics/qr';
 import { bands, hamming, SAME_PICTURE_DISTANCE } from '../lib/forensics/phash';
 import { loadStats, recordAnswer, trustFor, type StatKind } from '../lib/ai/stats';
 import { MAX_VOICE_SECONDS, pictureTooBig, recordingSeconds, VOICE_ANALYSIS_SECONDS } from '../lib/forensics/limits';
+import { READER_FELL_BACK } from '../lib/ai/fallback';
 import { readTactics } from '../lib/ai/tactics';
 import { IN_EXTENSION } from '../lib/config';
 import { domainOf, findLookalike, registrable } from '../lib/checks/domain';
@@ -166,8 +167,11 @@ export function useAnalysis() {
       try {
         const res = await readTactics(text);
         setFindings((f) => ({ ...f, place, tactics: { ...res, lines } }));
+        // The keyword list read it instead: say so in plain words, and never show it as Gemini's.
+        if (res.geminiFailed) setError(READER_FELL_BACK);
       } catch (e) {
-        setError(`The tactic reader failed: ${(e as Error).message}`);
+        console.warn('[FISHY] reading the message failed', e);
+        setError('FISHY couldn’t read this message. Check it again in a moment.');
       } finally {
         setBusy(null);
       }
@@ -918,6 +922,8 @@ export function useAnalysis() {
     clear,
     loadDemo,
     emailOpen: !!findings.email,
+    /** Gemini did not answer on the last message, so only the keyword list read it. */
+    readerFailed: !!findings.tactics?.geminiFailed,
     hasVoice: mode === 'demo' || !!findings.voice,
   };
 }

@@ -3,13 +3,13 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
 import { demoData } from '../demo/dataset';
 import { DEMO_KNOWN_BAD } from '../demo/fixtures';
-import type { StartResult } from './call-wait';
+import { callUpdate, type StartResult } from './call-wait';
 import { DATABASE, DEMO, FIREBASE_READY, IN_EXTENSION, REGION } from './config';
 import { DEFAULT_SELECTORS, SELECTORS_KEY, type PageSelectors } from './messages';
 import { ensureSignedIn, firebaseApp } from './firebase';
 import { DEFAULT_RULES, mergeRules, type RulesConfig } from './rules/engine';
 import type { Suspects } from './checks/known';
-import type { CallState, CallStatus, DirectoryPerson, KnownBadEntry, SignalKind, Supplier } from './types';
+import type { CallStatus, DirectoryPerson, KnownBadEntry, SignalKind, Supplier } from './types';
 
 /*
  * Everything the panel reads from or writes to Firebase. Without a Firebase config, each
@@ -123,14 +123,11 @@ export async function shareIncident(checkId: string): Promise<string | null> {
   }
 }
 
-const CALL_STATES: CallState[] = ['idle', 'ringing', 'confirmed', 'not_me', 'no_answer', 'escalated'];
-
-/** Call progress, written by Cloud Functions from the phone menu. */
+/** Call progress, written by Cloud Functions from the phone menu or the approval page. */
 export function watchCall(checkId: string, onChange: (s: Partial<CallStatus>) => void) {
   return onSnapshot(doc(db(), 'checks', checkId), (snap) => {
-    const call = snap.data()?.call as { state?: string; escalateAt?: { toMillis(): number }; escalatedTo?: string } | undefined;
-    if (!call?.state || !CALL_STATES.includes(call.state as CallState)) return;
-    onChange({ state: call.state as CallState, escalateAt: call.escalateAt?.toMillis(), escalatedTo: call.escalatedTo });
+    const update = callUpdate(snap.data()?.call);
+    if (update) onChange(update);
   });
 }
 
