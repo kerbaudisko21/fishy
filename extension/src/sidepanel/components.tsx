@@ -1,4 +1,5 @@
 import { createContext, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { AiChip } from './AiStatus';
 import { versionLine } from '../lib/version';
 import type { CallState, CheckItem, Signal, SignalKind, Source, Step, Verdict } from '../lib/types';
 
@@ -98,6 +99,7 @@ export function Header({
           <span className="brand-word">FISHY</span>
         </span>
         <span className="header-tools">
+          <AiChip />
           {demo && <span className="demo-tag">Demo</span>}
           {where && (
             <span className="live">

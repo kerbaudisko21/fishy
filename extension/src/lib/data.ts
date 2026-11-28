@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDocs, getFirestore, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, getFirestore, limit, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
 import { demoData } from '../demo/dataset';
@@ -7,7 +7,7 @@ import type { StartResult } from './call-wait';
 import { DATABASE, DEMO, FIREBASE_READY, IN_EXTENSION, REGION } from './config';
 import { DEFAULT_SELECTORS, SELECTORS_KEY, type PageSelectors } from './messages';
 import { ensureSignedIn, firebaseApp } from './firebase';
-import { DEFAULT_RULES, type RulesConfig } from './rules/engine';
+import { DEFAULT_RULES, mergeRules, type RulesConfig } from './rules/engine';
 import type { Suspects } from './checks/known';
 import type { CallState, CallStatus, DirectoryPerson, KnownBadEntry, SignalKind, Supplier } from './types';
 
@@ -61,13 +61,13 @@ export async function loadKnownBad(): Promise<{ list: KnownBadEntry[]; updatedAt
 
 /** Rules engine config from Remote Config `scam_rules`, so new scams are blocked without a release (R2). */
 export async function loadRules(): Promise<RulesConfig> {
-  if (!FIREBASE_READY) return { ...DEFAULT_RULES, version: 14 };
+  if (!FIREBASE_READY) return DEFAULT_RULES;
   try {
     const rc = getRemoteConfig(firebaseApp());
     rc.settings.minimumFetchIntervalMillis = 60 * 60 * 1000;
     await fetchAndActivate(rc);
     const raw = getValue(rc, 'scam_rules').asString();
-    return raw ? ({ ...DEFAULT_RULES, ...JSON.parse(raw) } as RulesConfig) : DEFAULT_RULES;
+    return raw ? mergeRules(JSON.parse(raw) as Partial<RulesConfig>) : DEFAULT_RULES;
   } catch (e) {
     console.warn('[FISHY] Remote Config unavailable, using built-in rules', e);
     return DEFAULT_RULES;
@@ -185,5 +185,54 @@ export async function checkLinks(urls: string[]): Promise<{ unsafe: string[] } |
   } catch (e) {
     console.warn('[FISHY] Web Risk check failed', e);
     return null;
+  }
+}
+
+/* ---------- Pictures reported as scams: perceptual hashes only ---------- */
+
+export interface ReportedMatch {
+  /** How many people reported a picture this close. */
+  reports: number;
+  /** The closest one's distance, 0–64 bits. */
+  distance: number;
+}
+
+/**
+ * Pictures other FISHY users reported, near this one (perceptual hash within `maxDistance` bits).
+ * Looked up by the hash's four 16-bit bands (array-contains-any), then compared exactly here.
+ * Only the hash goes out: never the picture.
+ */
+export async function findReported(hash: string, bands: string[], hammingFn: (a: string, b: string) => number, maxDistance: number): Promise<ReportedMatch | null> {
+  if (!FIREBASE_READY) return null;
+  try {
+    await ensureSignedIn();
+    const snap = await getDocs(query(collection(db(), 'reportedFakes'), where('bands', 'array-contains-any', bands), limit(50)));
+    let reports = 0;
+    let distance = 65;
+    for (const d of snap.docs) {
+      const other = d.data().hash as string;
+      const dist = hammingFn(hash, other);
+      if (dist <= maxDistance) {
+        reports++;
+        distance = Math.min(distance, dist);
+      }
+    }
+    return reports ? { reports, distance } : null;
+  } catch (e) {
+    console.warn('[FISHY] reported-pictures lookup failed', e);
+    return null;
+  }
+}
+
+/** Reports a picture as a scam, by its hash. One report per person per picture (the rules enforce it). */
+export async function reportFake(hash: string, bands: string[], kind: 'picture' | 'document' | 'frame'): Promise<boolean> {
+  if (!FIREBASE_READY) return false;
+  try {
+    const user = await ensureSignedIn();
+    await setDoc(doc(db(), 'reportedFakes', `${hash}_${user.uid}`), { hash, bands, kind, uid: user.uid, createdAt: serverTimestamp() });
+    return true;
+  } catch (e) {
+    console.warn('[FISHY] report failed', e);
+    return false;
   }
 }

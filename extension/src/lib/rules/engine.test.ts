@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { decide } from './engine';
+import { decide, DEFAULT_RULES, mergeRules, type RulesConfig } from './engine';
 import { DEMO_SIGNALS } from '../../demo/fixtures';
 import { mediaSignals } from '../pipeline';
-import type { MediaCheck } from '../types';
-import type { Signal } from '../types';
+import type { MediaCheck, Signal } from '../types';
 
 describe('decide', () => {
   it('flags the demo fake-CFO request as fishy, with all six red flags', () => {
@@ -67,5 +66,43 @@ describe('decide', () => {
     it('editing software alone is not fishy: photos are edited every day', () => {
       expect(decide(mediaSignals([item({ facts: { editedWith: 'a photo editor' } })])).level).toBe('clear');
     });
+  });
+});
+
+describe('what kind of scam (media)', () => {
+  const sig = (kind: Signal['kind'], strength?: number): Signal => ({ kind, step: 'check', source: 'on_device', title: kind, detail: '', strength });
+  it('names the most specific scam first, each name once', () => {
+    const v = decide([sig('video_signs', 3), sig('pressure_tactics', 3)]);
+    expect(v.patterns[0]).toBe('Deepfake executive on a video call');
+    expect(v.patterns).toContain('Deepfake video call');
+    expect(new Set(v.patterns).size).toBe(v.patterns.length);
+    expect(decide([sig('ai_label'), sig('ai_tool')]).patterns).toEqual(['AI-made picture or receipt']);
+  });
+  it('a face that breaks up behind a hand is fishy on its own', () => {
+    const v = decide([sig('liveness_failed', 3)]);
+    expect(v.level).toBe('fishy');
+    expect(v.patterns).toEqual(['Real-time face swap']);
+  });
+  it('a pixel hint alone is not enough; with Gemini’s signs it is', () => {
+    expect(decide([sig('tamper_trace', 1)]).level).toBe('clear');
+    expect(decide([sig('tamper_trace', 1), sig('picture_signs', 1)]).level).toBe('fishy');
+  });
+  it('every pattern says what to do or what it looks like', () => {
+    for (const p of DEFAULT_RULES.patterns.filter((p) => p.requires.some((k) => k.includes('video') || k.includes('voice') || k.includes('liveness')))) {
+      expect(p.action ?? p.signs).toBeTruthy();
+    }
+  });
+});
+
+describe('Remote Config on top of the built-in rules', () => {
+  it('an older deployed config keeps the media signals switched on', () => {
+    const old = { version: 14, alwaysFishy: ['bank_account_changed'], weights: { pressure_tactics: 2 }, threshold: 3, patterns: [{ name: 'Vendor bank change', requires: ['bank_account_changed'] }] } as Partial<RulesConfig>;
+    const r = mergeRules(old);
+    expect(r.version).toBe(14);
+    expect(r.weights.pressure_tactics).toBe(2);
+    expect(r.weights.video_signs).toBe(1);
+    expect(r.alwaysFishy).toContain('ai_label');
+    expect(r.patterns.filter((p) => p.name === 'Vendor bank change')).toHaveLength(1);
+    expect(r.patterns.map((p) => p.name)).toContain('Cloned voice');
   });
 });

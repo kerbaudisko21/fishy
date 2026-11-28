@@ -6,10 +6,33 @@ import overlayScript from '../content/overlay.ts?script';
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(console.error);
+  // Right-click any picture (a web page, Gmail, WhatsApp Web) → "Check this picture with FISHY".
+  chrome.contextMenus.create({ id: 'fishy-check-picture', title: 'Check this picture with FISHY', contexts: ['image'] }, () => void chrome.runtime.lastError);
 });
 
-async function showOverlay(tabId: number) {
+/** A picture the person asked FISHY to check from the right-click menu, waiting for the panel. */
+export interface PictureJob {
+  kind: 'picture';
+  src: string;
+  tabId: number;
+  pageUrl?: string;
+  at: number;
+}
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== 'fishy-check-picture' || tab?.id === undefined || !info.srcUrl) return;
+  const job: PictureJob = { kind: 'picture', src: info.srcUrl, tabId: tab.id, pageUrl: info.pageUrl, at: Date.now() };
+  // The panel picks the job up when it opens, or straight away if it's already open.
+  void chrome.storage.session.set({ fishyJob: job }).then(() => showOverlay(tab.id!, { keepOpen: true }));
+});
+
+async function showOverlay(tabId: number, { keepOpen = false } = {}) {
   try {
+    // Running the overlay script toggles the window; from the right-click menu it must only open it.
+    if (keepOpen) {
+      const [open] = await chrome.scripting.executeScript({ target: { tabId }, func: () => !!document.getElementById('fishy-overlay-host') });
+      if (open?.result) return;
+    }
     await chrome.scripting.executeScript({ target: { tabId }, files: [overlayScript] });
   } catch (e) {
     // Chrome pages and the Web Store can't be scripted: fall back to the side panel there.

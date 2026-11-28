@@ -6,6 +6,7 @@ rules_version = '2';
 //   directoryPublic/{id}  masked copy for the side panel
 //   checks/{checkId}      one payment check: signals summary + call state. Never message text.
 //   knownBad/{kind:value} confirmed bad accounts, domains, numbers, with a seen count
+//   reportedFakes/{hash_uid} perceptual hashes of pictures reported as scams (no picture, no text)
 // Cloud Functions also keep checkCalls, checkSuspects, callCounters, personCounters, pinFailures and
 // incidentLinks. No rule below
 // names them, so clients can neither read nor write them.
@@ -25,6 +26,36 @@ service cloud.firestore {
     match /directory/{id} { allow read, write: if false; }        // Cloud Functions only (Admin SDK)
     match /directoryPublic/{id} { allow read: if signedIn(); allow write: if false; }
     match /knownBad/{id} { allow read: if signedIn(); allow write: if false; }
+
+    // reportedFakes/{hash_uid}: perceptual hashes of pictures users reported as scams, so others see
+    // "this picture was reported before". No picture, file name or text: a 64-bit fingerprint only.
+    //   hash:      string, 16 lowercase hex (required)        the perceptual hash
+    //   bands:     list of exactly 4 strings (required)        the hash in four 4-hex chunks, for array-contains-any
+    //   kind:      'picture' | 'document' | 'frame' (required)
+    //   uid:       string == request.auth.uid (required)       who reported it
+    //   createdAt: timestamp == request.time (required)
+    // Document ID: hash + '_' + uid, so one person can report a picture once. Never updated or deleted.
+    function isValidReport(d, id) {
+      return d.keys().hasOnly(['hash', 'bands', 'kind', 'uid', 'createdAt'])
+        && d.keys().hasAll(['hash', 'bands', 'kind', 'uid', 'createdAt'])
+        && d.hash is string && d.hash.matches('^[0-9a-f]{16}$')
+        // The bands must be the hash itself, cut in four: nothing else can be stored in them.
+        && d.bands is list && d.bands.size() == 4
+        && d.bands[0] == d.hash[0:4] && d.bands[1] == d.hash[4:8]
+        && d.bands[2] == d.hash[8:12] && d.bands[3] == d.hash[12:16]
+        && d.kind in ['picture', 'document', 'frame']
+        && d.uid == request.auth.uid
+        && d.createdAt == request.time
+        && id == d.hash + '_' + request.auth.uid;
+    }
+
+    match /reportedFakes/{reportId} {
+      allow get: if signedIn();
+      // The extension asks for at most 50 near matches at a time (bands array-contains-any).
+      allow list: if signedIn() && request.query.limit <= 50;
+      allow create: if signedIn() && isValidReport(request.resource.data, reportId);
+      allow update, delete: if false;
+    }
 
     match /checks/{checkId} {
       // The panel writes the summary only. `call` is written by Cloud Functions, so a client cannot fake an answer.

@@ -9,6 +9,61 @@ export interface Change {
 
 export const CHANGES: Change[] = [
   {
+    version: '0.7.0',
+    date: '29 Nov 2026',
+    items: [
+      'Score by evidence fusion: odds × each sign’s likelihood ratio, shown on every reason (“×8”, “÷1.4”), with the weights grounded in published figures (Jia 2024, GOTCHA, Interisle 2025, APWG, Layton 2024) and the rest marked as estimates',
+      'Gemini Nano status in the header: Nano + cloud, cloud only, Nano getting ready, offline, or laptop checks only',
+      'Self-tuning escalation: FISHY counts how often the cloud agrees with Gemini Nano and asks it less, or more, accordingly; Settings → How the AI ran shows the share answered on this laptop, times, agreement and cloud calls saved',
+      'Right-click any picture → “Check this picture with FISHY” (web pages, Gmail, WhatsApp Web), with Google Lens and TinEye for a reverse search',
+      'QR codes in pictures and PDFs: where the link goes (address checks, redirectors), and QRIS payment codes: who they pay, the amount, a checksum check and a name check against suppliers on record',
+      'Watch mode: checks the call’s face every 20 s on this laptop and raises the alarm only when the evidence adds up (Wald’s sequential test, 1% false alarms), then the cloud double-checks',
+      'Lip-sync check: 5 s of the call; does anything on screen move with the voice?',
+      'New picture checks: copy-move (two identical areas, outlined), and JPEG saved twice or cropped and re-saved; each tested in Chrome and counted only as weak signs',
+      'Reported before: a picture’s fingerprint (never the picture) can be reported as a scam, and later checks show “reported by N users”',
+      'Website check: the most abused endings, free hosting asking for passwords, pages sending to chat bots, a supplier’s name on someone else’s address; private network addresses no longer count',
+      'Advice from the FBI, CISA, FinCEN, Hong Kong Police and Bank Indonesia on the cards: the code word, “signs, not proof”, the SHA-256 fingerprint of each file, and where to report if money already moved',
+    ],
+  },
+  {
+    version: '0.6.1',
+    date: '28 Nov 2026',
+    items: [
+      'Security review (OWASP Top 10 and the LLM Top 10): a website’s title is quoted to Gemini cleaned and labelled, never as instructions; oversized pictures (decompression bombs) and hours-long recordings are refused before they are decoded; Remote Config and model answers are checked field by field',
+      'A damaged picture, an empty file or an SVG drawing now says so plainly instead of showing an empty result',
+      'Long file names and addresses take two lines at most (the full name on hover)',
+      '22 new edge-case tests: random and truncated files, silence, broken samples, black video, hostile page titles, broken model answers and broken Remote Config',
+    ],
+  },
+  {
+    version: '0.6.0',
+    date: '28 Nov 2026',
+    items: [
+      'Fourth check: the website in this tab. The laptop reads the address and the page (look-alike letters, a copy of a supplier’s address, a bare number, secrets asked without https or sent to another site, risky endings); the cloud is asked only the address’s age and whether Google lists it as unsafe; Gemini looks at a screenshot, on the laptop first',
+      'New scam types: Fake website copying a supplier, Phishing or fake website',
+      'FISHY always starts empty: the demo case no longer opens by itself, and the demo buttons are gone',
+      'Fixed: “Don’t pay until them confirms” now reads “until the real person confirms” when no one is on record yet',
+    ],
+  },
+  {
+    version: '0.5.0',
+    date: '28 Nov 2026',
+    items: [
+      'Home says what to do at a glance: 1 something you were sent, 2 the call you are in (the face, the voice), 3 then call the real person',
+      'Hybrid by design: Gemini Nano takes the first look on the laptop; FISHY asks the cloud model for a second opinion only when Nano can’t tell, isn’t sure, finds one sign, or disagrees with the laptop’s own checks. The card shows the path it took',
+      'The video check watches 3 seconds (5 frames) instead of one: it spots a frozen picture (a still photo played as a camera) and Gemini compares the frames side by side',
+      'New hand check for a video call: ask the caller to pass a hand across their face; a live face swap often breaks up behind the hand',
+      'Voice measurements on the laptop before Gemini listens: pitch movement (with a chart), room sound between words, background jumps between pauses, breaths and pause rhythm',
+      'Picture checks on the laptop: the camera’s stored preview against the picture, camera files re-saved by software (JPEG tables), and the grid pattern AI generators leave; a re-save heat map to look at yourself',
+      'What the laptop measured goes to Gemini with the file, so its reading is grounded in numbers',
+      '“Looks like”: what kind of scam the checks point to (deepfake executive on a video call, cloned voice, real-time face swap, fake camera feed, doctored picture or payment screenshot, forged document…), with what to do',
+      'Fixed: Remote Config’s scam rules now add to the built-in rules instead of replacing them, so an older config can’t switch the media checks off',
+      'The test-data switch in development builds stays hidden unless ?data= is in the address',
+      'When the Firebase AI Logic API is off in the project, the card says which API to turn on',
+      'Gemini Nano is told to answer in English, as Chrome asks, so it can check the answer’s quality and safety',
+    ],
+  },
+  {
     version: '0.4.0',
     date: '23 Nov 2026',
     items: [

@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { suspectsFrom } from '../lib/checks/known';
+import { patternInfo } from '../lib/rules/engine';
 import { firstName } from '../lib/names';
 import { IN_EXTENSION } from '../lib/config';
 import { isPageMessage, type BannerState, type PanelMessage } from '../lib/messages';
@@ -91,6 +92,24 @@ export function App() {
     else void sendBanner('hidden', '', '');
   }, [call.state, who, a.hasInput, a.verdict]);
 
+  // "Check this picture with FISHY" from the right-click menu: the job waits in session storage.
+  const { checkPagePicture } = a;
+  useEffect(() => {
+    if (!IN_EXTENSION || !chrome.storage?.session) return;
+    type Job = { kind: 'picture'; src: string; tabId: number; pageUrl?: string; at: number };
+    const take = (job?: Job) => {
+      if (!job || job.kind !== 'picture' || Date.now() - job.at > 60_000) return;
+      void chrome.storage.session.remove('fishyJob');
+      void checkPagePicture(job);
+    };
+    void chrome.storage.session.get('fishyJob').then((v) => take(v.fishyJob as Job | undefined));
+    const onChange = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'session' && changes.fishyJob?.newValue) take(changes.fishyJob.newValue as Job);
+    };
+    chrome.storage.onChanged.addListener(onChange);
+    return () => chrome.storage.onChanged.removeListener(onChange);
+  }, [checkPagePicture]);
+
   // A file dragged anywhere over FISHY can be dropped to check it.
   const { checkFile } = a;
   const dropping = useWindowDrop(useCallback((file: File) => void checkFile(file), [checkFile]));
@@ -140,17 +159,13 @@ export function App() {
   const detail = tab ? null : placeFor(screen);
   const where = !a.hasInput ? null : screen === 'verdict' || screen === 'directory' || screen === 'paste' || screen === 'settings' || screen === 'media' ? a.place : detail;
   const error = a.error ?? callError;
-  const loadDemo = () => {
-    cancel();
-    a.loadDemo();
-    back();
-  };
   const newCheck = () => {
     cancel();
     a.clear();
     back();
   };
   const track = useMemo(() => trackFor(a.verdict, call.state), [a.verdict, call.state]);
+  const info = useCallback((name: string) => patternInfo(name, a.rules), [a.rules]);
 
   return (
     <>
@@ -198,9 +213,13 @@ export function App() {
             setFocusMedia(id);
             setScreen('media');
           }}
-          onDemo={loadDemo}
+          patternInfo={info}
           onVoice={IN_EXTENSION ? () => void a.checkVoice() : undefined}
           onFrame={IN_EXTENSION ? () => void a.checkFrame() : undefined}
+          onSite={IN_EXTENSION ? () => void a.checkSite() : undefined}
+          watch={a.watch}
+          onWatch={IN_EXTENSION ? () => void a.startWatch() : undefined}
+          onStopWatch={a.stopWatch}
         />
       )}
       {screen === 'directory' && <Directory people={a.directory.people} suppliers={a.directory.suppliers} />}
@@ -211,7 +230,20 @@ export function App() {
         <Voice data={ev.voice} busy={!!a.busy} onBack={back} onRecordAgain={a.mode === 'live' && IN_EXTENSION ? () => void a.checkVoice() : undefined} />
       )}
       {screen === 'known' && ev.known && <KnownScams data={ev.known} onBack={back} />}
-      {screen === 'media' && ev.media && <Media items={ev.media} busy={!!a.busy} focusId={focusMedia} onBack={back} onFile={(f) => void a.checkFile(f)} />}
+      {screen === 'media' && ev.media && (
+        <Media
+          items={ev.media}
+          busy={!!a.busy}
+          focusId={focusMedia}
+          onBack={back}
+          onFile={(f) => void a.checkFile(f)}
+          patterns={a.verdict.patterns}
+          patternInfo={info}
+          onChallenge={IN_EXTENSION ? () => void a.checkFrame(true) : undefined}
+          onLipSync={IN_EXTENSION ? () => void a.checkLipSync() : undefined}
+          onReport={(id) => void a.reportPicture(id)}
+        />
+      )}
       {screen === 'paste' && (
         <CheckYourself
           busy={!!a.busy}
@@ -231,7 +263,6 @@ export function App() {
           rulesVersion={a.rules.version}
           knownCount={a.knownCount}
           onBack={back}
-          onDemo={loadDemo}
           onClear={newCheck}
         />
       )}

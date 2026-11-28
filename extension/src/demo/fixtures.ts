@@ -27,11 +27,14 @@ export const DEMO_SIGNALS: Signal[] = [
   { kind: 'bank_account_changed', step: 'check', source: 'on_device', title: 'Bank account changed', detail: 'The invoice account differs from the last 6 payments to Sinar Logistik.' },
   { kind: 'lookalike_sender', step: 'check', source: 'on_device', title: 'Lookalike sender', detail: 'sinar-logistik.co, 9 days old. On record: sinarlogistik.co.id.' },
   { kind: 'known_bad_account', step: 'match', source: 'on_device', title: 'Known scam account', detail: 'Bank Teluk •••• 9032 is in 2 confirmed scams.', seenCount: 2 },
-  { kind: 'picture_signs', step: 'check', source: 'on_device', title: 'Signs of AI in the video', detail: 'The earrings change shape when he turns his head (left ear), plus 2 more. A sign, not proof.', strength: 3 },
+  { kind: 'video_signs', step: 'check', source: 'cloud', title: 'Signs of a deepfake face', detail: 'The earrings change shape between frames 2 and 4 (left ear), plus 2 more. A sign, not proof.', strength: 3 },
   { kind: 'voice_signs', step: 'check', source: 'cloud', title: 'Signs of a cloned voice', detail: 'No breathing between sentences (whole clip), plus 2 more. A sign, not proof.', strength: 3 },
 ];
 
 // Loudness for the demo voice clip's waveform.
+/** A demo voice's pitch: unusually flat, around 118 Hz, with gaps for the pauses. */
+const DEMO_PITCH = Array.from({ length: 300 }, (_, i) => (i % 60 > 48 ? 0 : 118 + Math.sin(i / 7) * 3 + ((i * 7919) % 5) * 0.4));
+
 const DEMO_BARS = [30, 52, 40, 68, 84, 60, 44, 72, 90, 64, 38, 56, 80, 96, 70, 48, 34, 58, 76, 88, 62, 42, 66, 82, 94, 74, 50, 36, 54, 70, 86, 60, 40, 64, 78, 52, 32, 46, 30, 22].map((h) => h / 100);
 
 export const DEMO_EVIDENCE: Evidence = {
@@ -111,12 +114,20 @@ export const DEMO_EVIDENCE: Evidence = {
       name: 'Video call at 10:44',
       at: '10:44',
       checks: [],
+      forensics: {
+        hints: [],
+        rows: [{ ok: true, title: 'Movement', detail: 'The picture changes between frames, as a live camera does' }],
+        motion: [3.1, 2.4, 4.0, 2.8],
+      },
+      firstLook: { assessment: 'likely_ai', confidence: 'low', source: 'on_device', model: 'gemini-nano', signs: [{ sign: 'The hairline blurs into the background', where: 'top of the head' }] },
+      escalation: 'Gemini Nano found only one sign',
       gemini: {
         assessment: 'likely_ai',
-        source: 'on_device',
-        model: 'gemini-nano',
+        confidence: 'high',
+        source: 'cloud',
+        model: 'gemini-cloud',
         signs: [
-          { sign: 'The earrings change shape when he turns his head', where: 'left ear' },
+          { sign: 'The earrings change shape between frames', where: 'frames 2–4, left ear' },
           { sign: 'The light on his face comes from the left; the room light comes from the right', where: 'face and window' },
           { sign: 'The edge of his hair blurs into the background', where: 'top of the head' },
         ],
@@ -130,6 +141,16 @@ export const DEMO_EVIDENCE: Evidence = {
       at: '10:44',
       levels: DEMO_BARS,
       checks: [],
+      forensics: {
+        hints: [{ id: 'flat_pitch', strength: 1, text: 'The voice barely moves up or down (about 1.8 semitones; people usually move 4 or more).' }],
+        rows: [
+          { ok: false, title: 'Pitch movement', detail: '1.8 semitones around 118 Hz' },
+          { ok: true, title: 'Room sound between words', detail: 'Digitally silent (−92 dBFS); normal for a call app’s noise filter' },
+          { ok: true, title: 'Background from pause to pause', detail: 'Changes by up to 4 dB' },
+          { ok: true, title: 'Breaths', detail: '0 heard in 8 s of speech (call apps often filter them out)' },
+        ],
+        pitch: DEMO_PITCH,
+      },
       gemini: {
         assessment: 'likely_ai',
         source: 'cloud',

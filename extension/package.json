@@ -1,7 +1,7 @@
 {
   "name": "extension",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "jsqr": "1.4.0",
     "@fontsource-variable/atkinson-hyperlegible-next": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.2.0",
     "firebase": "^13.4.0",

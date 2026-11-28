@@ -4,13 +4,57 @@ import { builtWhen, COMMIT, VERSION } from '../../lib/version';
 import { nanoStatus, prepareNano, type NanoStatus } from '../../lib/ai/tactics';
 import { FIREBASE_READY } from '../../lib/config';
 import { DetailHead, Icon, Section } from '../components';
+import { currentStats, onStats, resetStats, summary } from '../../lib/ai/stats';
+import { DOUBTFUL, TRUSTED, TUNE_AFTER } from '../../lib/ai/escalate';
+
+/** How the hybrid AI has run on this laptop: the numbers behind "on device first". */
+function AiStats() {
+  const [stats, setStats] = useState(currentStats);
+  useEffect(() => onStats((s) => setStats({ ...s })), []);
+  const t = summary(stats);
+  const secs = (ms: number) => (ms ? `${(ms / 1000).toFixed(1)} s` : '–');
+  const pct = (v: number) => `${Math.round(v * 100)}%`;
+  const tuning =
+    t.escalations < TUNE_AFTER
+      ? `After ${TUNE_AFTER} second opinions FISHY starts tuning when to ask the cloud (${t.escalations} so far).`
+      : t.agreement !== null && t.agreement >= TRUSTED
+        ? 'Gemini Nano agrees with the cloud almost every time, so its borderline answers now stay on this laptop.'
+        : t.agreement !== null && t.agreement < DOUBTFUL
+          ? 'Gemini Nano often disagrees with the cloud, so more of its answers get a second opinion.'
+          : 'Agreement is in between: FISHY asks the cloud when Nano can’t tell, isn’t sure, or finds a single sign.';
+  return (
+    <div className="surface card-pad">
+      {t.answers ? (
+        <>
+          <dl className="kv">
+            <dt>Answered on this laptop</dt>
+            <dd>
+              {pct(t.onDeviceShare)} ({t.cloudCallsSaved} of {t.answers})
+            </dd>
+            <dt>Average time</dt>
+            <dd>
+              Nano {secs(t.deviceAvgMs)} · cloud {secs(t.cloudAvgMs)}
+            </dd>
+            <dt>Second opinions</dt>
+            <dd>{t.escalations ? `${t.escalations}, agreed with Nano ${pct(t.agreement ?? 0)}` : 'none yet'}</dd>
+          </dl>
+          <span className="row-detail">{tuning}</span>
+          <button className="btn secondary small" onClick={resetStats}>
+            Start counting again
+          </button>
+        </>
+      ) : (
+        <span className="row-detail">Nothing checked with Gemini yet. Counts only, kept on this laptop: no file, sign or text is stored.</span>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   mode: 'demo' | 'live';
   rulesVersion: number;
   knownCount: number;
   onBack: () => void;
-  onDemo: () => void;
   onClear: () => void;
 }
 
@@ -24,7 +68,7 @@ const NANO_TEXT: Record<NanoStatus, { title: string; detail: string }> = {
   },
 };
 
-export function Settings({ mode, rulesVersion, knownCount, onBack, onDemo, onClear }: Props) {
+export function Settings({ rulesVersion, knownCount, onBack, onClear }: Props) {
   const [nano, setNano] = useState<NanoStatus | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,20 +134,17 @@ export function Settings({ mode, rulesVersion, knownCount, onBack, onDemo, onCle
         </div>
         </Section>
 
-        <Section title="Demo">
+        <Section title="This check">
         <div className="surface card-pad">
-          <span className="row-detail">
-            {mode === 'demo' ? 'Showing the synthetic Kalindra Group case.' : 'Showing live checks from this browser.'}
-          </span>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn secondary small" onClick={onDemo}>
-              Load the demo case
-            </button>
-            <button className="btn secondary small" onClick={onClear}>
-              Clear this check
-            </button>
-          </div>
+          <span className="row-detail">Clears what was checked in this window and starts over.</span>
+          <button className="btn secondary small" onClick={onClear}>
+            Clear this check
+          </button>
         </div>
+        </Section>
+
+        <Section title="How the AI ran">
+          <AiStats />
         </Section>
 
         <Section title="About">

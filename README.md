@@ -30,11 +30,55 @@ The hybrid pattern is chosen by what the model is given:
 | Task | What the model gets | Mode | Why |
 |---|---|---|---|
 | **Read** the request for pressure tactics ([tactics.ts](extension/src/lib/ai/tactics.ts)) | The message itself | FISHY checks `LanguageModel.availability()` first: `ONLY_ON_DEVICE` with the raw text when Gemini Nano is ready, otherwise `ONLY_IN_CLOUD` with a **redacted** copy (accounts, numbers, emails and links removed, [redact.ts](extension/src/lib/redact.ts)) | Private message text may only reach Gemini Nano on the laptop. The SDK's automatic fallback would send the raw text to the cloud, so FISHY chooses itself |
-| **Look** at a picture, a document's first page or a frame of the video call for signs of AI or editing ([media.ts](extension/src/lib/ai/media.ts)) | The picture the person chose to check | `PREFER_ON_DEVICE` with image input: Gemini Nano on the laptop for JPEG and PNG, the cloud model otherwise | The person chose to check it; Nano keeps it on the laptop whenever it can |
-| **Listen** to a voice clip for signs of a cloned or spliced voice ([media.ts](extension/src/lib/ai/media.ts)) | 10 seconds of the call, or a recording the person chose | `ONLY_IN_CLOUD` | Firebase AI Logic cannot send audio to Gemini Nano yet; the badge says Cloud |
+| **Look** at a picture or a document's first page for signs of AI or editing ([media.ts](extension/src/lib/ai/media.ts)) | The picture, plus what the laptop measured in it | **Escalation:** `PREFER_ON_DEVICE` first (Gemini Nano on the laptop). Only when Nano can't tell, says it isn't sure, finds a single sign, or finds nothing where the laptop's own checks found something ([escalate.ts](extension/src/lib/ai/escalate.ts)), the same request goes to `ONLY_IN_CLOUD` for a second opinion. Both readings are shown | A clear first look never leaves the laptop; the cloud is spent only where it changes the answer |
+| **Compare** frames of the video call for a deepfake face ([media.ts](extension/src/lib/ai/media.ts), [voice.ts](extension/src/lib/voice.ts)) | A numbered sheet of 5 frames over 3 s (8 frames during the hand check), plus the motion measured between them | The same escalation | One image keeps it within what Nano takes, and lets the model compare frames in one look |
+| **Check the website** in this tab for a scam or a copy ([media.ts](extension/src/lib/ai/media.ts), [site.ts](extension/src/lib/checks/site.ts)) | A screenshot of what the person sees, plus what the laptop measured about the address and the page (never the page's text) | The same escalation. The cloud lookups get the address only: its age (RDAP) and Google Web Risk | The page may show private account details: Nano reads it on the laptop first |
+| **Listen** to a voice clip for signs of a cloned or spliced voice ([media.ts](extension/src/lib/ai/media.ts)) | 10 seconds of the call, or a recording the person chose, as 16 kHz WAV, plus the voice measurements | `ONLY_IN_CLOUD`, after the on-device measurements ([voice-math.ts](extension/src/lib/forensics/voice-math.ts)) | Firebase AI Logic cannot send audio to Gemini Nano yet; the laptop's measurements are the on-device half |
 | **Explain** the red flags in plain words ([explain.ts](extension/src/lib/ai/explain.ts)) | The red flags only (titles and one line of masked evidence), never the message | `PREFER_ON_DEVICE`: Firebase AI Logic runs Nano when it can and falls back to the cloud by itself | Nothing private is in the input, so the SDK may decide |
 
 Both answer in JSON or short text, and `inferenceSource` tells the panel which badge to show: **On device** or **Cloud** on every step. The verdict itself never comes from the model: a fixed rules engine decides it from the signals, so the same signals always give the same verdict. Firebase App Check protects every call (a debug token in the extension, reCAPTCHA Enterprise on the hosted pages), and the same prompts run in the extension and on `/try` ([prompts.ts](extension/src/lib/ai/prompts.ts)).
+
+**Before any model: the laptop's own measurements** ([extension/src/lib/forensics](extension/src/lib/forensics)). They are told to Gemini with the file, so its reading is grounded in numbers, and they count in the score on their own:
+
+| Check | What it finds | Based on |
+|---|---|---|
+| Camera preview vs picture | The small preview a camera stores no longer matches the picture: changed or cropped after it was taken | Kee & Farid, digital image authentication from thumbnails (SPIE 2010) |
+| JPEG quantization tables | A file that names a camera but was last saved with standard software tables | Kornblum, DFRWS 2008 |
+| Grid pattern in the noise (PNG, WebP) | The periodic peaks latent-diffusion generators leave at 1/4 and 1/8 of the sampling frequency | Corvi et al., 2023 |
+| Motion across frames | A frozen picture: a still photo played as a camera | |
+| Hand check | A live face swap breaking up behind a hand (GOTCHA: hand occlusion degraded real-time deepfakes most of all tested challenges) | Mittal et al., GOTCHA |
+| Voice | Flat pitch, digitally empty pauses, background jumps between pauses (joined recordings), missing breaths, even pause rhythm; call-app noise filters are allowed for | Layton et al., 2024 (breaths) |
+
+Tested honestly: a re-save heat map (ELA) and a grain check are shown for a person to look at but **not scored**. On clean and forged test pictures with text, they flagged clean pictures as often as forged ones.
+
+**How the score is worked out: evidence fusion with likelihood ratios** ([media-score.ts](extension/src/lib/media-score.ts)). The score starts at 15%, an estimate of how often something a person doubts turns out fake. Each sign multiplies the odds by its likelihood ratio: how many times more often it shows up in fakes than in real files. The card shows each sign with its weight ("×8", "÷2"). Signs that tend to come together count less each: the k-th strongest is damped by 0.8^k. The weights are estimates from the research behind each check and from FISHY's own tests, and the card says so.
+
+**Self-tuning escalation** ([stats.ts](extension/src/lib/ai/stats.ts), [escalate.ts](extension/src/lib/ai/escalate.ts)). Every time the cloud gives a second opinion, FISHY notes whether it agreed with Gemini Nano's first look; the counts stay on the laptop. After 8 second opinions:
+- if Nano agreed 90% of the time or more, its borderline answers stay on the laptop;
+- if it agreed less than 60%, even its "medium" answers are checked.
+
+Settings → How the AI ran shows the share answered on the laptop, the average times, the agreement and the cloud calls saved. The header chip says where the AI runs right now: Gemini Nano, Nano and cloud, cloud only, offline, or laptop checks only.
+
+**Watch mode, with a sequential test** ([sprt.ts](extension/src/lib/forensics/sprt.ts)).
+- **Cadence:** one capture of the call stays open. Every 20 s (45 s when Nano isn't available), FISHY grabs 3 frames, blacking its own window out of them, and Gemini takes a quick look.
+- **Deciding:** each round's likelihood ratio feeds Wald's SPRT, with α = 1% false alarms and β = 5% missed fakes.
+- **Raising the alarm:** it needs the evidence to add up over at least two rounds. Then the cloud double-checks and the result appears as a card.
+- **"Looks real so far":** the count restarts and watching goes on.
+
+**Lip-sync** ([lipsync.ts](extension/src/lib/forensics/lipsync.ts)).
+- **What it records:** 5 s of the call at 10 frames a second.
+- **How it measures:** the motion of each cell of an 8×6 grid is correlated with the voice's loudness, at shifts of ±0.5 s, and the best cell is kept.
+- **What counts:** only a mismatch (no cell follows the voice, or a lag over 300 ms). A match is never taken as proof, because some lip-sync fakes match too well.
+
+**QR codes ("quishing")** ([qr.ts](extension/src/lib/forensics/qr.ts)). A QR code in a picture or PDF is read on the laptop:
+- **A link** gets the website check's address tests and the cloud lookups (address only).
+- **A QRIS / EMVCo payment code** shows who it pays and how much, and its CRC-16 checksum is verified. A code edited to pay someone else fails the checksum.
+
+**Right-click → "Check this picture with FISHY"** on any picture: a web page, Gmail, WhatsApp Web. The picture is fetched inside the page with its original bytes, or cut out of a screenshot.
+
+**Reported before** ([data.ts](extension/src/lib/data.ts)). A picture's 64-bit perceptual hash, never the picture, can be reported as a scam. Each check looks up near matches by the hash's four 16-bit bands (array-contains-any), then by Hamming distance. Firestore rules allow one report per person per picture and accept the hash and nothing else.
+
+**What kind of scam:** the signals are matched to scam patterns from Remote Config (Deepfake executive on a video call, Executive voice clone, Real-time face swap, Fake camera feed, Doctored invoice, Forged document, AI-made picture or receipt, Doctored picture or payment screenshot…), each with what to do. A deployed config adds to the built-in rules, never removes them.
 
 Other Firebase products: **Authentication** (anonymous) for the checks a person owns, **Firestore** for the directory, known scams and call state, **Remote Config** for scam rules and the Meet and Gmail page selectors, **Cloud Functions** for the call, the approval page, the link check, domain age and the incident report, and **Hosting** for the pages.
 
@@ -377,6 +421,49 @@ All of it lives in FISHY's own database, `fishy`, not in `(default)`.
 - Voice clips and video frames leave the laptop only when the user clicks.
 - FISHY never calls a number taken from a message.
 - The team sees a summary, never the message.
+
+## Research behind FISHY
+
+FISHY follows what recognised organisations recommend, and its weights come from published figures where they exist.
+
+**What it follows**
+
+| Recommendation | Who | In FISHY |
+|---|---|---|
+| Hang up and call back on a number you look up yourself; verify account changes on a second channel | FBI IC3 (PSA240911, PSA251219), Singapore SPF/MAS/CSA (Mar 2025), OJK, Australia's ACCC | The core action: "Call the real person on the number on record", never a number from the message |
+| A pre-agreed code word, a one-time PIN or "known personal details" | FBI IC3 PSA241203; NSA/FBI/CISA deepfake guidance (2023) | The approval PIN; the code-word prompt on the home screen and after a video check |
+| Test liveness during calls; ask questions only the real person can answer | NSA/FBI/CISA; Hong Kong Police after the Arup case; NIST SP 800-63A-4 (active detection) | The hand check (GOTCHA), lip-sync, watch mode |
+| Hash the original before analysing; check the source with a reverse image search; read the metadata, knowing stripped metadata often just means a chat app | NSA/FBI/CISA | SHA-256 of every file in Details; Google Lens / TinEye for right-clicked pictures; metadata wording |
+| No single red flag is proof; detection tools are early | FinCEN FIN-2024-Alert004; Singapore CSA AD-2024-006; NIST AI 100-4 | Likelihood ratios with the evidence shown; "signs, not proof" on every result |
+| Check the payee's name, not only the number | EU Verification of Payee (Oct 2025); Bank Indonesia (QRIS merchant name) | QRIS name check: match, close match or none against suppliers on record |
+| Report fast; the bank first | OJK / Indonesia Anti-Scam Centre, ScamShield, Hong Kong ADCC, IC3 | "Already paid, or sent details?" on every result |
+| Content Credentials: valid and trusted differ from "present" | C2PA 2.x | FISHY says it sees credentials but doesn't verify their signature |
+
+**Where the weights come from** (in [media-score.ts](extension/src/lib/media-score.ts), each with its source):
+- **Gemini as a detector:** likelihood ratio about 3 (Jia et al. 2024). A Gemini "likely AI" alone gives "worth a closer look", not "fishy".
+- **The hand check:** 12. Hand occlusion degraded live deepfakes most in GOTCHA (Mittal et al. 2024), but newer tools occlude better.
+- **A domain under 30 days old:** 12. Most phishing domains are used within days of registration (Interisle).
+- **The most abused web endings:** 8; **cheap new ones:** 3 (Interisle 2025).
+- **Look-alike letters alone:** about 1 (only 0.17% of phishing domains, Interisle 2025). They count when they imitate a supplier.
+- **One user report:** 5. Only 12–40% of what users report is malicious; three reporters give 20.
+- **No published figure, so FISHY's estimate:** the camera preview, copy-move, a frozen video, voice splicing. Copy-move and the JPEG checks were also measured in Chrome on realistic pictures.
+
+**How FISHY's accuracy should be measured** (NIST AI 100-4, ISO/IEC 30107-3, ASVspoof 5). Not done yet; this is the plan.
+1. **One decision per kind of check:** picture, PDF, voice, live call, website, QR. Thresholds and weights are frozen before the test set is touched.
+2. **The test set:**
+   - Real items from the target setting: Indonesian invoices, WhatsApp-recompressed photos, call captures, Bahasa and English voice notes, QRIS stickers.
+   - Fakes from several generators, some never seen during development.
+   - Copies passed through screenshots, re-saves and re-recordings.
+   - A slice made by someone who knows FISHY's checks.
+3. **Headline figure:** the share of fakes caught at 1% and 0.1% false alarms, with ROC AUC and EER. Calibration: does "×10" really mean about 10 to 1 (Cllr, a reliability plot)?
+4. **The hand check:** report it like ISO 30107-3, with the share of each attack type accepted (APCER) and of real callers rejected (BPCER).
+5. **Watch mode:** the time to a decision, and the real error rates against the 1% / 5% it was designed for.
+6. **People:** finance staff's accuracy and time with and without FISHY, and how often they actually make the callback.
+7. **Publishing:** never one "X% accurate". Give per check "at 1 false alarm in 100, FISHY caught Y% of fakes (95% CI)", name what it misses, and never say "verified real".
+
+## Next: Android
+
+FISHY on Android would be a separate app, not the extension. It would use Kotlin with Firebase AI Logic's Android SDK, and run Gemini Nano on phones that support it. It would take pictures, PDFs and voice notes from the Share menu ("Share → FISHY" from WhatsApp or Gmail), with the same Firebase project, App Check and rules. Android doesn't let apps record calls or read other apps' screens, so the face and voice checks on a live call stay in the browser.
 
 ## Built during #BuildHybridAI
 

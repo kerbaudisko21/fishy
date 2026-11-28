@@ -22,7 +22,7 @@ export default defineManifest({
   // No 'tabs': FISHY never reads a tab's address or title (security review L4).
   // activeTab: clicking the FISHY icon on the call's tab is what lets Chrome capture that tab.
   // scripting: the toolbar icon puts the floating window on the page it was clicked on.
-  permissions: ['sidePanel', 'storage', 'tabCapture', 'activeTab', 'scripting'],
+  permissions: ['sidePanel', 'storage', 'tabCapture', 'activeTab', 'scripting', 'contextMenus'],
   host_permissions: ['https://meet.google.com/*', 'https://mail.google.com/*'],
   // The floating window loads the panel page in a frame on the page.
   web_accessible_resources: [{ resources: ['src/sidepanel/index.html'], matches: ['<all_urls>'], use_dynamic_url: true }],

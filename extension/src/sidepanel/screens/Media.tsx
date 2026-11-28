@@ -1,9 +1,9 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
-import { BAND_LABEL, scoreMedia, whySentence } from '../../lib/media-score';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { BAND_LABEL, lrLabel, scoreMedia, whySentence } from '../../lib/media-score';
 import type { MediaAssessment, MediaCheck } from '../../lib/types';
 import { DetailHead, Icon, Note, Privacy, SourceBadge } from '../components';
 import { useFirstSeen } from '../motion';
-import { DropZone, ScoreRing, Stamp } from '../scanner';
+import { DropZone, Filmstrip, HybridTrail, PitchChart, ScamType, ScoreRing, Stamp } from '../scanner';
 
 interface Props {
   items: MediaCheck[];
@@ -12,25 +12,39 @@ interface Props {
   focusId?: string | null;
   onBack: () => void;
   onFile: (file: File) => void;
+  /** What kind of scam all the checks together point to. */
+  patterns?: string[];
+  patternInfo?: (name: string) => { signs?: string[]; action?: string } | undefined;
+  /** Check the call's video again while the caller passes a hand across their face. */
+  onChallenge?: () => void;
+  /** 5 s of the call: does the mouth move with the voice? */
+  onLipSync?: () => void;
+  /** Report a picture as a scam (its fingerprint only). */
+  onReport?: (id: string) => void;
 }
 
-const TITLE: Record<MediaCheck['kind'], string> = { picture: 'Picture', document: 'Document', voice: 'Voice', frame: 'Video call' };
+const TITLE: Record<MediaCheck['kind'], string> = { picture: 'Picture', document: 'Document', voice: 'Voice', frame: 'Video call', site: 'Website' };
 
-const LOOKS: Record<MediaAssessment, { picture: string; voice: string }> = {
-  likely_ai: { picture: 'Looks made by AI', voice: 'Sounds like a cloned voice' },
-  likely_edited: { picture: 'Looks edited', voice: 'Sounds spliced together' },
-  no_clear_signs: { picture: 'No clear signs', voice: 'No clear signs' },
-  unclear: { picture: 'Hard to tell', voice: 'Hard to tell' },
+const LOOKS: Record<MediaAssessment, { picture: string; voice: string; site: string }> = {
+  likely_ai: { picture: 'Looks made by AI', voice: 'Sounds like a cloned voice', site: 'Looks like a scam website' },
+  likely_edited: { picture: 'Looks edited', voice: 'Sounds spliced together', site: 'Looks suspicious' },
+  no_clear_signs: { picture: 'No clear signs', voice: 'No clear signs', site: 'No clear signs' },
+  unclear: { picture: 'Hard to tell', voice: 'Hard to tell', site: 'Hard to tell' },
 };
 
+const looks = (kind: MediaCheck['kind'], a: MediaAssessment) => (kind === 'voice' ? LOOKS[a].voice : kind === 'site' ? LOOKS[a].site : LOOKS[a].picture);
+
 function kindIcon(kind: MediaCheck['kind'], size = 16) {
-  return kind === 'voice' ? Icon.mic(size) : kind === 'frame' ? Icon.video(size) : kind === 'document' ? Icon.file(size) : Icon.image(size);
+  return kind === 'voice' ? Icon.mic(size) : kind === 'frame' ? Icon.video(size) : kind === 'site' ? Icon.link(size) : kind === 'document' ? Icon.file(size) : Icon.image(size);
 }
 
 function Preview({ item, stamp }: { item: MediaCheck; stamp: ReactNode }) {
   const scanning = item.gemini === undefined;
+  const [heat, setHeat] = useState(false);
+  const [picked, setPicked] = useState(0);
   if (item.kind === 'voice') {
     return (
+      <>
       <div className="media-frame voice">
         {item.levels?.length ? (
           <div className={`wave${scanning ? ' listening' : ''}`} aria-hidden="true">
@@ -43,22 +57,38 @@ function Preview({ item, stamp }: { item: MediaCheck; stamp: ReactNode }) {
         )}
         {stamp}
       </div>
+      {item.forensics?.pitch && <PitchChart pitch={item.forensics.pitch} />}
+      </>
     );
   }
+  const shown = item.frames?.[picked] ?? item.preview;
+  const heatmap = item.forensics?.heatmap;
   return (
-    <div className={`media-frame${scanning ? ' scanning' : ''}`}>
-      {item.preview ? (
-        <img className="media-preview" src={item.preview} alt={`The ${TITLE[item.kind].toLowerCase()} that was checked`} />
-      ) : (
-        <span className="voice-placeholder">{kindIcon(item.kind, 28)}</span>
+    <>
+      <div className={`media-frame${scanning ? ' scanning' : ''}`}>
+        {shown ? (
+          <img className="media-preview" src={shown} alt={`The ${TITLE[item.kind].toLowerCase()} that was checked`} />
+        ) : (
+          <span className="voice-placeholder">{kindIcon(item.kind, 28)}</span>
+        )}
+        {heatmap && heat && <img className="media-heat" src={heatmap} alt="" aria-hidden="true" />}
+        {item.forensics?.boxes?.map((b, i) => (
+          <span key={i} className="media-box" aria-hidden="true" style={{ left: `${b.x0 * 100}%`, top: `${b.y0 * 100}%`, width: `${(b.x1 - b.x0) * 100}%`, height: `${(b.y1 - b.y0) * 100}%` }} />
+        ))}
+        {scanning && <span className="scan-line" aria-hidden="true" />}
+        {stamp}
+      </div>
+      {item.frames && item.frames.length > 1 && <Filmstrip frames={item.frames} motion={item.forensics?.motion} picked={picked} onPick={setPicked} />}
+      {heatmap && (
+        <button className="heat-toggle" aria-pressed={heat} onClick={() => setHeat((h) => !h)}>
+          {heat ? 'Hide the heat map' : 'Show the re-save heat map'}
+        </button>
       )}
-      {scanning && <span className="scan-line" aria-hidden="true" />}
-      {stamp}
-    </div>
+    </>
   );
 }
 
-function Card({ item, focused }: { item: MediaCheck; focused: boolean }) {
+function Card({ item, focused, onChallenge, onLipSync, onReport }: { item: MediaCheck; focused: boolean; onChallenge?: () => void; onLipSync?: () => void; onReport?: (id: string) => void }) {
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
     if (focused) ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -76,7 +106,7 @@ function Card({ item, focused }: { item: MediaCheck; focused: boolean }) {
       <header className="media-head">
         <span className="media-kind">{kindIcon(item.kind)}</span>
         <span className="grow">
-          <span className="row-title media-name">{item.name}</span>
+          <span className="row-title media-name" title={item.name}>{item.name}</span>
           <span className="row-detail">{item.demo ? 'Demo result' : `${TITLE[item.kind]} · checked ${item.at}`}</span>
         </span>
       </header>
@@ -103,22 +133,65 @@ function Card({ item, focused }: { item: MediaCheck; focused: boolean }) {
         )}
       </div>
 
-      {s.reasons.length > 1 && (
+      <HybridTrail item={item} />
+
+      {item.kind === 'frame' && !item.challenge && !pending && onChallenge && (
+        <div className="challenge">
+          <span className="grow">
+            <span className="row-title">Make sure: the hand check</span>
+            <span className="row-detail">Ask them to pass a hand slowly across their face: a real face stays whole, a live face swap often breaks up. Then ask something only the real person would know (Hong Kong Police advice after the Arup case).</span>
+          </span>
+          <span className="challenge-actions">
+            <button className="btn secondary small" onClick={onChallenge}>
+              {Icon.video(14)} Check with hand
+            </button>
+            {onLipSync && (
+              <button className="btn secondary small" onClick={onLipSync} title="5 s while they talk: does the mouth move with the voice?">
+                {Icon.mic(14)} Mouth and voice
+              </button>
+            )}
+          </span>
+        </div>
+      )}
+
+      {s.factors.some((f) => f.lr !== undefined) && (
         <details className="fold" open>
           <summary>
             Why <span className="fold-count">{s.reasons.length}</span>
           </summary>
           <ul className="why-list">
-            {s.reasons.map((r, i) => (
-              <li key={i}>{r}</li>
+            {s.factors.map((f, i) => (
+              <li key={i} className={f.lr === undefined ? 'detail' : undefined}>
+                <span>{f.text}</span>
+                {f.lr !== undefined && <span className={`odds ${f.lr >= 1 ? 'up' : 'down'}`} title="How much this sign changed the odds">{lrLabel(f.lr)}</span>}
+              </li>
             ))}
           </ul>
+          <p className="odds-note">
+            How the score is worked out: it starts at {Math.round(s.prior * 100)}%, about how often something people doubt turns out fake, and each sign multiplies the odds by its weight (similar signs count less each). The weights are estimates from research and FISHY’s tests, not proof.
+          </p>
         </details>
       )}
 
       <details className="fold">
         <summary>Details</summary>
         <div className="fold-body">
+          {item.forensics && item.forensics.rows.length > 0 && (
+            <>
+              <span className="row-title">Measured on this laptop</span>
+              <ul className="rows" aria-label="Measured on this laptop">
+                {item.forensics.rows.map((c) => (
+                  <li key={c.title} className="check-row">
+                    <span className={`dot ${c.ok ? 'ok' : 'flagged'}`}>{c.ok ? Icon.check() : Icon.bang()}</span>
+                    <span className="grow">
+                      <span className="row-title">{c.title}</span>
+                      <span className="row-detail">{c.detail}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           {item.checks.length > 0 && (
             <ul className="rows" aria-label={item.kind === 'document' ? 'In the document' : 'In the file'}>
               {item.checks.map((c) => (
@@ -136,37 +209,111 @@ function Card({ item, focused }: { item: MediaCheck; focused: boolean }) {
             <span className="row-title">{voice ? 'What Gemini heard' : 'What Gemini saw'}</span>
             {g ? (
               <>
-                <span className="row-detail">{voice ? LOOKS[g.assessment].voice : LOOKS[g.assessment].picture}</span>
+                <span className="row-detail">
+                  {looks(item.kind, g.assessment)}
+                  {g.claimsToBe ? `; it presents itself as ${g.claimsToBe}` : ''}
+                </span>
                 <SourceBadge source={g.source} label={g.source === 'on_device' ? 'Gemini Nano, on device' : 'Gemini, cloud'} />
+                {item.firstLook && (
+                  <span className="row-detail">
+                    First look by Gemini Nano on this laptop: {looks(item.kind, item.firstLook.assessment)}
+                    {item.escalation ? `. Asked the cloud because ${item.escalation}.` : '.'}
+                  </span>
+                )}
               </>
             ) : (
               <span className="row-detail">{pending ? 'Still reading…' : (item.note ?? 'Gemini did not run.')}</span>
             )}
           </div>
+          {item.sourceUrl && (
+            <div className="media-verdict">
+              <span className="row-title">Seen elsewhere?</span>
+              <span className="row-detail">A reverse image search finds where else this picture appears, as NSA, FBI and CISA advise. It sends the picture’s web address to that service.</span>
+              <span className="link-row">
+                <a className="link" href={`https://lens.google.com/uploadbyurl?url=${encodeURIComponent(item.sourceUrl)}`} target="_blank" rel="noreferrer">
+                  Google Lens
+                </a>
+                <a className="link" href={`https://tineye.com/search?url=${encodeURIComponent(item.sourceUrl)}`} target="_blank" rel="noreferrer">
+                  TinEye
+                </a>
+              </span>
+            </div>
+          )}
+          {item.sha256 && (
+            <div className="media-verdict">
+              <span className="row-title">File fingerprint (SHA-256)</span>
+              <span className="row-detail mono hash">{item.sha256}</span>
+              <span className="row-detail">Keep it with the incident: it proves which file was checked.</span>
+            </div>
+          )}
         </div>
       </details>
+      {item.phash && onReport && s.score !== null && s.band !== 'low' && (
+        <div className="report-row">
+          {item.reported ? (
+            <span className="row-detail">{Icon.check(13)} Reported. Other FISHY users will see it was reported, by its fingerprint only.</span>
+          ) : (
+            <>
+              <span className="row-detail grow">Confirmed it’s a scam (the real person said no)? Warn other FISHY users.</span>
+              <button className="btn secondary small" onClick={() => onReport(item.id)}>
+                Report as a scam
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </article>
   );
 }
 
 /** What the checks found: one card per picture, document, voice or video frame, newest first. */
-export function Media({ items, busy, focusId, onBack, onFile }: Props) {
+export function Media({ items, busy, focusId, onBack, onFile, patterns = [], patternInfo, onChallenge, onLipSync, onReport }: Props) {
   const newest = items[items.length - 1]?.id;
   return (
     <>
       <DetailHead title="What the checks found" badges={[]} onBack={onBack} />
       <main className="main">
+        {patternInfo && <ScamType names={patterns} info={patternInfo} />}
         {[...items].reverse().map((item) => (
-          <Card key={item.id} item={item} focused={item.id === (focusId ?? newest) && items.length > 1} />
+          <Card key={item.id} item={item} focused={item.id === (focusId ?? newest) && items.length > 1} onChallenge={busy ? undefined : onChallenge} onLipSync={busy ? undefined : onLipSync} onReport={onReport} />
         ))}
 
         <Note icon={Icon.phone(15)}>
-          Signs, not proof: a good fake can pass every check. <strong>Before money moves, call the real person on the number on record.</strong>
+          Signs, not proof: a good fake can pass every check (US Treasury’s FinCEN: no single red flag proves fraud). <strong>Before money moves, hang up and call the real person on the number in your records, and ask your agreed code word or something only they would know</strong> (FBI and CISA advice).
         </Note>
+
+        <details className="fold how-fold">
+          <summary>Already paid, or sent details?</summary>
+          <ul className="why-list route">
+            <li>
+              <span>
+                <strong>Call your bank first, right now:</strong> the sooner, the better the chance the money can be stopped.
+              </span>
+            </li>
+            <li>
+              <span>
+                <strong>Indonesia:</strong> report at iasc.ojk.go.id (Indonesia Anti-Scam Centre) or OJK 157; QRIS problems: Bank Indonesia 131.
+              </span>
+            </li>
+            <li>
+              <span>
+                <strong>Singapore:</strong> ScamShield helpline 1799. <strong>Hong Kong:</strong> Anti-Deception Centre 18222.
+              </span>
+            </li>
+            <li>
+              <span>
+                <strong>United States:</strong> ic3.gov. <strong>Australia:</strong> cyber.gov.au (ReportCyber) and Scamwatch.
+              </span>
+            </li>
+            <li>
+              <span>Keep the file, its fingerprint (in Details) and the incident report link.</span>
+            </li>
+          </ul>
+        </details>
 
         <DropZone onFile={onFile} disabled={busy} compact />
 
-        <Privacy>The file’s marks are read on this laptop. A picture goes to the cloud only when Gemini Nano isn’t available; a voice clip always does. Nothing is stored.</Privacy>
+        <Privacy>The file’s marks, pixels, motion, voice and a website’s page are measured on this laptop. A picture, video frame or website screenshot goes to the cloud only when Gemini Nano isn’t available or isn’t sure; a voice clip always does. For a website, only its address is looked up. Nothing is stored.</Privacy>
       </main>
     </>
   );

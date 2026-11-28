@@ -7,7 +7,8 @@ const LABEL: Record<DataSet, string> = { demo: 'Demo', worst: 'Worst case', one:
  * The choice lives in the URL, so a reload keeps it.
  */
 export function DataToggle() {
-  if (!DATA_TOGGLE) return null;
+  // Hidden until asked for (?data=… in the URL), so a development build looks like the real one.
+  if (!DATA_TOGGLE || !new URLSearchParams(location.search).has('data')) return null;
   const active = currentDataSet();
   const pick = (set: DataSet) => {
     const url = new URL(location.href);

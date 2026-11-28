@@ -25,20 +25,22 @@ export async function pictureForGemini(blob: Blob): Promise<Blob> {
   return canvas.convertToBlob({ type: 'image/png' });
 }
 
-/**
- * Any recording the browser can play, as 16 kHz mono WAV. Chrome records WebM/Opus, which the
- * Gemini API does not accept; WAV it always does. 10 s of speech is about 320 KB.
- */
-export async function audioForGemini(blob: Blob): Promise<Blob> {
-  const RATE = 16000;
+export const VOICE_RATE = 16000;
+
+/** Any recording the browser can play, as 16 kHz mono samples. */
+export async function decodeMono16k(blob: Blob): Promise<Float32Array> {
+  const RATE = VOICE_RATE;
   const decoded = await new AudioContext().decodeAudioData(await blob.arrayBuffer());
   const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * RATE)), RATE);
   const source = offline.createBufferSource();
   source.buffer = decoded;
   source.connect(offline.destination);
   source.start();
-  const samples = (await offline.startRendering()).getChannelData(0);
+  return (await offline.startRendering()).getChannelData(0);
+}
 
+/** 16 kHz mono samples as a WAV file. */
+export function wavFrom(samples: Float32Array, RATE = VOICE_RATE): Blob {
   const wav = new DataView(new ArrayBuffer(44 + samples.length * 2));
   const text = (at: number, s: string) => [...s].forEach((c, i) => wav.setUint8(at + i, c.charCodeAt(0)));
   text(0, 'RIFF');
@@ -58,3 +60,10 @@ export async function audioForGemini(blob: Blob): Promise<Blob> {
   return new Blob([wav], { type: 'audio/wav' });
 }
 
+/**
+ * Any recording the browser can play, as 16 kHz mono WAV. Chrome records WebM/Opus, which the
+ * Gemini API does not accept; WAV it always does. 10 s of speech is about 320 KB.
+ */
+export async function audioForGemini(blob: Blob): Promise<Blob> {
+  return wavFrom(await decodeMono16k(blob));
+}

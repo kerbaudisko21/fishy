@@ -130,6 +130,11 @@ function toggle() {
     const data = e.data as { fishy?: string } | null;
     if (data?.fishy === 'hide') win.classList.add('hidden');
     if (data?.fishy === 'show') win.classList.remove('hidden');
+    // Where the window is, so watch mode and lip-sync can black FISHY out of the frames they grab.
+    if (data?.fishy === 'rect?') {
+      const r = win.getBoundingClientRect();
+      frame.contentWindow?.postMessage({ fishy: 'rect', x: r.left, y: r.top, w: r.width, h: r.height, vw: window.innerWidth, vh: window.innerHeight }, '*');
+    }
   });
 }
 
